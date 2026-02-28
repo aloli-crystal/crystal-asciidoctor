@@ -1,6 +1,6 @@
 = crystal-asciidoctor
 :description: A Crystal port of the Asciidoctor document processor.
-:repo_url: https://github.com/papilip/crystal-asciidoctor
+:repo_url: https://github.com/aloli/crystal-asciidoctor
 
 A Crystal port of the https://github.com/asciidoctor/asciidoctor[Asciidoctor] document processor.
 
@@ -49,7 +49,7 @@ Add the dependency to your `shard.yml`:
 ----
 dependencies:
   crystal-asciidoctor:
-    github: papilip/crystal-asciidoctor
+    github: aloli/crystal-asciidoctor
 ----
 
 Run `shards install`.
