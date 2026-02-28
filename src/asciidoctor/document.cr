@@ -113,7 +113,7 @@ module Asciidoctor
     property? sourcemap : Bool
 
     # The SyntaxHighlighter associated with this document.
-    getter syntax_highlighter : SyntaxHighlighter?
+    property syntax_highlighter : SyntaxHighlighterBase?
 
     def initialize(@safe : Int32 = SafeMode::SECURE,
                    @backend : String = DEFAULT_BACKEND,
@@ -151,14 +151,6 @@ module Asciidoctor
       end
     end
 
-    # Finalize the document header after parsing.
-    def finalize_header(block_attrs : Hash(String, String), apply_header : Bool = true) : Hash(String, String)
-      block_attrs.each do |key, val|
-        @attributes[key] = val unless @attributes.has_key?(key)
-      end
-      block_attrs
-    end
-
     # Get the author.
     def author : String?
       @attributes["author"]?
@@ -188,6 +180,21 @@ module Asciidoctor
     # Get the callouts.
     def callouts : Callouts
       @catalog.callouts
+    end
+
+    # Create or retrieve the converter for this document.
+    # Uses the DefaultRegistry to find a converter matching the backend.
+    def create_converter : Converter::Base
+      if (existing = @converter)
+        return existing
+      end
+
+      converter = Converter::DefaultRegistry.create(@backend)
+      unless converter
+        converter = Converter::Html5Converter.new
+      end
+      @converter = converter
+      converter
     end
 
     def document : Document
@@ -231,6 +238,14 @@ module Asciidoctor
       @extensions.not_nil!
     end
 
+    # Finalize the document header after parsing.
+    def finalize_header(block_attrs : Hash(String, String), apply_header : Bool = true) : Hash(String, String)
+      block_attrs.each do |key, val|
+        @attributes[key] = val unless @attributes.has_key?(key)
+      end
+      block_attrs
+    end
+
     # Get the first section of the document.
     def first_section : Section?
       @blocks.each do |block|
@@ -272,6 +287,16 @@ module Asciidoctor
         @counters[counter_name] = 1
         "1"
       end
+    end
+
+    # Initialize the syntax highlighter based on the source-highlighter attribute.
+    def init_syntax_highlighter : SyntaxHighlighterBase?
+      if basebackend?("html") && @safe < SafeMode::SERVER
+        if (source_hl_name = @attributes["source-highlighter"]?)
+          @syntax_highlighter = SyntaxHighlighter::DefaultRegistry.create(source_hl_name, @backend)
+        end
+      end
+      @syntax_highlighter
     end
 
     # Check if this is a multipart (book) document.
@@ -377,12 +402,6 @@ module Asciidoctor
     end
   end
 
-  # Placeholder types for future implementation.
-  module Converter
+  module Extensions
   end
-
-  class SyntaxHighlighter
-  end
-
-
 end

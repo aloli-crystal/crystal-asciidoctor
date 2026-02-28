@@ -1,6 +1,8 @@
 module Asciidoctor
   module Converter
     class DocBook5Converter < Base
+      register_for "docbook5"
+
       DLIST_TAGS_DEFAULT = {list: "variablelist", entry: "varlistentry", label: "label", term: "term", item: "listitem"}
       DLIST_TAGS = {
         "qanda"    => {list: "qandaset", entry: "qandaentry", label: "question", term: "simpara", item: "answer"},

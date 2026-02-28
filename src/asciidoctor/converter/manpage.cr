@@ -1,6 +1,8 @@
 module Asciidoctor
   module Converter
     class ManPageConverter < Base
+      register_for "manpage"
+
       ESC    = "\u001b"
       ESC_BS = "#{ESC}\\"
       ESC_FS = "#{ESC}."

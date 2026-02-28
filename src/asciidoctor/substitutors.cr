@@ -83,7 +83,7 @@ module Asciidoctor
                  when :macros            then sub_macros(result)
                  when :post_replacements then sub_post_replacements(result)
                  when :callouts          then sub_callouts(result)
-                 when :highlight         then sub_specialchars(result)
+                 when :highlight         then highlight_source(result, subs.includes?(:callouts))
                  else                         result
                  end
       end
@@ -609,6 +609,18 @@ module Asciidoctor
         {:superscript, :unconstrained, /\\?(?:#{qa})?\^(\S+?)\^/},
         {:subscript, :unconstrained, /\\?(?:#{qa})?~(\S+?)~/},
       ]
+    end
+
+    # Highlight the source code in the given text using the syntax highlighter
+    # registered with the document, if available.
+    def highlight_source(source : String, process_callouts : Bool) : String
+      syntax_hl = @document.syntax_highlighter
+      return sub_specialchars(source) unless syntax_hl && syntax_hl.highlight?
+
+      # For server-side highlighting, delegate to the syntax highlighter
+      lang = attr("language") || ""
+      highlighted = syntax_hl.highlight(self.as(AbstractNode), source, lang)
+      highlighted
     end
 
     # Convert a string to a substitution symbol.

@@ -1,6 +1,8 @@
 module Asciidoctor
   module Converter
     class Html5Converter < Base
+      register_for "html5"
+
       FONT_AWESOME_VERSION = "4.7.0"
       MATHJAX_VERSION      = "2.7.9"
 
@@ -256,11 +258,20 @@ Your browser does not support the audio tag.
           if linkcss
             stylesdir = node.attr("stylesdir") || "."
             result << %(<link rel="stylesheet" href="#{stylesdir}/#{DEFAULT_STYLESHEET_NAME}"#{slash}>)
+          else
+            result << Stylesheets.instance.embed_primary_stylesheet
           end
         elsif stylesheet && !stylesheet.empty?
           if linkcss
             stylesdir = node.attr("stylesdir") || "."
             result << %(<link rel="stylesheet" href="#{stylesdir}/#{stylesheet}"#{slash}>)
+          end
+        end
+
+        # Syntax highlighter head docinfo
+        if node.is_a?(Document)
+          if (syntax_hl = node.syntax_highlighter) && syntax_hl.docinfo?(:head)
+            result << syntax_hl.docinfo(:head, node)
           end
         end
 
@@ -294,6 +305,13 @@ Your browser does not support the audio tag.
           result << %(#{node.attr("version-label") || ""} #{node.attr("revnumber") || ""}#{br}) if node.attr?("revnumber")
           result << %(#{node.attr("last-update-label") || ""} #{node.attr("docdatetime") || ""}) if node.attr?("last-update-label") && !node.attr?("reproducible")
           result << %(</div>\n</div>)
+        end
+
+        # Syntax highlighter footer docinfo
+        if node.is_a?(Document)
+          if (syntax_hl = node.syntax_highlighter) && syntax_hl.docinfo?(:footer)
+            result << syntax_hl.docinfo(:footer, node)
+          end
         end
 
         result << "</body>"
@@ -535,14 +553,22 @@ Your browser does not support the audio tag.
 
         if style == "source"
           lang = node.attr("language")
-          pre_open = %(<pre class="highlight#{nowrap ? " nowrap" : ""}"><code#{lang ? %( class="language-#{lang}" data-lang="#{lang}") : ""}>)
-          pre_close = "</code></pre>"
+          syntax_hl = node.document.syntax_highlighter
+          if syntax_hl
+            pre_class = syntax_hl.pre_class
+            pre_open = %(<pre class="#{pre_class} highlight#{nowrap ? " nowrap" : ""}"><code#{lang ? %( class="language-#{lang}" data-lang="#{lang}") : ""}>)
+            pre_close = "</code></pre>"
+          else
+            pre_open = %(<pre class="highlight#{nowrap ? " nowrap" : ""}"><code#{lang ? %( class="language-#{lang}" data-lang="#{lang}") : ""}>)
+            pre_close = "</code></pre>"
+          end
         else
           pre_open = %(<pre#{nowrap ? " class=\"nowrap\"" : ""}>)
           pre_close = "</pre>"
         end
 
-        %(<div#{id_attr} class="listingblock#{role ? " #{role}" : ""}">\n#{title_el}<div class="content">\n#{pre_open}#{content}#{pre_close}\n</div>\n</div>)
+        %(<div#{id_attr} class="listingblock#{role ? " #{role}" : ""}">
+#{title_el}<div class="content">\n#{pre_open}#{content}#{pre_close}\n</div>\n</div>)
       end
 
       def convert_literal(node : AbstractNode) : String
