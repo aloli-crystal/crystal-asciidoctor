@@ -5,28 +5,29 @@ module Asciidoctor
   # The section responds as an Array of content blocks by delegating
   # block-related methods to its @blocks Array.
   class Section < AbstractBlock
-    # The 0-based index order of this section within the parent block
+    # The 0-based index order of this section within the parent block.
     property index : Int32
 
-    # The section name of this section
-    property sectname : String?
-
-    # Flag to indicate whether this is a special section or a child of one
-    property special : Bool
-
-    # Flag to indicate whether this section should be numbered
+    # Flag to indicate whether this section should be numbered.
     property numbered : Bool
 
-    # The parent block
+    # The parent block.
     getter parent_block : AbstractBlock?
 
-    # The document this section belongs to
+    # The section name of this section.
+    property sectname : String?
+
+    # Flag to indicate whether this is a special section or a child of one.
+    property special : Bool
+
+    # The document this section belongs to.
     @document : Document
 
     def initialize(document : Document, parent : AbstractBlock? = nil, level : Int32? = nil, numbered : Bool = false, attributes : Hash(String, String) = {} of String => String)
       super(:section, attributes)
       @document = document
       @parent_block = parent
+      @parent = parent
       if parent.is_a?(Section)
         @level = level || (parent.level + 1)
         @special = parent.special
@@ -34,23 +35,34 @@ module Asciidoctor
         @level = level || 1
         @special = false
       end
-      @numbered = numbered
       @index = 0
+      @numbered = numbered
       @sectname = nil
+    end
+
+    # Append a content block to this block's list of blocks.
+    # If the child block is a Section, assign an index to it.
+    def <<(block : AbstractBlock) : self
+      if block.is_a?(Section)
+        assign_numeral(block)
+      end
+      super(block)
     end
 
     def document : Document
       @document
     end
 
-    # The name of this section, an alias of the section title
-    def name : String?
-      title
+    # Generate a String id for this section based on its title.
+    def generate_id : String?
+      if t = title
+        Section.generate_id(t, @document)
+      end
     end
 
-    # Check whether this Section has any child Section objects.
-    def sections? : Bool
-      next_section_index > 0
+    # The name of this section, an alias of the section title.
+    def name : String?
+      title
     end
 
     # Get the section number for the current Section.
@@ -66,13 +78,9 @@ module Asciidoctor
       end
     end
 
-    # Append a content block to this block's list of blocks.
-    # If the child block is a Section, assign an index to it.
-    def <<(block : AbstractBlock) : self
-      if block.is_a?(Section)
-        assign_numeral(block)
-      end
-      super(block)
+    # Check whether this Section has any child Section objects.
+    def sections? : Bool
+      next_section_index > 0
     end
 
     def to_s(io : IO) : Nil
@@ -82,6 +90,52 @@ module Asciidoctor
       else
         io << "#<" << self.class.name << " {level: " << @level << ", blocks: " << @blocks.size << "}>"
       end
+    end
+
+    # Generate cross reference text (xreftext) that can be used to refer
+    # to this section.
+    def xreftext(xrefstyle : String? = nil) : String?
+      if (val = reftext) && !val.empty?
+        val
+      elsif xrefstyle
+        case xrefstyle
+        when "full"
+          if @numbered
+            if (refsig = document.attributes["#{@sectname || "section"}-refsig"]?)
+              "#{refsig} #{sectnum(".", "")}, \"#{title}\""
+            else
+              "\"#{title}\""
+            end
+          else
+            "\"#{title}\""
+          end
+        when "short"
+          if @numbered
+            if (refsig = document.attributes["#{@sectname || "section"}-refsig"]?)
+              "#{refsig} #{sectnum(".", "")}"
+            else
+              sectnum(".", "")
+            end
+          else
+            title
+          end
+        else # "basic"
+          title
+        end
+      else
+        title
+      end
+    end
+
+    # Generate a String id from the given section title and document.
+    def self.generate_id(title : String, document : Document) : String
+      prefix = document.attributes["idprefix"]? || "_"
+      separator = document.attributes["idseparator"]? || "_"
+      id = title.downcase
+        .gsub(/[^a-z0-9 -]/, "")
+        .strip
+        .gsub(/\s+/, separator)
+      "#{prefix}#{id}"
     end
   end
 end

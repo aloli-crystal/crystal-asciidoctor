@@ -10,25 +10,25 @@ module Asciidoctor
   #   # => "<em>This</em> is a &lt;test&gt;"
   class Block < AbstractBlock
     DEFAULT_CONTENT_MODEL = {
-      :audio         => ContentModel::Empty,
-      :image         => ContentModel::Empty,
-      :listing       => ContentModel::Verbatim,
-      :literal       => ContentModel::Verbatim,
-      :stem          => ContentModel::Raw,
-      :open          => ContentModel::Compound,
-      :page_break    => ContentModel::Empty,
-      :pass          => ContentModel::Raw,
+      :audio          => ContentModel::Empty,
+      :image          => ContentModel::Empty,
+      :listing        => ContentModel::Verbatim,
+      :literal        => ContentModel::Verbatim,
+      :open           => ContentModel::Compound,
+      :page_break     => ContentModel::Empty,
+      :pass           => ContentModel::Raw,
+      :stem           => ContentModel::Raw,
       :thematic_break => ContentModel::Empty,
-      :video         => ContentModel::Empty,
+      :video          => ContentModel::Empty,
     }
 
-    # The original Array content for this block
+    # The original Array content for this block.
     property lines : Array(String)
 
-    # The parent block
+    # The parent block.
     getter parent_block : AbstractBlock
 
-    # The document this block belongs to
+    # The document this block belongs to.
     @document : Document
 
     def initialize(@parent_block : AbstractBlock, @context : Symbol,
@@ -40,6 +40,7 @@ module Asciidoctor
       @document = @parent_block.document
       @content_model = content_model || DEFAULT_CONTENT_MODEL[@context]? || ContentModel::Simple
       @level = @parent_block.level
+      @parent = @parent_block
 
       if subs
         @subs = subs
@@ -55,10 +56,6 @@ module Asciidoctor
                else
                  [] of String
                end
-    end
-
-    def document : Document
-      @document
     end
 
     # Get the converted result of the child blocks by converting the
@@ -90,7 +87,11 @@ module Asciidoctor
       end
     end
 
-    # Returns the preprocessed source of this block
+    def document : Document
+      @document
+    end
+
+    # Returns the preprocessed source of this block.
     def source : String
       @lines.join('\n')
     end

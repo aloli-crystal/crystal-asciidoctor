@@ -1,47 +1,32 @@
 module Asciidoctor
   module SafeMode
-    UNSAFE = 0
-    SAFE = 1
-    SERVER = 10
-    SECURE = 20
-    #PARANOID = 100
-
-    def self.value_for_name(name)
-      case name.to_s.upcase
-      when "UNSAFE"
-        UNSAFE
-      when "SAFE"
-        SAFE
-      when "SERVER"
-        SERVER
-      when "SECURE"
-        SECURE
-      #when "PARANOID"
-      #  PARANOID
-      else
-        nil
-      end
-    end
+    SAFE    =  1
+    SECURE  = 20
+    SERVER  = 10
+    UNSAFE  =  0
 
     def self.name_for_value(value)
       case value
-      when UNSAFE
-        "unsafe"
-      when SAFE
-        "safe"
-      when SERVER
-        "server"
-      when SECURE
-        "secure"
-      #when PARANOID
-      #  "paranoid"
-      else
-        nil
+      when UNSAFE then "unsafe"
+      when SAFE   then "safe"
+      when SERVER then "server"
+      when SECURE then "secure"
+      else             nil
       end
     end
 
     def self.names
       ["unsafe", "safe", "server", "secure"]
+    end
+
+    def self.value_for_name(name)
+      case name.to_s.upcase
+      when "UNSAFE" then UNSAFE
+      when "SAFE"   then SAFE
+      when "SERVER" then SERVER
+      when "SECURE" then SECURE
+      else               nil
+      end
     end
   end
 end

@@ -1,77 +1,13 @@
 module Asciidoctor
-  # The newline character used for output
-  LF = '\n'
+  ADMONITION_STYLES = Set{"CAUTION", "IMPORTANT", "NOTE", "TIP", "WARNING"}
 
-  # The null character to use for splitting attribute values
-  NULL = '\0'
+  ASCIIDOC_EXTENSIONS = Set{".ad", ".adoc", ".asc", ".asciidoc", ".txt"}
 
-  # Tab character
-  TAB = '\t'
-
-  # Maximum integer value for "boundless" operations
-  MAX_INT = 9007199254740991_i64
-
-  # The default document type
-  DEFAULT_DOCTYPE = "article"
-
-  # The backend determines the format of the converted output
-  DEFAULT_BACKEND = "html5"
-
-  DEFAULT_STYLESHEET_NAME = "asciidoctor.css"
-
-  # Pointers to the preferred version for a given backend
   BACKEND_ALIASES = {
-    "html"    => "html5",
     "docbook" => "docbook5",
+    "html"    => "html5",
   }
 
-  # Default page widths for calculating absolute widths
-  DEFAULT_PAGE_WIDTHS = {
-    "docbook" => 425,
-  }
-
-  # Default extensions for the respective base backends
-  DEFAULT_EXTENSIONS = {
-    "html"    => ".html",
-    "docbook" => ".xml",
-    "pdf"     => ".pdf",
-    "epub"    => ".epub",
-    "manpage" => ".man",
-    "asciidoc" => ".adoc",
-  }
-
-  # File extensions recognized as AsciiDoc documents
-  ASCIIDOC_EXTENSIONS = Set{".adoc", ".asciidoc", ".asc", ".ad", ".txt"}
-
-  SETEXT_SECTION_LEVELS = {
-    '=' => 0,
-    '-' => 1,
-    '~' => 2,
-    '^' => 3,
-    '+' => 4,
-  }
-
-  ADMONITION_STYLES = Set{"NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"}
-
-  PARAGRAPH_STYLES = Set{
-    "comment", "example", "literal", "listing", "normal", "open",
-    "pass", "quote", "sidebar", "source", "verse", "abstract", "partintro",
-  }
-
-  VERBATIM_STYLES = Set{"literal", "listing", "source", "verse"}
-
-  NESTABLE_LIST_CONTEXTS = [:ulist, :olist, :dlist]
-
-  ORDERED_LIST_STYLES = [:arabic, :loweralpha, :lowerroman, :upperalpha, :upperroman]
-
-  ORDERED_LIST_KEYWORDS = {
-    "loweralpha" => "a",
-    "lowerroman" => "i",
-    "upperalpha" => "A",
-    "upperroman" => "I",
-  }
-
-  # Caption attribute names for various block contexts
   CAPTION_ATTRIBUTE_NAMES = {
     :example => "example-caption",
     :figure  => "figure-caption",
@@ -102,37 +38,94 @@ module Asciidoctor
     "warning-caption"   => "Warning",
   }
 
+  DEFAULT_BACKEND = "html5"
+
+  DEFAULT_DOCTYPE = "article"
+
+  DEFAULT_EXTENSIONS = {
+    "asciidoc" => ".adoc",
+    "docbook"  => ".xml",
+    "epub"     => ".epub",
+    "html"     => ".html",
+    "manpage"  => ".man",
+    "pdf"      => ".pdf",
+  }
+
+  DEFAULT_PAGE_WIDTHS = {
+    "docbook" => 425,
+  }
+
+  DEFAULT_STYLESHEET_NAME = "asciidoctor.css"
+
   INTRINSIC_ATTRIBUTES = {
-    "startsb"        => "[",
-    "endsb"          => "]",
-    "vbar"           => "|",
-    "caret"          => "^",
+    "amp"            => "&",
+    "apos"           => "&#39;",
     "asterisk"       => "*",
-    "tilde"          => "~",
-    "plus"           => "&#43;",
     "backslash"      => "\\",
     "backtick"       => "`",
     "blank"          => "",
-    "empty"          => "",
-    "sp"             => " ",
-    "two-colons"     => "::",
-    "two-semicolons" => ";;",
-    "nbsp"           => "&#160;",
-    "deg"            => "&#176;",
-    "zwsp"           => "&#8203;",
-    "quot"           => "&#34;",
-    "apos"           => "&#39;",
-    "lsquo"          => "&#8216;",
-    "rsquo"          => "&#8217;",
-    "ldquo"          => "&#8220;",
-    "rdquo"          => "&#8221;",
-    "wj"             => "&#8288;",
     "brvbar"         => "&#166;",
-    "pp"             => "&#43;&#43;",
+    "caret"          => "^",
     "cpp"            => "C&#43;&#43;",
     "cxx"            => "C&#43;&#43;",
-    "amp"            => "&",
-    "lt"             => "<",
+    "deg"            => "&#176;",
+    "empty"          => "",
+    "endsb"          => "]",
     "gt"             => ">",
+    "ldquo"          => "&#8220;",
+    "lsquo"          => "&#8216;",
+    "lt"             => "<",
+    "nbsp"           => "&#160;",
+    "plus"           => "&#43;",
+    "pp"             => "&#43;&#43;",
+    "quot"           => "&#34;",
+    "rdquo"          => "&#8221;",
+    "rsquo"          => "&#8217;",
+    "sp"             => " ",
+    "startsb"        => "[",
+    "tilde"          => "~",
+    "two-colons"     => "::",
+    "two-semicolons" => ";;",
+    "vbar"           => "|",
+    "wj"             => "&#8288;",
+    "zwsp"           => "&#8203;",
   }
+
+  # The newline character used for output.
+  LF = '\n'
+
+  # Maximum integer value for "boundless" operations.
+  MAX_INT = 9007199254740991_i64
+
+  NESTABLE_LIST_CONTEXTS = [:dlist, :olist, :ulist]
+
+  # The null character to use for splitting attribute values.
+  NULL = '\0'
+
+  ORDERED_LIST_KEYWORDS = {
+    "loweralpha" => "a",
+    "lowerroman" => "i",
+    "upperalpha" => "A",
+    "upperroman" => "I",
+  }
+
+  ORDERED_LIST_STYLES = [:arabic, :loweralpha, :lowerroman, :upperalpha, :upperroman]
+
+  PARAGRAPH_STYLES = Set{
+    "abstract", "comment", "example", "listing", "literal", "normal", "open",
+    "partintro", "pass", "quote", "sidebar", "source", "verse",
+  }
+
+  SETEXT_SECTION_LEVELS = {
+    '=' => 0,
+    '-' => 1,
+    '~' => 2,
+    '^' => 3,
+    '+' => 4,
+  }
+
+  # Tab character.
+  TAB = '\t'
+
+  VERBATIM_STYLES = Set{"listing", "literal", "source", "verse"}
 end

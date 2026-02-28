@@ -7,20 +7,20 @@ module Asciidoctor
   abstract class AbstractNode
     include Logging
 
-    # The Hash of attributes for this node
+    # The Hash of attributes for this node.
     getter attributes : Hash(String, String)
 
-    # The Symbol context for this node
+    # The Symbol context for this node.
     getter context : Symbol
 
-    # The String id of this node
+    # The String id of this node.
     property id : String?
 
-    # The String name of this node
+    # The String name of this node.
     getter node_name : String
 
-    # NOTE: document and parent are set by subclass constructors
-    # because of Crystal's strict initialization rules.
+    # The parent AbstractNode of this node.
+    property parent : AbstractNode?
 
     abstract def block? : Bool
     abstract def inline? : Bool
@@ -28,6 +28,22 @@ module Asciidoctor
 
     def initialize(@context : Symbol, @attributes : Hash(String, String) = {} of String => String)
       @node_name = @context.to_s
+      @parent = nil
+    end
+
+    # Adds the given role directly to this node.
+    def add_role(name : String) : Bool
+      if val = @attributes["role"]?
+        if " #{val} ".includes?(" #{name} ")
+          false
+        else
+          @attributes["role"] = "#{val} #{name}"
+          true
+        end
+      else
+        @attributes["role"] = name
+        true
+      end
     end
 
     # Get the value of the specified attribute.
@@ -66,29 +82,9 @@ module Asciidoctor
       end
     end
 
-    # Assign the value to the attribute name for the current node.
-    def set_attr(name : String, value : String = "", overwrite : Bool = true) : Bool
-      if !overwrite && @attributes.has_key?(name)
-        false
-      else
-        @attributes[name] = value
-        true
-      end
-    end
-
-    # Remove the attribute from the current node.
-    def remove_attr(name : String) : String?
-      @attributes.delete(name)
-    end
-
-    # Check if the specified option attribute is enabled on the current node.
-    def option?(name : String) : Bool
-      @attributes.has_key?("#{name}-option")
-    end
-
-    # Set the specified option on this node.
-    def set_option(name : String) : Nil
-      @attributes["#{name}-option"] = ""
+    # Get the Converter instance associated with this node.
+    def converter : Converter?
+      document.converter
     end
 
     # Retrieve the Set of option names that are enabled on this node.
@@ -102,35 +98,6 @@ module Asciidoctor
       result
     end
 
-    # Update the attributes of this node with the new values.
-    def update_attributes(new_attributes : Hash(String, String)) : Hash(String, String)
-      @attributes.merge!(new_attributes)
-    end
-
-    # Retrieves the space-separated String role for this node.
-    def role : String?
-      @attributes["role"]?
-    end
-
-    # Retrieves the String role names for this node as an Array.
-    def roles : Array(String)
-      if val = @attributes["role"]?
-        val.split
-      else
-        [] of String
-      end
-    end
-
-    # Checks if the role attribute is set on this node and, if an expected value
-    # is given, whether the space-separated role matches that value.
-    def role?(expected_value : String? = nil) : Bool
-      if expected_value
-        expected_value == @attributes["role"]?
-      else
-        @attributes.has_key?("role")
-      end
-    end
-
     # Checks if the specified role is present in the list of roles for this node.
     def has_role?(name : String) : Bool
       if val = @attributes["role"]?
@@ -140,24 +107,67 @@ module Asciidoctor
       end
     end
 
-    # Sets the value of the role attribute on this node.
-    def role=(names : String | Array(String))
-      @attributes["role"] = names.is_a?(Array) ? names.join(' ') : names
+    # Construct a URI reference to the target image.
+    def image_uri(target_image : String, asset_dir_key : String = "imagesdir") : String
+      if is_uri?(target_image)
+        target_image
+      elsif (dir = @attributes[asset_dir_key]?) || (dir = document.attributes[asset_dir_key]?)
+        normalize_web_path(target_image, dir)
+      else
+        normalize_web_path(target_image)
+      end
     end
 
-    # Adds the given role directly to this node.
-    def add_role(name : String) : Bool
-      if val = @attributes["role"]?
-        if " #{val} ".includes?(" #{name} ")
-          false
-        else
-          @attributes["role"] = "#{val} #{name}"
-          true
-        end
+    # Check if the specified string is a URI by checking for a URI scheme.
+    def is_uri?(str : String) : Bool
+      str.matches?(/\A[a-zA-Z][a-zA-Z0-9.+-]*:\/\//)
+    end
+
+    # Construct a URI reference to the target media.
+    def media_uri(target : String, asset_dir_key : String = "imagesdir") : String
+      image_uri(target, asset_dir_key)
+    end
+
+    # Resolve and normalize a system path from the target and start paths.
+    def normalize_system_path(target : String, start : String? = nil, jail : String? = nil) : String
+      if target.starts_with?('/')
+        target
+      elsif start
+        File.join(start, target)
       else
-        @attributes["role"] = name
-        true
+        File.join(document.base_dir, target)
       end
+    end
+
+    # Resolve and normalize a web path from the target and start paths.
+    def normalize_web_path(target : String, start : String? = nil) : String
+      if is_uri?(target) || target.starts_with?('/')
+        target
+      elsif start && !start.empty?
+        "#{start}/#{target}"
+      else
+        target
+      end
+    end
+
+    # Check if the specified option attribute is enabled on the current node.
+    def option?(name : String) : Bool
+      @attributes.has_key?("#{name}-option")
+    end
+
+    # A convenience method that checks if the reftext attribute is defined.
+    def reftext? : Bool
+      @attributes.has_key?("reftext")
+    end
+
+    # A convenience method that returns the value of the reftext attribute.
+    def reftext : String?
+      @attributes["reftext"]?
+    end
+
+    # Remove the attribute from the current node.
+    def remove_attr(name : String) : String?
+      @attributes.delete(name)
     end
 
     # Removes the given role directly from this node.
@@ -179,14 +189,53 @@ module Asciidoctor
       end
     end
 
-    # A convenience method that returns the value of the reftext attribute.
-    def reftext : String?
-      @attributes["reftext"]?
+    # Retrieves the space-separated String role for this node.
+    def role : String?
+      @attributes["role"]?
     end
 
-    # A convenience method that checks if the reftext attribute is defined.
-    def reftext? : Bool
-      @attributes.has_key?("reftext")
+    # Sets the value of the role attribute on this node.
+    def role=(names : String | Array(String))
+      @attributes["role"] = names.is_a?(Array) ? names.join(' ') : names
+    end
+
+    # Checks if the role attribute is set on this node and, if an expected value
+    # is given, whether the space-separated role matches that value.
+    def role?(expected_value : String? = nil) : Bool
+      if expected_value
+        expected_value == @attributes["role"]?
+      else
+        @attributes.has_key?("role")
+      end
+    end
+
+    # Retrieves the String role names for this node as an Array.
+    def roles : Array(String)
+      if val = @attributes["role"]?
+        val.split
+      else
+        [] of String
+      end
+    end
+
+    # Assign the value to the attribute name for the current node.
+    def set_attr(name : String, value : String = "", overwrite : Bool = true) : Bool
+      if !overwrite && @attributes.has_key?(name)
+        false
+      else
+        @attributes[name] = value
+        true
+      end
+    end
+
+    # Set the specified option on this node.
+    def set_option(name : String) : Nil
+      @attributes["#{name}-option"] = ""
+    end
+
+    # Update the attributes of this node with the new values.
+    def update_attributes(new_attributes : Hash(String, String)) : Hash(String, String)
+      @attributes.merge!(new_attributes)
     end
   end
 end

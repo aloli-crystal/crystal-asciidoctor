@@ -4,14 +4,14 @@ require "./abstract_node"
 module Asciidoctor
   # Methods and constants for managing AsciiDoc table content in a document.
   class Table < AbstractBlock
-    # Precision of column widths
+    # Precision of column widths.
     DEFAULT_PRECISION = 4
 
-    # A data object that encapsulates the collection of rows (head, foot, body) for a table
+    # A data object that encapsulates the collection of rows (head, foot, body) for a table.
     class Rows
-      property head : Array(Array(Cell))
-      property foot : Array(Array(Cell))
       property body : Array(Array(Cell))
+      property foot : Array(Array(Cell))
+      property head : Array(Array(Cell))
 
       def initialize(@head = [] of Array(Cell), @foot = [] of Array(Cell), @body = [] of Array(Cell))
       end
@@ -27,30 +27,31 @@ module Asciidoctor
       end
     end
 
-    # The columns for this table
+    # The columns for this table.
     property columns : Array(Column)
 
-    # The Rows struct for this table
-    property rows : Rows
-
-    # Boolean specifying whether this table has a header row
+    # Boolean specifying whether this table has a header row.
     property has_header_option : Bool
 
-    # The parent block
+    # The parent block.
     getter parent_block : AbstractBlock
 
-    # The document this table belongs to
+    # The Rows struct for this table.
+    property rows : Rows
+
+    # The document this table belongs to.
     @document : Document
 
     def initialize(@parent_block : AbstractBlock,
                    attributes : Hash(String, String) = {} of String => String)
       super(:table, attributes)
       @document = @parent_block.document
-      @rows = Rows.new
       @columns = [] of Column
       @has_header_option = false
+      @parent = @parent_block
+      @rows = Rows.new
 
-      # Resolve table width
+      # Resolve table width.
       pcwidth = attributes["width"]?
       pcwidth_intval = if pcwidth
                          v = pcwidth.to_i? || 100
@@ -59,6 +60,56 @@ module Asciidoctor
                          100
                        end
       @attributes["tablepcwidth"] = pcwidth_intval.to_s
+    end
+
+    # Assign column widths based on the width base and autowidth columns.
+    def assign_column_widths(width_base : Float64? = nil, autowidth_cols : Array(Column)? = nil) : Nil
+      precision = DEFAULT_PRECISION
+      if width_base
+        total = 0.0
+        @columns.each do |col|
+          total += col.assign_width(nil, width_base, precision)
+        end
+        # Distribute rounding error to last column.
+        if total != 100.0 && !@columns.empty?
+          last = @columns.last
+          diff = 100.0 - total
+          current = last.attributes["colpcwidth"]?.try(&.to_f) || 0.0
+          last.attributes["colpcwidth"] = (current + diff).round(precision).to_s
+        end
+      elsif autowidth_cols
+        if autowidth_cols.size == @columns.size
+          # All columns are autowidth.
+          col_pcwidth = (100.0 / @columns.size).round(precision)
+          @columns.each do |col|
+            col.assign_width(col_pcwidth, nil, precision)
+          end
+        else
+          # Only some columns are autowidth.
+          remaining = 100.0
+          @columns.each do |col|
+            unless autowidth_cols.includes?(col)
+              remaining -= col.assign_width(nil, nil, precision)
+            end
+          end
+          if autowidth_cols.size > 0
+            col_pcwidth = (remaining / autowidth_cols.size).round(precision)
+            autowidth_cols.each do |col|
+              col.assign_width(col_pcwidth, nil, precision)
+            end
+          end
+        end
+      end
+    end
+
+    # Creates the Column objects from the column spec.
+    def create_columns(colspecs : Array(Hash(String, String | Int32))) : Nil
+      cols = [] of Column
+      colspecs.each_with_index do |colspec, idx|
+        cols << Column.new(self, idx, colspec)
+      end
+      @columns = cols
+      @attributes["colcount"] = cols.size.to_s if cols.size > 0
     end
 
     def document : Document
@@ -71,17 +122,7 @@ module Asciidoctor
       @has_header_option && @rows.body.empty?
     end
 
-    # Creates the Column objects from the column spec
-    def create_columns(colspecs : Array(Hash(String, String | Int32))) : Nil
-      cols = [] of Column
-      colspecs.each_with_index do |colspec, idx|
-        cols << Column.new(self, idx, colspec)
-      end
-      @columns = cols
-      @attributes["colcount"] = cols.size.to_s if cols.size > 0
-    end
-
-    # Internal: Partition the rows into header, footer and body
+    # Internal: Partition the rows into header, footer and body.
     def partition_header_footer(attrs : Hash(String, String)) : Nil
       body = @rows.body
       num_body_rows = body.size
@@ -100,38 +141,27 @@ module Asciidoctor
 
   # Methods to manage the columns of an AsciiDoc table.
   class Table::Column < AbstractNode
-    # The style for this column
-    property style : String?
-
-    # The parent table
+    # The parent table.
     getter table : Table
 
-    # The document this column belongs to
+    # The style for this column.
+    property style : String?
+
+    # The document this column belongs to.
     @document : Document
 
     def initialize(@table : Table, index : Int32, attributes : Hash(String, String | Int32) = {} of String => String | Int32)
       super(:table_column, {} of String => String)
       @document = @table.document
+      @parent = @table
       @style = attributes["style"]?.try(&.as(String))
       @attributes["colnumber"] = (index + 1).to_s
-      @attributes["width"] = (attributes["width"]? || 1).to_s
       @attributes["halign"] = (attributes["halign"]?.try(&.as(String))) || "left"
       @attributes["valign"] = (attributes["valign"]?.try(&.as(String))) || "top"
+      @attributes["width"] = (attributes["width"]? || 1).to_s
     end
 
-    def document : Document
-      @document
-    end
-
-    def block? : Bool
-      false
-    end
-
-    def inline? : Bool
-      false
-    end
-
-    # Calculate and assign the widths for this column
+    # Calculate and assign the widths for this column.
     def assign_width(col_pcwidth : Float64?, width_base : Float64?, precision : Int32) : Float64
       if width_base
         w = @attributes["width"]?.try(&.to_f) || 1.0
@@ -144,29 +174,41 @@ module Asciidoctor
       @attributes["colpcwidth"] = result.to_s
       result
     end
+
+    def block? : Bool
+      false
+    end
+
+    def document : Document
+      @document
+    end
+
+    def inline? : Bool
+      false
+    end
   end
 
   # Methods for managing a cell in an AsciiDoc table.
   class Table::Cell < AbstractBlock
-    # The number of columns this cell will span
-    property colspan : Int32?
-
-    # The number of rows this cell will span
-    property rowspan : Int32?
-
-    # The text content of this cell
-    @text : String
-
-    # The style of this cell
+    # The style of this cell.
     property cell_style : Symbol?
 
-    # The nested Document in an AsciiDoc table cell (only set when style is :asciidoc)
-    getter inner_document : Document?
-
-    # The parent column
+    # The parent column.
     getter column : Table::Column
 
-    # The document this cell belongs to
+    # The number of columns this cell will span.
+    property colspan : Int32?
+
+    # The nested Document in an AsciiDoc table cell (only set when style is :asciidoc).
+    getter inner_document : Document?
+
+    # The number of rows this cell will span.
+    property rowspan : Int32?
+
+    # The text content of this cell.
+    @text : String
+
+    # The document this cell belongs to.
     @document : Document
 
     def initialize(@column : Table::Column, cell_text : String = "",
@@ -175,17 +217,47 @@ module Asciidoctor
                    style : Symbol? = nil)
       super(:table_cell, attributes)
       @document = @column.document
-      @text = cell_text
+      @cell_style = style || ((@column.style && !@column.style.try(&.empty?)) ? nil : nil)
       @colspan = colspan
-      @rowspan = rowspan
-      @cell_style = style || @column.style.try { |s| s.empty? ? nil : s.to_sym }
-      @inner_document = nil
       @content_model = ContentModel::Simple
+      @inner_document = nil
+      @parent = @column
+      @rowspan = rowspan
       @subs = NORMAL_SUBS
+      @text = cell_text
+    end
+
+    # Handles the body data (tbody, tfoot), applying styles and partitioning into paragraphs.
+    def content : String | Array(String)
+      if @cell_style == :asciidoc && (inner = @inner_document)
+        inner.to_s
+      elsif @text.includes?("\n\n")
+        @text.split(/\n{2,}/)
+      else
+        [@text]
+      end
     end
 
     def document : Document
       @document
+    end
+
+    # Get the source file where this cell started.
+    def file : String?
+      @source_location.try(&.file)
+    end
+
+    # Get the source line number where this cell started.
+    def lineno : Int32?
+      @source_location.try(&.lineno)
+    end
+
+    def lines : Array(String)
+      @text.split('\n')
+    end
+
+    def source : String
+      @text
     end
 
     # Get the String text of this cell with substitutions applied.
@@ -199,36 +271,8 @@ module Asciidoctor
       @text = val
     end
 
-    # Handles the body data (tbody, tfoot), applying styles and partitioning into paragraphs
-    def content : String | Array(String)
-      if @cell_style == :asciidoc && (inner = @inner_document)
-        inner.to_s
-      elsif @text.includes?("\n\n")
-        @text.split(/\n{2,}/)
-      else
-        [@text]
-      end
-    end
-
-    def lines : Array(String)
-      @text.split('\n')
-    end
-
-    def source : String
-      @text
-    end
-
     def to_s(io : IO) : Nil
       io << "#<" << self.class.name << " {text: " << @text.inspect << ", colspan: " << (@colspan || 1) << ", rowspan: " << (@rowspan || 1) << "}>"
     end
-  end
-end
-
-# Helper to convert a String to a Symbol-like value
-class String
-  def to_sym : Symbol
-    # Crystal doesn't have runtime symbol creation from strings,
-    # but we can use this for known values
-    raise "Cannot convert arbitrary string to symbol at runtime in Crystal"
   end
 end

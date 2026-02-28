@@ -6,10 +6,10 @@ description: |
   Provides an AST model and parser for AsciiDoc documents.
 
 authors:
-  - aloli
+  - Philippe Nénert @papilip
 
 crystal: ">= 1.19.0"
 
 license: MIT
 
-repository: https://github.com/aloli/crystal-asciidoctor
+repository: https://github.com/papilip/crystal-asciidoctor
