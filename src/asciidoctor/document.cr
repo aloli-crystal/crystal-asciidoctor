@@ -83,7 +83,7 @@ module Asciidoctor
     getter? compat_mode : Bool
 
     # The Converter associated with this document.
-    getter converter : Converter?
+    property converter : Converter::Base?
 
     # The Hash of document counters.
     getter counters : Hash(String, Int32 | String)
@@ -198,6 +198,10 @@ module Asciidoctor
     def doctitle(opts : Hash(Symbol, Bool) = {} of Symbol => Bool) : String?
       if (hdr = @header)
         hdr.title
+      elsif (dt = @attributes["doctitle"]?)
+        dt
+      elsif @title
+        @title
       elsif opts[:use_fallback]?
         @attributes["untitled-label"]? || "Untitled"
       else
@@ -369,10 +373,7 @@ module Asciidoctor
   end
 
   # Placeholder types for future implementation.
-  class Converter
-    def convert(node : AbstractNode) : String
-      "" # placeholder
-    end
+  module Converter
   end
 
   class SyntaxHighlighter

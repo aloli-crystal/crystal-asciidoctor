@@ -193,6 +193,12 @@ module Asciidoctor
   # Matches a kbd or btn inline macro.
   InlineKbdBtnMacroRx = /(\\)?(kbd|btn):\[(.*?[^\\])\]/m
 
+  # Matches a kbd inline macro.
+  InlineKbdMacroRx = /\\?kbd:\[(.*?[^\\])\]/m
+
+  # Matches a btn inline macro.
+  InlineBtnMacroRx = /\\?btn:\[(.*?[^\\])\]/m
+
   # Matches an implicit link and some of the link inline macro.
   InlineLinkRx = /(^|link:|[\p{Zs}\t]|\\?&lt;()|[>\(\)\[\];"'])(\\?(?:https?|file|ftp|irc):\/\/)(?:([^\s\[\]]+)\[(|.*?[^\\])\]|\2([^\s]+?)&gt;|([^\s\[\]<]*([^\s,.?!\[\]<\)])))/m
 
@@ -251,6 +257,9 @@ module Asciidoctor
 
   # Matches one or more consecutive digits at the end of a line.
   TrailingDigitsRx = /\d+$/
+
+  # Matches callout source markers.
+  CalloutSourceRx = /((?:\/\/|#|--|;;) ?)?(\\)?&lt;!?(|--)([\d]+|\.)\3&gt;(?=(?: ?\\?&lt;!?\3(?:\d+|\.)\3&gt;)*$)/
 
   # Detects strings that resemble URIs.
   UriSniffRx = /\A\p{L}[\p{Xan}.+-]+:\/{0,2}/

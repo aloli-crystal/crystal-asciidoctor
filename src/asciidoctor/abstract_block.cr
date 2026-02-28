@@ -7,6 +7,8 @@ module Asciidoctor
   # block-level node of AsciiDoc content. Block-level nodes include Document,
   # Section, Block, List, ListItem, and Table.
   abstract class AbstractBlock < AbstractNode
+    include Substitutors
+
     # The Array of child blocks for this block.
     getter blocks : Array(AbstractBlock)
 
@@ -44,6 +46,9 @@ module Asciidoctor
     # Default substitutions.
     @default_subs : Substitution?
 
+    # Substitutions list (symbol-based, used by Substitutors module).
+    property subs_list : Array(Symbol) = [] of Symbol
+
     def initialize(@context : Symbol, @attributes : Hash(String, String) = {} of String => String)
       super(@context, @attributes)
       @blocks = [] of AbstractBlock
@@ -56,9 +61,11 @@ module Asciidoctor
       @next_section_index = 0
       @next_section_ordinal = 1
       @numeral = nil
+      @passthroughs = [] of PassthroughEntry
       @source_location = nil
       @style = nil
       @subs = Substitution::None
+      @subs_list = [] of Symbol
       @title = nil
     end
 
@@ -127,7 +134,7 @@ module Asciidoctor
     def content : String?
       case @content_model
       when ContentModel::Compound
-        @blocks.map(&.to_s).join('\n')
+        @blocks.map { |b| b.convert }.join('\n')
       else
         nil
       end

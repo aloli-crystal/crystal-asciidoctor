@@ -63,7 +63,7 @@ module Asciidoctor
     def content : String?
       case @content_model
       when ContentModel::Compound
-        @blocks.map(&.to_s).join('\n')
+        @blocks.map { |b| b.convert }.join('\n')
       when ContentModel::Simple
         # TODO: apply_subs(@lines.join('\n'), @subs)
         @lines.join('\n')

@@ -20,6 +20,10 @@ module Asciidoctor
     # Flag to indicate whether this is a special section or a child of one.
     property special : Bool
 
+    def special? : Bool
+      @special
+    end
+
     # The document this section belongs to.
     @document : Document
 
@@ -37,7 +41,7 @@ module Asciidoctor
       end
       @index = 0
       @numbered = numbered
-      @sectname = nil
+      @sectname = @special ? nil : "section"
     end
 
     # Append a content block to this block's list of blocks.

@@ -83,7 +83,7 @@ module Asciidoctor
     end
 
     # Get the Converter instance associated with this node.
-    def converter : Converter?
+    def converter : Converter::Base?
       document.converter
     end
 
@@ -104,6 +104,17 @@ module Asciidoctor
         " #{val} ".includes?(" #{name} ")
       else
         false
+      end
+    end
+
+    # Construct a URI reference to the target icon.
+    def icon_uri(name : String) : String
+      if (icon_dir = @attributes["iconsdir"]?) || (icon_dir = document.attributes["iconsdir"]?)
+        icon_type = @attributes["icontype"]? || document.attributes["icontype"]? || "png"
+        normalize_web_path("#{name}.#{icon_type}", icon_dir)
+      else
+        icon_type = @attributes["icontype"]? || document.attributes["icontype"]? || "png"
+        normalize_web_path("#{name}.#{icon_type}", "./images/icons")
       end
     end
 

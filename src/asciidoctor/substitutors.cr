@@ -1,0 +1,642 @@
+module Asciidoctor
+  # Additional constants used by the Substitutors module
+  PASS_START = "\u0096"
+  PASS_END   = "\u0097"
+  R_SB       = "]"
+  ESC_R_SB   = "\\]"
+  RS         = "\\"
+  PLUS_CHAR  = "+"
+
+  # Sub groups map symbol names to arrays of substitution symbols
+  SUB_GROUPS = {
+    :attributes        => [:attributes],
+    :macros            => [:macros],
+    :none              => [] of Symbol,
+    :normal            => [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements],
+    :pass              => [] of Symbol,
+    :post_replacements => [:post_replacements],
+    :quotes            => [:quotes],
+    :replacements      => [:replacements],
+    :specialcharacters => [:specialcharacters],
+    :verbatim          => [:specialcharacters, :callouts],
+  }
+
+  SUB_HINTS = {
+    :a => :attributes,
+    :c => :specialcharacters,
+    :m => :macros,
+    :n => :normal,
+    :p => :post_replacements,
+    :q => :quotes,
+    :r => :replacements,
+    :v => :verbatim,
+  }
+
+  SUB_OPTIONS = {
+    :block  => [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements, :callouts, :highlight],
+    :inline => [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements],
+  }
+
+  PassSlotRx = /#{Regex.escape(PASS_START)}(\d+)#{Regex.escape(PASS_END)}/
+
+  # Quoted text substitution pattern prefix
+  QUOTE_ATTR_LIST_RXT = "\\[([^\\[\\]]+)\\]"
+
+  # Replacement patterns (order is significant)
+  REPLACEMENTS = [
+    {/\\?\(C\)/, "&#169;", :none},
+    {/\\?\(R\)/, "&#174;", :none},
+    {/\\?\(TM\)/, "&#8482;", :none},
+    {/(?: |\n|^|\\)--(?: |\n|$)/, "&#8201;&#8212;&#8201;", :none},
+    {/([\p{Xwd}])\\?--(?=[\p{Xwd}])/, "&#8212;&#8203;", :leading},
+    {/\\?\.\.\./, "&#8230;&#8203;", :none},
+    {/\\?`'/, "&#8217;", :none},
+    {/([\p{Xan}])\\?'(?=[\p{L}])/, "&#8217;", :leading},
+    {/\\?-&gt;/, "&#8594;", :none},
+    {/\\?=&gt;/, "&#8658;", :none},
+    {/\\?&lt;-/, "&#8592;", :none},
+    {/\\?&lt;=/, "&#8656;", :none},
+    {/\\?(&)amp;((?:[a-zA-Z][a-zA-Z]+\d{0,2}|#\d\d\d{0,4}|#x[\da-fA-F][\da-fA-F][\da-fA-F]{0,3});)/, "", :bounding},
+  ]
+
+  # Passthrough data stored during extraction
+  record PassthroughEntry,
+    text : String,
+    subs : Array(Symbol) = [] of Symbol,
+    type : Symbol? = nil,
+    attributes : Hash(String, String)? = nil
+
+  # Module included in AbstractBlock subclasses to provide text substitution capabilities.
+  module Substitutors
+    @passthroughs : Array(PassthroughEntry) = [] of PassthroughEntry
+
+    # Apply the specified substitutions to the text.
+    def apply_subs(text : String, subs : Array(Symbol)) : String
+      return text if subs.empty?
+      result = text
+      subs.each do |sub|
+        result = case sub
+                 when :specialcharacters then sub_specialchars(result)
+                 when :quotes            then sub_quotes(result)
+                 when :attributes        then sub_attributes(result)
+                 when :replacements      then sub_replacements(result)
+                 when :macros            then sub_macros(result)
+                 when :post_replacements then sub_post_replacements(result)
+                 when :callouts          then sub_callouts(result)
+                 when :highlight         then sub_specialchars(result)
+                 else                         result
+                 end
+      end
+      result
+    end
+
+    # Apply substitutions to a String value (convenience for AttributeList).
+    def apply_subs_str(value : String) : String
+      apply_subs(value, [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements])
+    end
+
+    # Commit substitutions based on content model and custom subs attribute.
+    def commit_subs
+      default_subs = @default_subs
+      unless default_subs
+        default_subs = case @content_model
+                       when ContentModel::Simple
+                         [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements]
+                       when ContentModel::Verbatim
+                         @context == :verse ? [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] : [:specialcharacters, :callouts]
+                       when ContentModel::Raw
+                         @context == :stem ? [:specialcharacters] : [] of Symbol
+                       else
+                         return @subs_list
+                       end
+      end
+
+      if (custom_subs = @attributes["subs"]?)
+        @subs_list = resolve_block_subs(custom_subs, default_subs) || [] of Symbol
+      else
+        @subs_list = default_subs.dup
+      end
+      nil
+    end
+
+    # Expand all groups in the subs list.
+    def expand_subs(subs : Array(Symbol)) : Array(Symbol)?
+      expanded = [] of Symbol
+      subs.each do |key|
+        next if key == :none
+        if (group = SUB_GROUPS[key]?)
+          expanded += group
+        else
+          expanded << key
+        end
+      end
+      expanded.empty? ? nil : expanded
+    end
+
+    # Extract passthrough text from the document for reinsertion after processing.
+    def extract_passthroughs(text : String) : String
+      return text unless text.includes?("++") || text.includes?("$$") || text.includes?("ss:")
+      passthrus = @passthroughs
+      result = text.gsub(InlinePassMacroRx) do |match_str, md|
+        if (boundary = md[4]?)
+          content = md[5]? || ""
+          subs = boundary == "+++" ? [] of Symbol : [:specialcharacters]
+          passthrus << PassthroughEntry.new(text: content, subs: subs)
+          "#{PASS_START}#{passthrus.size - 1}#{PASS_END}"
+        elsif md[6]?
+          content = md[8]? || ""
+          subs_str = md[7]?
+          if subs_str
+            passthrus << PassthroughEntry.new(text: normalize_text(content), subs: resolve_pass_subs(subs_str))
+          else
+            passthrus << PassthroughEntry.new(text: normalize_text(content))
+          end
+          "#{PASS_START}#{passthrus.size - 1}#{PASS_END}"
+        else
+          match_str
+        end
+      end
+      result
+    end
+
+    # Normalize text by stripping whitespace and folding newlines.
+    def normalize_text(text : String, normalize_whitespace : Bool? = nil, unescape_closing_square_brackets : Bool? = nil) : String
+      return text if text.empty?
+      result = text
+      result = result.strip.tr("\n", " ") if normalize_whitespace
+      result = result.gsub(ESC_R_SB, R_SB) if unescape_closing_square_brackets && result.includes?(R_SB)
+      result
+    end
+
+    # Parse inline attributes from an attrlist string.
+    def parse_inline_attributes(attrlist : String, positional_attrs : Array(String) = [] of String) : Hash(String, String)
+      return {} of String => String if attrlist.empty?
+      attrs = AttributeList.new(attrlist, self.as(AbstractBlock)).parse(positional_attrs)
+      result = {} of String => String
+      attrs.each do |k, v|
+        result[k.to_s] = v
+      end
+      result
+    end
+
+    # Parse quoted text attributes (role and id shorthand).
+    def parse_quoted_text_attributes(str : String) : Hash(String, String)
+      str = sub_attributes(str) if str.includes?(ATTR_REF_HEAD)
+      if str.includes?(',')
+        idx = str.index(',')
+        str = str[0...idx.not_nil!] if idx
+      end
+      str = str.strip
+      return {} of String => String if str.empty?
+      if str.starts_with?('.') || str.starts_with?('#')
+        before, _, after = str.partition('#')
+        attrs = {} of String => String
+        if after.empty?
+          attrs["role"] = before.tr(".", " ").lstrip if before.size > 1
+        else
+          id, _, roles = after.partition('.')
+          attrs["id"] = id unless id.empty?
+          if roles.empty?
+            attrs["role"] = before.tr(".", " ").lstrip if before.size > 1
+          elsif before.size > 1
+            attrs["role"] = (before + "." + roles).tr(".", " ").lstrip
+          else
+            attrs["role"] = roles.tr(".", " ")
+          end
+        end
+        attrs
+      else
+        {"role" => str}
+      end
+    end
+
+    # Resolve block substitutions.
+    def resolve_block_subs(subs : String, defaults : Array(Symbol), subject : String? = nil) : Array(Symbol)?
+      resolve_subs(subs, :block, defaults, subject)
+    end
+
+    # Resolve pass substitutions.
+    def resolve_pass_subs(subs : String, subject : String = "passthrough macro") : Array(Symbol)
+      resolve_subs(subs, :inline, nil, subject) || [] of Symbol
+    end
+
+    # Resolve comma-delimited subs against the possible options.
+    def resolve_subs(subs : String, type : Symbol = :block, defaults : Array(Symbol)? = nil, subject : String? = nil) : Array(Symbol)?
+      return nil if subs.empty?
+      candidates : Array(Symbol)? = nil
+      subs = subs.delete(' ') if subs.includes?(' ')
+      modifiers_present = SubModifierSniffRx.matches?(subs)
+      subs.split(',').each do |key|
+        modifier_operation : Symbol? = nil
+        if modifiers_present
+          first = key[0]?
+          if first == '+'
+            modifier_operation = :append
+            key = key[1..]
+          elsif first == '-'
+            modifier_operation = :remove
+            key = key[1..]
+          elsif key.ends_with?('+')
+            modifier_operation = :prepend
+            key = key[0...-1]
+          end
+        end
+        key_sym = string_to_sub_symbol(key)
+        if type == :inline && (key_sym == :verbatim || key_sym == :v)
+          resolved_keys = [:specialcharacters]
+        elsif (group = SUB_GROUPS[key_sym]?)
+          resolved_keys = group
+        elsif type == :inline && key.size == 1 && (hint = SUB_HINTS[key_sym]?)
+          if (candidate = SUB_GROUPS[hint]?)
+            resolved_keys = candidate
+          else
+            resolved_keys = [hint]
+          end
+        else
+          resolved_keys = [key_sym]
+        end
+
+        if modifier_operation
+          candidates ||= defaults ? defaults.dup : [] of Symbol
+          case modifier_operation
+          when :append
+            candidates = candidates.not_nil! + resolved_keys
+          when :prepend
+            candidates = resolved_keys + candidates.not_nil!
+          when :remove
+            candidates = candidates.not_nil! - resolved_keys
+          end
+        else
+          candidates ||= [] of Symbol
+          candidates = candidates.not_nil! + resolved_keys
+        end
+      end
+      return nil unless candidates
+      valid_options = SUB_OPTIONS[type]? || [] of Symbol
+      candidates.not_nil!.select { |s| valid_options.includes?(s) }.uniq
+    end
+
+    # Restore the passthrough text by reinserting into the placeholder positions.
+    def restore_passthroughs(text : String) : String
+      return text unless text.includes?(PASS_START)
+      passthrus = @passthroughs
+      text.gsub(PassSlotRx) do |match_str, md|
+        idx = md[1].to_i
+        if idx < passthrus.size
+          pass = passthrus[idx]
+          subbed_text = apply_subs(pass.text, pass.subs)
+          if (type = pass.type)
+            subbed_text = Inline.new(self.as(AbstractBlock), :quoted, subbed_text,
+              type: type,
+              attributes: pass.attributes).convert
+          end
+          subbed_text.includes?(PASS_START) ? restore_passthroughs(subbed_text) : subbed_text
+        else
+          "??pass??"
+        end
+      end
+    end
+
+    # Split text formatted as CSV with support for double-quoted values.
+    def split_simple_csv(str : String) : Array(String)
+      return [] of String if str.empty?
+      if str.includes?('"')
+        values = [] of String
+        accum = ""
+        quote_open = false
+        str.each_char do |c|
+          case c
+          when ','
+            if quote_open
+              accum += c
+            else
+              values << accum.strip
+              accum = ""
+            end
+          when '"'
+            quote_open = !quote_open
+          else
+            accum += c
+          end
+        end
+        values << accum.strip
+        values
+      else
+        str.split(',').map(&.strip)
+      end
+    end
+
+    # Substitute attribute references.
+    def sub_attributes(text : String) : String
+      return text unless text.includes?(ATTR_REF_HEAD)
+      doc = if self.responds_to?(:document)
+              self.document
+            elsif self.is_a?(Document)
+              self.as(Document)
+            else
+              return text
+            end
+      text.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
+        attr_name = md[1]
+        if (val = doc.attributes[attr_name]?)
+          val
+        elsif (val = INTRINSIC_ATTRIBUTES[attr_name]?)
+          val
+        else
+          match_str
+        end
+      end
+    end
+
+    # Substitute callout markers in source listings.
+    def sub_callouts(text : String) : String
+      autonum = 0
+      text.gsub(CalloutSourceRx) do |match_str, md|
+        if md[2]?
+          match_str.sub(RS, "")
+        else
+          num_str = md[4]? || ""
+          num = num_str == "." ? (autonum += 1).to_s : num_str
+          guard = md[1]?
+          Inline.new(self.as(AbstractBlock), :callout, num,
+            id: document.callouts.read_next_id.to_s,
+            attributes: {"guard" => guard || ""}).convert
+        end
+      end
+    end
+
+    # Substitute inline macros (links, images, footnotes, etc.).
+    def sub_macros(text : String) : String
+      return text if text.empty?
+      result = text
+
+      # Inline image macros: image:target[alt] and icon:name[alt]
+      if result.includes?("image:") || result.includes?("icon:")
+        result = result.gsub(InlineImageMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            target = md[1]? || ""
+            attrlist = md[2]? || ""
+            attrs = parse_inline_attributes(attrlist, ["alt", "width", "height"])
+            attrs["target"] = target
+            attrs["alt"] ||= File.basename(target, File.extname(target))
+            Inline.new(self.as(AbstractBlock), :image, nil,
+              type: :image,
+              target: target,
+              attributes: attrs).convert
+          end
+        end
+      end
+
+      # Inline anchor macros: [[id,reftext]] and anchor:id[reftext]
+      if result.includes?("[[") || result.includes?("anchor:")
+        result = result.gsub(InlineAnchorRx) do |match_str, md|
+          if md[1]?
+            match_str[1..]
+          else
+            id = md[2]? || md[4]? || ""
+            reftext = md[3]? || md[5]?
+            Inline.new(self.as(AbstractBlock), :anchor, reftext,
+              type: :ref, id: id).convert
+          end
+        end
+      end
+
+      # Inline xref macros: <<id,text>> and xref:id[text]
+      if (result.includes?("&") && result.includes?(";&l")) || result.includes?("xref:")
+        result = result.gsub(InlineXrefMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            attrs = {} of String => String
+            link_text : String? = nil
+            if (refid = md[1]?)
+              if refid.includes?(",")
+                refid, _, lt = refid.partition(",")
+                link_text = lt.strip.empty? ? nil : lt.strip
+              end
+            else
+              refid = md[2]? || ""
+              link_text = md[3]?
+            end
+            fragment = refid
+            target = "##{fragment}"
+            attrs["path"] = ""
+            attrs["fragment"] = fragment || ""
+            attrs["refid"] = refid || ""
+            Inline.new(self.as(AbstractBlock), :anchor, link_text,
+              type: :xref, target: target, attributes: attrs).convert
+          end
+        end
+      end
+
+      # Inline link macros and auto-detected URLs
+      if result.includes?("://") || result.includes?("link:")
+        result = result.gsub(InlineLinkRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            prefix = md[1]? || ""
+            target = md[3]? || ""
+            link_text = md[5]? || md[6]? || md[7]? || target
+            prefix = "" if prefix == "link:"
+            Inline.new(self.as(AbstractBlock), :anchor, link_text,
+              type: :link, target: target).convert
+          end
+        end
+      end
+
+      # Inline kbd macro: kbd:[keys]
+      if result.includes?("kbd:")
+        result = result.gsub(InlineKbdMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            keys_str = md[1]? || ""
+            Inline.new(self.as(AbstractBlock), :kbd, nil,
+              attributes: {"keys" => keys_str}).convert
+          end
+        end
+      end
+
+      # Inline btn macro: btn:[label]
+      if result.includes?("btn:")
+        result = result.gsub(InlineBtnMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            label = md[1]? || ""
+            Inline.new(self.as(AbstractBlock), :button, label).convert
+          end
+        end
+      end
+
+      # Inline menu macro: menu:name[items]
+      if result.includes?("menu:")
+        result = result.gsub(InlineMenuMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            menu = md[1]? || ""
+            items = md[2]? || ""
+            Inline.new(self.as(AbstractBlock), :menu, nil,
+              attributes: {"menu" => menu, "submenus" => "", "menuitem" => items}).convert
+          end
+        end
+      end
+
+      result
+    end
+
+    # Substitute post replacements (hard line breaks).
+    def sub_post_replacements(text : String) : String
+      if (self.responds_to?(:attributes) && self.attributes["hardbreaks-option"]?) ||
+         (self.responds_to?(:document) && self.document.attributes["hardbreaks-option"]?)
+        lines = text.split("\n", remove_empty: false)
+        return text if lines.size < 2
+        last = lines.pop
+        result = lines.map do |line|
+          if line.ends_with?(HARD_LINE_BREAK)
+            Inline.new(self.as(AbstractBlock), :break, line[0...-2], type: :line).convert
+          else
+            Inline.new(self.as(AbstractBlock), :break, line, type: :line).convert
+          end
+        end
+        result << last
+        result.join("\n")
+      elsif text.includes?(PLUS_CHAR) && text.includes?(HARD_LINE_BREAK)
+        text.gsub(HardLineBreakRx) do |match_str, md|
+          Inline.new(self.as(AbstractBlock), :break, md[1], type: :line).convert
+        end
+      else
+        text
+      end
+    end
+
+    # Substitute quoted text (bold, italic, monospace, etc.).
+    def sub_quotes(text : String) : String
+      result = text
+      quote_subs = quote_subs_for(false)
+      quote_subs.each do |type, scope, pattern|
+        result = result.gsub(pattern) do |match_str, md|
+          convert_quoted_text(md, type, scope)
+        end
+      end
+      result
+    end
+
+    # Substitute replacement characters.
+    def sub_replacements(text : String) : String
+      return text unless ReplaceableTextRx.matches?(text)
+      result = text
+      REPLACEMENTS.each do |pattern, replacement, restore|
+        result = result.gsub(pattern) do |match_str, md|
+          do_replacement(md, replacement, restore)
+        end
+      end
+      result
+    end
+
+    # Substitute special characters (XML entities).
+    def sub_specialchars(text : String) : String
+      return text if text.empty?
+      text.gsub('&', "&amp;").gsub('<', "&lt;").gsub('>', "&gt;")
+    end
+
+    # Substitute source code with optional callout processing.
+    def sub_source(source : String, process_callouts : Bool) : String
+      process_callouts ? sub_callouts(sub_specialchars(source)) : sub_specialchars(source)
+    end
+
+    # Internal: Convert a quoted text region.
+    private def convert_quoted_text(md : Regex::MatchData, type : Symbol, scope : Symbol) : String
+      match_str = md[0]
+      if match_str.starts_with?(RS)
+        if scope == :constrained && md[2]?
+          return "[#{md[2]}]#{Inline.new(self.as(AbstractBlock), :quoted, md[3]? || "", type: type).convert}"
+        else
+          return match_str[1..]
+        end
+      end
+
+      if scope == :constrained
+        if (attrlist = md[2]?)
+          id = (attributes = parse_quoted_text_attributes(attrlist))["id"]?
+          type = :unquoted if type == :mark
+        end
+        "#{md[1]?}#{Inline.new(self.as(AbstractBlock), :quoted, md[3]? || "", type: type, id: id, attributes: attributes).convert}"
+      else
+        if (attrlist = md[1]?)
+          id = (attributes = parse_quoted_text_attributes(attrlist))["id"]?
+          type = :unquoted if type == :mark
+        end
+        Inline.new(self.as(AbstractBlock), :quoted, md[2]? || "", type: type, id: id, attributes: attributes).convert
+      end
+    end
+
+    # Internal: Perform replacement substitution.
+    private def do_replacement(md : Regex::MatchData, replacement : String, restore : Symbol) : String
+      captured = md[0]
+      if captured.includes?(RS)
+        captured.sub(RS, "")
+      else
+        case restore
+        when :none
+          replacement
+        when :bounding
+          "#{md[1]?}#{replacement}#{md[2]?}"
+        else # :leading
+          "#{md[1]?}#{replacement}"
+        end
+      end
+    end
+
+    # Build the quote substitution patterns.
+    private def quote_subs_for(compat_mode : Bool) : Array(Tuple(Symbol, Symbol, Regex))
+      qa = QUOTE_ATTR_LIST_RXT
+      [
+        {:strong, :unconstrained, /\\?(?:#{qa})?\*\*(.+?)\*\*/m},
+        {:strong, :constrained, /(^|[^\p{Xwd};:}])(?:#{qa})?\*(\S|\S.*?\S)\*(?![\p{Xwd}])/m},
+        {:double, :constrained, /(^|[^\p{Xwd};:}])(?:#{qa})?"`(\S|\S.*?\S)`"(?![\p{Xwd}])/m},
+        {:single, :constrained, /(^|[^\p{Xwd};:`}])(?:#{qa})?'`(\S|\S.*?\S)`'(?![\p{Xwd}])/m},
+        {:monospaced, :unconstrained, /\\?(?:#{qa})?``(.+?)``/m},
+        {:monospaced, :constrained, /(^|[^\p{Xwd};:"'`}])(?:#{qa})?`(\S|\S.*?\S)`(?![\p{Xwd}"'`])/m},
+        {:emphasis, :unconstrained, /\\?(?:#{qa})?__(.+?)__/m},
+        {:emphasis, :constrained, /(^|[^\p{Xwd};:}])(?:#{qa})?_(\S|\S.*?\S)_(?![\p{Xwd}])/m},
+        {:mark, :unconstrained, /\\?(?:#{qa})?##(.+?)##/m},
+        {:mark, :constrained, /(^|[^\p{Xwd}&;:}])(?:#{qa})?#(\S|\S.*?\S)#(?![\p{Xwd}])/m},
+        {:superscript, :unconstrained, /\\?(?:#{qa})?\^(\S+?)\^/},
+        {:subscript, :unconstrained, /\\?(?:#{qa})?~(\S+?)~/},
+      ]
+    end
+
+    # Convert a string to a substitution symbol.
+    private def string_to_sub_symbol(str : String) : Symbol
+      case str
+      when "attributes"        then :attributes
+      when "callouts"          then :callouts
+      when "highlight"         then :highlight
+      when "macros"            then :macros
+      when "none"              then :none
+      when "normal"            then :normal
+      when "pass"              then :pass
+      when "post_replacements" then :post_replacements
+      when "quotes"            then :quotes
+      when "replacements"      then :replacements
+      when "specialcharacters" then :specialcharacters
+      when "specialchars"      then :specialcharacters
+      when "verbatim"          then :verbatim
+      when "a"                 then :a
+      when "c"                 then :c
+      when "m"                 then :m
+      when "n"                 then :n
+      when "p"                 then :p
+      when "q"                 then :q
+      when "r"                 then :r
+      when "v"                 then :v
+      else                          :none
+      end
+    end
+  end
+end
