@@ -303,7 +303,7 @@ module Asciidoctor
           if (type = pass.type)
             subbed_text = Inline.new(self.as(AbstractBlock), :quoted, subbed_text,
               type: type,
-              attributes: pass.attributes).convert
+              attributes: pass.attributes || {} of String => String).convert
           end
           subbed_text.includes?(PASS_START) ? restore_passthroughs(subbed_text) : subbed_text
         else
