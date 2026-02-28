@@ -119,12 +119,16 @@ module Asciidoctor
       end
     end
 
-    # Internal: Resolve the specified object as a Class.
-    # In Crystal, this is not directly applicable. Returns nil.
-    # Kept for API compatibility.
-    # def resolve_class(object) : Nil
-    #   nil
-    # end
+    # Internal: Resolve a system path from the target and start values.
+    def resolve(target : String, start : String? = nil) : String
+      if target.starts_with?("/") || target.starts_with?("~")
+        File.expand_path(target)
+      elsif start
+        File.expand_path(target, start)
+      else
+        File.expand_path(target)
+      end
+    end
 
     # Internal: Converts an uppercase Roman numeral to an integer.
     def roman_to_int(val : String) : Int32

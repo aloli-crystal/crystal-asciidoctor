@@ -130,12 +130,37 @@ module Asciidoctor
   CalloutExtractRx = /((?:\/\/|#|--|;;) ?)?(\\)?<!?(|--)(\d+|\.)(\3)>(?=(?: ?\\?<!?\3(?:\d+|\.)\3>)*$)/
   CalloutScanRx    = /\\?<!?(|--)(\d+|\.)\1>(?=(?: ?\\?<!?\1(?:\d+|\.)\1>)*$)/
 
-  # A Hash of regexps for lists used for dynamic access.
+  # A Hash of regexps for lists used for dynamic access (string keys).
   LIST_RX_MAP = {
     "ulist"  => UnorderedListRx,
     "olist"  => OrderedListRx,
     "dlist"  => DescriptionListRx,
     "colist" => CalloutListRx,
+  }
+
+  # A Hash of regexps for lists used for dynamic access (symbol keys).
+  ListRxMap = {
+    :ulist  => UnorderedListRx,
+    :olist  => OrderedListRx,
+    :dlist  => DescriptionListRx,
+    :colist => CalloutListRx,
+  }
+
+  # A Hash mapping ordered list styles to their marker patterns.
+  OrderedListMarkerRxMap = {
+    :arabic     => /^\d+\.$/,
+    :loweralpha => /^[a-z]\.$/,
+    :lowerroman => /^[ivx]+\)$/,
+    :upperalpha => /^[A-Z]\.$/,
+    :upperroman => /^[IVX]+\)$/,
+  }
+
+  # Matches a sibling description list item (excluding the delimiter specified by the key).
+  DescriptionListSiblingRx = {
+    "::"   => /^(?!\/\/[^\/])[ \t]*([^ \t].*?[^:]|[^ \t:])(::)(?:$|[ \t]+(.*)$)/,
+    ":::"  => /^(?!\/\/[^\/])[ \t]*([^ \t].*?[^:]|[^ \t:])(:::)(?:$|[ \t]+(.*)$)/,
+    "::::" => /^(?!\/\/[^\/])[ \t]*([^ \t].*?[^:]|[^ \t:])(::::)(?:$|[ \t]+(.*)$)/,
+    ";;"   => /^(?!\/\/[^\/])[ \t]*([^ \t].*?)(;;)(?:$|[ \t]+(.*)$)/,
   }
 
   # --------------------------------------------------------------------------
@@ -266,4 +291,10 @@ module Asciidoctor
 
   # Detects XML tags.
   XmlSanitizeRx = /<[^>]+>/
+
+  # Sentinel values for list continuation tracking.
+  # In Ruby, ListContinuationMarker is a Module mixed into String instances.
+  # In Crystal, we use unique sentinel strings to distinguish continuation lines.
+  LIST_CONTINUATION_STRING      = "\x19"
+  LIST_CONTINUATION_PLACEHOLDER = "\x1a"
 end

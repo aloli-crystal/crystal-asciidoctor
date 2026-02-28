@@ -121,6 +121,78 @@ module Asciidoctor
       nil
     end
 
+    # Catalog callout markers found in the text.
+    def catalog_callouts(text : String, document : Document) : Bool
+      found = false
+      autonum = 0
+      if text.includes?('<')
+        text.scan(CalloutScanRx) do |md|
+          found = true
+          unless md[0].starts_with?("\\")
+            num_str = md[2]? || ""
+            num = num_str == "." ? (autonum += 1).to_s : num_str
+            document.callouts.register(num.to_i)
+          end
+        end
+      end
+      found
+    end
+
+    # Catalog a matched inline anchor.
+    def catalog_inline_anchor(id : String, reftext : String?, node : AbstractBlock, location : Reader | Cursor, doc : Document? = nil) : Nil
+      doc = node.document unless doc
+      reftext = doc.sub_attributes(reftext) if reftext && reftext.includes?(ATTR_REF_HEAD)
+      ref = Inline.new(node, :anchor, reftext, type: :ref, id: id)
+      unless doc.register(:refs, {id, ref.as(AbstractNode)})
+        cursor = location.is_a?(Reader) ? location.cursor_at_prev_line : location.as(Cursor)
+        logger.warn { "id assigned to anchor already in use: #{id}" }
+      end
+      nil
+    end
+
+    # Catalog any inline anchors found in the text (but don't convert).
+    def catalog_inline_anchors(text : String, block : AbstractBlock, document : Document, reader : Reader) : Nil
+      return unless text.includes?("[[") || text.includes?("or:")
+      text.scan(InlineAnchorScanRx) do |md|
+        if (id = md[1]?)
+          reftext = md[2]?
+          if reftext && reftext.includes?(ATTR_REF_HEAD)
+            subbed = document.sub_attributes(reftext)
+            next if subbed.empty?
+            reftext = subbed
+          end
+        else
+          id = md[3]?
+          next unless id
+          reftext = md[4]?
+          if reftext
+            if reftext.includes?(']')
+              reftext = reftext.gsub("\\]", "]")
+              reftext = document.sub_attributes(reftext) if reftext.includes?(ATTR_REF_HEAD)
+            elsif reftext.includes?(ATTR_REF_HEAD)
+              subbed = document.sub_attributes(reftext)
+              reftext = subbed.empty? ? nil : subbed
+            end
+          end
+        end
+        ref = Inline.new(block, :anchor, reftext, type: :ref, id: id)
+        unless document.register(:refs, {id, ref.as(AbstractNode)})
+          logger.warn { "id assigned to anchor already in use: #{id}" }
+        end
+      end
+      nil
+    end
+
+    # Catalog the bibliography inline anchor found in the start of the list item.
+    def catalog_inline_biblio_anchor(id : String, reftext : String?, node : AbstractBlock, reader : Reader) : Nil
+      display_text = reftext ? "[#{reftext}]" : nil
+      ref = Inline.new(node, :anchor, display_text, type: :bibref, id: id)
+      unless node.document.register(:refs, {id, ref.as(AbstractNode)})
+        logger.warn { "id assigned to bibliography anchor already in use: #{id}" }
+      end
+      nil
+    end
+
     # Check whether the line given is an atx section title.
     def atx_section_title?(line : String) : Int32?
       if line.starts_with?('=') && (m = AtxSectionTitleRx.match(line))
@@ -269,6 +341,130 @@ module Asciidoctor
         end
         attrs = {} of String => String unless attributes
       end
+    end
+
+    # Parse and construct a callout list Block from the current position of the Reader.
+    def parse_callout_list(reader : Reader, match : Regex::MatchData, parent : AbstractBlock, callouts : Callouts) : List
+      list_block = List.new(parent, :colist)
+      next_index = 1
+      autonum = 0
+      first = true
+      while first || ((peek = reader.peek_line) && (match_data = CalloutListRx.match(peek)) && reader.mark && (match = match_data))
+        first = false
+        num_str = match[1]? || ""
+        if num_str == "."
+          num_str = (autonum += 1).to_s
+        end
+        unless num_str == next_index.to_s
+          logger.warn { "callout list item index: expected #{next_index}, got #{num_str}" }
+        end
+        item_text = match[2]? || ""
+        list_item = ListItem.new(list_block, item_text)
+        list_item.marker = "<1>"
+        # Read continuation lines for this callout list item
+        reader.advance
+        while reader.has_more_lines?
+          next_line = reader.peek_line
+          break unless next_line
+          if next_line.empty?
+            reader.advance
+            reader.skip_blank_lines
+            cont_line = reader.peek_line
+            break unless cont_line
+            if cont_line == LIST_CONTINUATION
+              reader.advance
+              if (cont_block = next_block(reader, list_item))
+                list_item.blocks << cont_block
+              end
+            elsif CalloutListRx.matches?(cont_line)
+              break
+            else
+              break
+            end
+          elsif next_line == LIST_CONTINUATION
+            reader.advance
+            if (cont_block = next_block(reader, list_item))
+              list_item.blocks << cont_block
+            end
+          elsif CalloutListRx.matches?(next_line)
+            break
+          elsif is_delimited_block?(next_line)
+            break
+          else
+            reader.advance
+            list_item.text = "#{list_item.text}\n#{next_line}"
+          end
+        end
+        list_block.items << list_item
+        coids = callouts.callout_ids(list_block.items.size)
+        if coids.empty?
+          logger.warn { "no callout found for <#{list_block.items.size}>" }
+        else
+          list_item.attributes["coids"] = coids
+        end
+        next_index += 1
+        match = nil.as(Regex::MatchData?)
+        break unless reader.has_more_lines?
+        peek2 = reader.peek_line
+        break unless peek2
+        match2 = CalloutListRx.match(peek2)
+        break unless match2
+        reader.mark
+        match = match2
+      end
+      callouts.next_list
+      list_block
+    end
+
+    # Parse a cell spec for a table.
+    def parse_cellspec(line : String, pos : Symbol = :end, delimiter : String? = nil) : Tuple(Hash(String, String | Int32)?, String)
+      if pos == :start
+        return {nil, line} unless delimiter && line.includes?(delimiter)
+        idx = line.index(delimiter)
+        return {nil, line} unless idx
+        spec_part = line[0...idx]
+        rest = line[(idx + delimiter.size)..]
+        m = CellSpecStartRx.match(spec_part)
+        return {nil, line} unless m
+        return { {} of String => String | Int32, rest} if m[0].empty?
+      elsif (m = CellSpecEndRx.match(line))
+        if m[0].lstrip.empty?
+          return { {} of String => String | Int32, line.rstrip}
+        end
+        rest = m.pre_match
+      else
+        return { {} of String => String | Int32, line}
+      end
+      spec = {} of String => String | Int32
+      if m[1]?
+        parts = m[1].split('.')
+        colspec_str = parts[0]? || ""
+        rowspec_str = parts[1]? || ""
+        colspec = colspec_str.empty? ? 1 : colspec_str.to_i
+        rowspec = rowspec_str.empty? ? 1 : rowspec_str.to_i
+        case m[2]?
+        when "+"
+          spec["colspan"] = colspec unless colspec == 1
+          spec["rowspan"] = rowspec unless rowspec == 1
+        when "*"
+          spec["repeatcol"] = colspec unless colspec == 1
+        end
+      end
+      if (align = m[3]?)
+        parts = align.split('.')
+        colspec_align = parts[0]? || ""
+        rowspec_align = parts[1]? || ""
+        if !colspec_align.empty? && colspec_align.size == 1 && TableCellHorzAlignments.has_key?(colspec_align[0])
+          spec["halign"] = TableCellHorzAlignments[colspec_align[0]]
+        end
+        if !rowspec_align.empty? && rowspec_align.size == 1 && TableCellVertAlignments.has_key?(rowspec_align[0])
+          spec["valign"] = TableCellVertAlignments[rowspec_align[0]]
+        end
+      end
+      if (style_char = m[4]?) && TableCellStyles.has_key?(style_char)
+        spec["style"] = style_char
+      end
+      {spec, rest}
     end
 
     # Parse the document header.
@@ -1031,6 +1227,159 @@ module Asciidoctor
       list
     end
 
+    # Parse and construct the next ListItem for the specified list Block.
+    def parse_list_item(reader : Reader, list_block : List, match : Regex::MatchData, sibling_trait : String | Regex, style : String? = nil) : ListItem
+      list_type = list_block.context
+      dlist = list_type == :dlist
+      has_text = true
+
+      if dlist
+        # For description lists, match[1] is the term, match[3] is the description
+        term_text = match[1]
+        item_text = match[3]?
+        has_text = !(item_text.nil? || item_text.empty?)
+        list_item = ListItem.new(list_block, item_text)
+        list_term = ListItem.new(list_block, term_text)
+        if term_text.starts_with?("[[") && (am = LeadingInlineAnchorRx.match(term_text))
+          catalog_inline_anchor(am[1], am[2]?, list_term, reader)
+        end
+      else
+        item_text = match[2]
+        list_item = ListItem.new(list_block, item_text)
+        list_item.source_location = reader.cursor.to_source_location if list_block.document.sourcemap?
+        case list_type
+        when :ulist
+          list_item.marker = sibling_trait.to_s
+          if item_text.starts_with?('[')
+            if style && style == "bibliography"
+              if (bm = InlineBiblioAnchorRx.match(item_text))
+                catalog_inline_biblio_anchor(bm[1], bm[2]?, list_item, reader)
+              end
+            elsif item_text.starts_with?("[[")
+              if (am = LeadingInlineAnchorRx.match(item_text))
+                catalog_inline_anchor(am[1], am[2]?, list_item, reader)
+              end
+            elsif item_text.starts_with?("[ ] ") || item_text.starts_with?("[x] ") || item_text.starts_with?("[*] ")
+              list_block.attributes["checklist-option"] = ""
+              list_item.attributes["checkbox"] = ""
+              list_item.attributes["checked"] = "" unless item_text.starts_with?("[ ")
+              list_item.text = item_text[4..]
+            end
+          end
+        when :olist
+          list_item.marker = sibling_trait.to_s
+          if item_text.starts_with?("[[") && (am = LeadingInlineAnchorRx.match(item_text))
+            catalog_inline_anchor(am[1], am[2]?, list_item, reader)
+          end
+        else # :colist
+          list_item.marker = sibling_trait.to_s
+          if item_text.starts_with?("[[") && (am = LeadingInlineAnchorRx.match(item_text))
+            catalog_inline_anchor(am[1], am[2]?, list_item, reader)
+          end
+        end
+      end
+
+      # Read continuation lines for this list item
+      reader.shift
+      block_cursor = reader.cursor
+      item_lines = read_lines_for_list_item(reader, list_type, sibling_trait, has_text)
+      list_item_reader = Reader.new(item_lines, block_cursor)
+      if list_item_reader.has_more_lines?
+        comment_lines = list_item_reader.skip_line_comments
+        if (subsequent_line = list_item_reader.peek_line)
+          list_item_reader.unshift_lines(comment_lines) unless comment_lines.empty?
+          unless subsequent_line.empty?
+            content_adjacent = true
+            has_text = true unless dlist
+          end
+        end
+        if (block = next_block(list_item_reader, list_item))
+          list_item.blocks << block
+        end
+        while list_item_reader.has_more_lines?
+          if (block = next_block(list_item_reader, list_item))
+            list_item.blocks << block
+          end
+        end
+        list_item.fold_first if content_adjacent && (first_block = list_item.blocks[0]?) && first_block.is_a?(Block) && first_block.context == :paragraph
+      end
+      list_item
+    end
+
+    # Parse the manpage-specific header metadata.
+    def parse_manpage_header(reader : Reader, document : Document, block_attributes : Hash(String, String), header_only : Bool = false) : Nil
+      doc_attrs = document.attributes
+      if (doctitle = doc_attrs["doctitle"]?) && (m = ManpageTitleVolnumRx.match(doctitle))
+        manvolnum = m[2]
+        mantitle = m[1]
+        mantitle = document.sub_attributes(mantitle) if mantitle.includes?(ATTR_REF_HEAD)
+        doc_attrs["manvolnum"] = manvolnum
+        doc_attrs["mantitle"] = mantitle.downcase
+      else
+        logger.error { "non-conforming manpage title" }
+        doc_attrs["mantitle"] = doc_attrs["doctitle"]? || doc_attrs["docname"]? || "command"
+        doc_attrs["manvolnum"] = manvolnum = "1"
+      end
+      if (manname = doc_attrs["manname"]?) && doc_attrs["manpurpose"]?
+        doc_attrs["manname-title"] ||= "Name"
+        doc_attrs["mannames"] = manname
+        if document.attributes["backend"]? == "manpage"
+          doc_attrs["docname"] = manname
+          doc_attrs["outfilesuffix"] = ".#{manvolnum}"
+        end
+      elsif header_only
+        # done
+      else
+        reader.skip_blank_lines
+        reader.save
+        block_attributes.merge!(parse_block_metadata_lines(reader, document))
+        if (name_section_level = is_next_line_section?(reader, {} of String => String))
+          if name_section_level == 1
+            name_section = initialize_section(reader, document, {} of String => String)
+            name_section_buffer = reader.read_lines_until(break_on_blank_lines: true, skip_line_comments: true).map(&.lstrip).join(' ')
+            if (npm = ManpageNamePurposeRx.match(name_section_buffer))
+              manname = npm[1]
+              manname = document.sub_attributes(manname) if manname.includes?(ATTR_REF_HEAD)
+              if manname.includes?(',')
+                mannames = manname.split(',').map(&.lstrip)
+                manname = mannames[0]
+              else
+                mannames = [manname]
+              end
+              manpurpose = npm[2]
+              manpurpose = document.sub_attributes(manpurpose) if manpurpose.includes?(ATTR_REF_HEAD)
+              doc_attrs["manname-title"] ||= name_section.title || "Name"
+              doc_attrs["manname-id"] = name_section.id.to_s if name_section.id
+              doc_attrs["manname"] = manname
+              doc_attrs["mannames"] = mannames.join(",")
+              doc_attrs["manpurpose"] = manpurpose
+              if document.attributes["backend"]? == "manpage"
+                doc_attrs["docname"] = manname
+                doc_attrs["outfilesuffix"] = ".#{manvolnum}"
+              end
+              reader.discard_save
+            else
+              reader.restore_save
+              logger.error { "non-conforming name section body" }
+              doc_attrs["manname"] = manname = doc_attrs["docname"]? || "command"
+              doc_attrs["mannames"] = manname
+            end
+          else
+            reader.restore_save
+            logger.error { "name section must be at level 1" }
+            doc_attrs["manname"] = manname = doc_attrs["docname"]? || "command"
+            doc_attrs["mannames"] = manname
+          end
+        else
+          reader.restore_save
+          logger.error { "name section expected" }
+          doc_attrs["manname"] = manname = doc_attrs["docname"]? || "command"
+          doc_attrs["mannames"] = manname
+        end
+      end
+      nil
+    end
+
     # Parse a description list.
     def parse_description_list(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String) : List
       list = List.new(parent, :dlist)
@@ -1139,11 +1488,11 @@ module Asciidoctor
           spec = {} of String => String | Int32
           if (align = m[2]?)
             colspec, rowspec = align.split('.')
-            if !colspec.empty? && TableCellHorzAlignments.has_key?(colspec)
-              spec["halign"] = TableCellHorzAlignments[colspec]
+            if !colspec.empty? && colspec.size == 1 && TableCellHorzAlignments.has_key?(colspec[0])
+              spec["halign"] = TableCellHorzAlignments[colspec[0]]
             end
-            if rowspec && !rowspec.empty? && TableCellVertAlignments.has_key?(rowspec)
-              spec["valign"] = TableCellVertAlignments[rowspec]
+            if rowspec && !rowspec.empty? && rowspec.size == 1 && TableCellVertAlignments.has_key?(rowspec[0])
+              spec["valign"] = TableCellVertAlignments[rowspec[0]]
             end
           end
           if (width = m[3]?)
@@ -1209,27 +1558,248 @@ module Asciidoctor
       when :ulist
         marker
       when :olist
-        resolve_ordered_list_marker(marker)
+        resolve_ordered_list_marker(marker)[0]
       else # :colist
         "<1>"
       end
     end
 
+    # Collect the lines belonging to the current list item, navigating
+    # through all the rules that determine what comprises a list item.
+    def read_lines_for_list_item(reader : Reader, list_type : Symbol, sibling_trait : String | Regex, has_text : Bool = true) : Array(String)
+      buffer = [] of String
+      continuation = :inactive
+      within_nested_list = false
+      detached_continuation : Int32? = nil
+      dlist = list_type == :dlist
+
+      while reader.has_more_lines?
+        this_line = reader.read_line
+        break unless this_line
+
+        # if we've arrived at a sibling item in this list, we've captured
+        # the complete list item and can begin processing it
+        if is_sibling_list_item?(this_line, list_type, sibling_trait)
+          reader.unshift_line(this_line)
+          break
+        end
+
+        this_line = LIST_CONTINUATION_STRING if this_line == LIST_CONTINUATION
+
+        prev_line = buffer.empty? ? nil : buffer[-1]
+
+        if prev_line && (prev_line == LIST_CONTINUATION_STRING || prev_line == LIST_CONTINUATION_PLACEHOLDER)
+          if continuation == :inactive
+            continuation = :active
+            has_text = true
+            buffer[-1] = LIST_CONTINUATION_PLACEHOLDER unless within_nested_list
+          end
+          # dealing with adjacent list continuations
+          if this_line == LIST_CONTINUATION_STRING || this_line == LIST_CONTINUATION_PLACEHOLDER
+            if continuation != :frozen
+              continuation = :frozen
+              buffer << this_line
+            end
+            next
+          end
+        end
+
+        # a delimited block immediately breaks the list unless preceded by a list continuation
+        if (match = is_delimited_block?(this_line, true))
+          unless continuation == :active
+            reader.unshift_line(this_line)
+            break
+          end
+          buffer << this_line
+          buffer.concat(reader.read_lines_until(terminator: match.terminator, read_last_line: true))
+          continuation = :inactive
+        elsif dlist && continuation != :active && this_line.starts_with?('[') && BlockAttributeLineRx.matches?(this_line)
+          # BlockAttributeLineRx only breaks dlist if ensuing line is not a list item
+          block_attribute_lines = [this_line]
+          interrupt = false
+          while (next_line = reader.peek_line)
+            if is_delimited_block?(next_line)
+              interrupt = true
+            elsif next_line.empty? || (next_line.starts_with?('[') && BlockAttributeLineRx.matches?(next_line))
+              block_attribute_lines << reader.read_line.not_nil!
+              next
+            elsif AnyListRx.matches?(next_line) && !is_sibling_list_item?(next_line, list_type, sibling_trait)
+              buffer.concat(block_attribute_lines)
+            else
+              interrupt = true
+            end
+            break
+          end
+          if interrupt
+            reader.unshift_lines(block_attribute_lines)
+            break
+          end
+        elsif continuation == :active && !this_line.empty?
+          if LiteralParagraphRx.matches?(this_line)
+            reader.unshift_line(this_line)
+            if dlist
+              buffer.concat(reader.read_lines_until(preserve_last_line: true, break_on_blank_lines: true, break_on_list_continuation: true) { |line| is_sibling_list_item?(line, list_type, sibling_trait) })
+            else
+              buffer.concat(reader.read_lines_until(preserve_last_line: true, break_on_blank_lines: true, break_on_list_continuation: true))
+            end
+            continuation = :inactive
+          elsif (this_line.starts_with?('.') && BlockTitleRx.matches?(this_line)) ||
+                (this_line.starts_with?('[') && BlockAttributeLineRx.matches?(this_line)) ||
+                (this_line.starts_with?(':') && AttributeEntryRx.matches?(this_line))
+            buffer << this_line
+          else
+            nestable_contexts = within_nested_list ? [:dlist] : NESTABLE_LIST_CONTEXTS
+            if (nested_list_type = nestable_contexts.find { |ctx| ListRxMap[ctx].matches?(this_line) })
+              within_nested_list = true
+              if nested_list_type == :dlist && (dm = DescriptionListRx.match(this_line)) && (dm[3]?.nil? || dm[3].empty?)
+                has_text = false
+              end
+            end
+            buffer << this_line
+            continuation = :inactive
+          end
+        elsif prev_line && prev_line.empty?
+          # advance to the next line of content
+          if this_line.empty?
+            reader.skip_blank_lines
+            this_line = reader.read_line
+            unless this_line
+              break
+            end
+            if is_sibling_list_item?(this_line, list_type, sibling_trait)
+              reader.unshift_line(this_line)
+              break
+            end
+          end
+          if this_line == LIST_CONTINUATION || this_line == LIST_CONTINUATION_STRING
+            detached_continuation = buffer.size
+            buffer << LIST_CONTINUATION_STRING
+          elsif has_text
+            if is_sibling_list_item?(this_line, list_type, sibling_trait)
+              reader.unshift_line(this_line)
+              break
+            end
+            nestable_contexts2 = NESTABLE_LIST_CONTEXTS
+            if (nested_list_type = nestable_contexts2.find { |ctx| ListRxMap[ctx].matches?(this_line) })
+              buffer << this_line
+              within_nested_list = true
+              if nested_list_type == :dlist && (dm = DescriptionListRx.match(this_line)) && (dm[3]?.nil? || dm[3].empty?)
+                has_text = false
+              end
+            elsif LiteralParagraphRx.matches?(this_line)
+              reader.unshift_line(this_line)
+              if dlist
+                buffer.concat(reader.read_lines_until(preserve_last_line: true, break_on_blank_lines: true, break_on_list_continuation: true) { |line| is_sibling_list_item?(line, list_type, sibling_trait) })
+              else
+                buffer.concat(reader.read_lines_until(preserve_last_line: true, break_on_blank_lines: true, break_on_list_continuation: true))
+              end
+            else
+              reader.unshift_line(this_line)
+              break
+            end
+          else # only dlist in need of item text, so slurp it up!
+            buffer.pop unless within_nested_list
+            buffer << this_line
+            has_text = true
+          end
+        elsif this_line == LIST_CONTINUATION_STRING || this_line == LIST_CONTINUATION_PLACEHOLDER
+          has_text = true
+          buffer << this_line
+        else
+          unless this_line.empty?
+            has_text = true
+            nestable_contexts3 = within_nested_list ? [:dlist] : NESTABLE_LIST_CONTEXTS
+            if (nested_list_type = nestable_contexts3.find { |ctx| ListRxMap[ctx].matches?(this_line) })
+              within_nested_list = true
+              if nested_list_type == :dlist && (dm = DescriptionListRx.match(this_line)) && (dm[3]?.nil? || dm[3].empty?)
+                has_text = false
+              end
+            end
+          end
+          buffer << this_line
+        end
+      end
+
+      buffer[detached_continuation] = LIST_CONTINUATION_PLACEHOLDER if detached_continuation
+
+      # trim trailing blank lines and trailing continuation
+      until buffer.empty?
+        last_line = buffer[-1]
+        if last_line == LIST_CONTINUATION_STRING || last_line == LIST_CONTINUATION_PLACEHOLDER
+          buffer.pop
+          break
+        elsif last_line.empty?
+          buffer.pop
+        else
+          break
+        end
+      end
+
+      buffer
+    end
+
     # Resolve the 0-index marker for an ordered list item.
-    def resolve_ordered_list_marker(marker : String) : String
-      return marker if marker.starts_with?('.')
-      if marker.matches?(/^\d+\./)
-        "1."
-      elsif marker.matches?(/^[a-z]\./)
-        "a."
-      elsif marker.matches?(/^[A-Z]\./)
-        "A."
-      elsif marker.matches?(/^[ivx]+\)/)
-        "i)"
-      elsif marker.matches?(/^[IVX]+\)/)
-        "I)"
+    # When ordinal and validate are provided, validates the marker against the expected value.
+    def resolve_ordered_list_marker(marker : String, ordinal : Int32? = nil, validate : Bool = false, reader : Reader? = nil) : Tuple(String, Symbol?)
+      return {marker, nil} if marker.starts_with?('.')
+      style = ORDERED_LIST_STYLES.find { |s| OrderedListMarkerRxMap[s].matches?(marker) }
+      expected : String? = nil
+      actual : String? = nil
+      case style
+      when :arabic
+        if validate && ordinal
+          expected = (ordinal + 1).to_s
+          actual = marker.chomp('.')
+        end
+        marker = "1."
+      when :loweralpha
+        if validate && ordinal
+          expected = (97 + ordinal).chr.to_s
+          actual = marker.chomp('.')
+        end
+        marker = "a."
+      when :upperalpha
+        if validate && ordinal
+          expected = (65 + ordinal).chr.to_s
+          actual = marker.chomp('.')
+        end
+        marker = "A."
+      when :lowerroman
+        if validate && ordinal
+          expected = Helpers.int_to_roman(ordinal + 1).downcase
+          actual = marker.chomp(')')
+        end
+        marker = "i)"
+      when :upperroman
+        if validate && ordinal
+          expected = Helpers.int_to_roman(ordinal + 1)
+          actual = marker.chomp(')')
+        end
+        marker = "I)"
+      end
+      if validate && expected && actual && expected != actual
+        logger.warn { "list item index: expected #{expected}, got #{actual}" }
+      end
+      {marker, style}
+    end
+
+    # Resolve the start number for an ordered list based on its marker.
+    def resolve_ordered_list_start(marker : String) : Int32
+      return 1 if marker.starts_with?('.')
+      style = ORDERED_LIST_STYLES.find { |s| OrderedListMarkerRxMap[s].matches?(marker) }
+      case style
+      when :arabic
+        marker.chomp('.').to_i
+      when :loweralpha
+        marker.chomp('.').char_at(0).ord - 96
+      when :upperalpha
+        marker.chomp('.').char_at(0).ord - 64
+      when :lowerroman
+        Helpers.roman_to_int(marker.chomp(')').upcase)
+      when :upperroman
+        Helpers.roman_to_int(marker.chomp(')'))
       else
-        marker
+        1
       end
     end
 
@@ -1396,6 +1966,30 @@ module Asciidoctor
 
       author_metadata["authorcount"] = author_idx.to_s
       author_metadata
+    end
+
+    # Save the collected attribute (:id, :option, :role, or nil for :style) in the attribute Hash.
+    def yield_buffered_attribute(attrs : Hash(Symbol, String | Array(String)), name : Symbol?, value : String, reader : Reader? = nil) : Nil
+      if name
+        if value.empty?
+          logger.warn { "invalid empty #{name} detected in style attribute" }
+        elsif name == :id
+          if attrs.has_key?(:id)
+            logger.warn { "multiple ids detected in style attribute" }
+          end
+          attrs[name] = value
+        else
+          existing = attrs[name]?
+          if existing.is_a?(Array(String))
+            existing << value
+          else
+            attrs[name] = [value]
+          end
+        end
+      else
+        attrs[:style] = value unless value.empty?
+      end
+      nil
     end
 
     # --------------------------------------------------------------------------

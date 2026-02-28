@@ -606,20 +606,36 @@ module Asciidoctor
     end
 
     # Register a reference in the document catalog.
-    def register(type : Symbol, value : String | Array(String) | Tuple(String, AbstractNode)) : Nil
+    def register(type : Symbol, value : String | Array(String) | Tuple(String, AbstractNode)) : AbstractNode?
       case type
       when :ids
         if value.is_a?(Tuple(String, AbstractNode))
           @catalog.refs[value[0]] ||= value[1]
         end
+      when :refs
+        if value.is_a?(Tuple(String, AbstractNode))
+          id = value[0]
+          ref = value[1]
+          unless @catalog.refs.has_key?(id)
+            @catalog.refs[id] = ref
+            return ref
+          end
+          nil
+        end
       when :footnotes
         # handled separately
+        nil
       when :images
         @catalog.images << ImageReference.new(value.as(String), @attributes["imagesdir"]? || "") if value.is_a?(String)
+        nil
       when :includes
         @catalog.includes[value.as(String)] = true if value.is_a?(String)
+        nil
       when :links
         @catalog.links << value.as(String) if value.is_a?(String)
+        nil
+      else
+        nil
       end
     end
 

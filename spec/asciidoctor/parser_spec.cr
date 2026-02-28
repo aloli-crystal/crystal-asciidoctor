@@ -305,19 +305,27 @@ describe Asciidoctor::Parser do
 
   describe ".resolve_ordered_list_marker" do
     it "resolves dot markers" do
-      Asciidoctor::Parser.resolve_ordered_list_marker(".").should eq(".")
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker(".")
+      marker.should eq(".")
+      style.should be_nil
     end
 
     it "resolves numeric markers" do
-      Asciidoctor::Parser.resolve_ordered_list_marker("1.").should eq("1.")
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("1.")
+      marker.should eq("1.")
+      style.should eq(:arabic)
     end
 
     it "resolves lowercase alpha markers" do
-      Asciidoctor::Parser.resolve_ordered_list_marker("a.").should eq("a.")
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("a.")
+      marker.should eq("a.")
+      style.should eq(:loweralpha)
     end
 
     it "resolves uppercase alpha markers" do
-      Asciidoctor::Parser.resolve_ordered_list_marker("A.").should eq("A.")
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("A.")
+      marker.should eq("A.")
+      style.should eq(:upperalpha)
     end
   end
 
@@ -507,6 +515,238 @@ describe Asciidoctor::Parser do
       doc = Asciidoctor::Document.new
       Asciidoctor::Parser.parse(reader, doc)
       doc.blocks.should_not be_empty
+    end
+  end
+end
+
+# ============================================================================
+# Tests for newly ported methods (Task 3)
+# ============================================================================
+
+describe Asciidoctor::Parser do
+  describe ".catalog_callouts" do
+    it "detects callout markers in source text" do
+      doc = Asciidoctor::Document.new
+      text = "puts 'hello' <1>\nputs 'world' <2>"
+      result = Asciidoctor::Parser.catalog_callouts(text, doc)
+      result.should be_true
+    end
+
+    it "returns false when no callouts present" do
+      doc = Asciidoctor::Document.new
+      text = "puts 'hello'\nputs 'world'"
+      result = Asciidoctor::Parser.catalog_callouts(text, doc)
+      result.should be_false
+    end
+
+    it "handles auto-numbered callouts" do
+      doc = Asciidoctor::Document.new
+      text = "line 1 <.>\nline 2 <.>"
+      result = Asciidoctor::Parser.catalog_callouts(text, doc)
+      result.should be_true
+    end
+  end
+
+  describe ".catalog_inline_anchors" do
+    it "catalogs inline anchors in text" do
+      doc = Asciidoctor::Document.new
+      block = Asciidoctor::Block.new(doc, :paragraph)
+      reader = Asciidoctor::Reader.new(["content"])
+      text = "Some text [[myanchor]] more text"
+      # Should not raise
+      Asciidoctor::Parser.catalog_inline_anchors(text, block, doc, reader)
+    end
+
+    it "catalogs bibliography anchors" do
+      doc = Asciidoctor::Document.new
+      block = Asciidoctor::Block.new(doc, :paragraph)
+      reader = Asciidoctor::Reader.new(["content"])
+      text = "Some text [[[bibref]]] more text"
+      Asciidoctor::Parser.catalog_inline_anchors(text, block, doc, reader)
+    end
+  end
+
+  describe ".parse_cellspec" do
+    it "parses text without cellspec at end position" do
+      attrs, text = Asciidoctor::Parser.parse_cellspec("just text")
+      attrs.should_not be_nil
+      text.should eq("just text")
+    end
+
+    it "parses cellspec with horizontal alignment at start" do
+      attrs, text = Asciidoctor::Parser.parse_cellspec(">|cell content", pos: :start, delimiter: "|")
+      attrs.should_not be_nil
+      if attrs
+        attrs["halign"]?.should eq("right")
+      end
+      text.should eq("cell content")
+    end
+
+    it "parses cellspec with span at start" do
+      attrs, text = Asciidoctor::Parser.parse_cellspec("2+|cell content", pos: :start, delimiter: "|")
+      attrs.should_not be_nil
+      if attrs
+        attrs["colspan"]?.should eq(2)
+      end
+      text.should eq("cell content")
+    end
+
+    it "returns nil attrs when no delimiter found at start" do
+      attrs, text = Asciidoctor::Parser.parse_cellspec("no delimiter", pos: :start, delimiter: "|")
+      attrs.should be_nil
+      text.should eq("no delimiter")
+    end
+  end
+
+  describe ".parse_callout_list" do
+    it "parses a callout list" do
+      doc = Asciidoctor::Document.new
+      callouts = doc.callouts
+      # Register callouts first
+      callouts.register(1)
+      reader = Asciidoctor::Reader.new(["<1> First callout", "<2> Second callout"])
+      line = reader.read_line.not_nil!
+      match = Asciidoctor::CalloutListRx.match(line)
+      if match
+        list = Asciidoctor::Parser.parse_callout_list(reader, match, doc, callouts)
+        list.context.should eq(:colist)
+        list.items.size.should be >= 1
+      end
+    end
+  end
+
+  describe ".parse_list_item" do
+    it "parses a simple unordered list item" do
+      doc = Asciidoctor::Document.new
+      list = Asciidoctor::List.new(doc, :ulist)
+      reader = Asciidoctor::Reader.new(["* Item 1", "* Item 2"])
+      line = reader.read_line.not_nil!
+      match = Asciidoctor::UnorderedListRx.match(line)
+      if match
+        item = Asciidoctor::Parser.parse_list_item(reader, list, match, "*")
+        item.should_not be_nil
+        item.text.should eq("Item 1")
+      end
+    end
+
+    it "parses a list item with continuation" do
+      doc = Asciidoctor::Document.new
+      list = Asciidoctor::List.new(doc, :ulist)
+      reader = Asciidoctor::Reader.new(["* Item 1", "+", "Continuation text", "* Item 2"])
+      line = reader.read_line.not_nil!
+      match = Asciidoctor::UnorderedListRx.match(line)
+      if match
+        item = Asciidoctor::Parser.parse_list_item(reader, list, match, "*")
+        item.should_not be_nil
+      end
+    end
+  end
+
+  describe ".resolve_ordered_list_start" do
+    it "returns 1 for dot markers" do
+      Asciidoctor::Parser.resolve_ordered_list_start(".").should eq(1)
+    end
+
+    it "returns the number for arabic markers" do
+      Asciidoctor::Parser.resolve_ordered_list_start("3.").should eq(3)
+    end
+
+    it "returns the position for lowercase alpha markers" do
+      Asciidoctor::Parser.resolve_ordered_list_start("c.").should eq(3)
+    end
+
+    it "returns the position for uppercase alpha markers" do
+      Asciidoctor::Parser.resolve_ordered_list_start("C.").should eq(3)
+    end
+
+    it "returns the value for lowercase roman markers" do
+      Asciidoctor::Parser.resolve_ordered_list_start("iii)").should eq(3)
+    end
+
+    it "returns the value for uppercase roman markers" do
+      Asciidoctor::Parser.resolve_ordered_list_start("III)").should eq(3)
+    end
+  end
+
+  describe ".resolve_ordered_list_marker (extended)" do
+    it "resolves lowercase roman markers" do
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("i)")
+      marker.should eq("i)")
+      style.should eq(:lowerroman)
+    end
+
+    it "resolves uppercase roman markers" do
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("I)")
+      marker.should eq("I)")
+      style.should eq(:upperroman)
+    end
+
+    it "validates ordinal when requested" do
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("2.", ordinal: 1, validate: true)
+      marker.should eq("1.")
+      style.should eq(:arabic)
+    end
+  end
+
+  describe ".yield_buffered_attribute" do
+    it "stores a style attribute" do
+      attrs = {} of Symbol => String | Array(String)
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, nil, "source")
+      attrs[:style].should eq("source")
+    end
+
+    it "stores an id attribute" do
+      attrs = {} of Symbol => String | Array(String)
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, :id, "myid")
+      attrs[:id].should eq("myid")
+    end
+
+    it "stores role attributes as array" do
+      attrs = {} of Symbol => String | Array(String)
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, :role, "lead")
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, :role, "center")
+      roles = attrs[:role]
+      roles.should be_a(Array(String))
+      roles.as(Array(String)).should eq(["lead", "center"])
+    end
+
+    it "stores option attributes as array" do
+      attrs = {} of Symbol => String | Array(String)
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, :option, "nowrap")
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, :option, "linenums")
+      options = attrs[:option]
+      options.should be_a(Array(String))
+      options.as(Array(String)).should eq(["nowrap", "linenums"])
+    end
+
+    it "does not store empty values" do
+      attrs = {} of Symbol => String | Array(String)
+      Asciidoctor::Parser.yield_buffered_attribute(attrs, :id, "")
+      attrs.has_key?(:id).should be_false
+    end
+  end
+
+  describe ".read_lines_for_list_item" do
+    it "reads lines for a simple list item" do
+      reader = Asciidoctor::Reader.new(["line 1", "* next item"])
+      lines = Asciidoctor::Parser.read_lines_for_list_item(reader, :ulist, "*")
+      lines.should eq(["line 1"])
+    end
+
+    it "reads lines until blank line for list item" do
+      reader = Asciidoctor::Reader.new(["line 1", "line 2", "", "next paragraph"])
+      lines = Asciidoctor::Parser.read_lines_for_list_item(reader, :ulist, "*")
+      lines.should eq(["line 1", "line 2"])
+    end
+  end
+
+  describe "parse_manpage_header" do
+    it "does not raise on empty document" do
+      doc = Asciidoctor::Document.new(doctype: "manpage")
+      reader = Asciidoctor::Reader.new([] of String)
+      attrs = {} of String => String
+      # Should not raise
+      Asciidoctor::Parser.parse_manpage_header(reader, doc, attrs)
     end
   end
 end

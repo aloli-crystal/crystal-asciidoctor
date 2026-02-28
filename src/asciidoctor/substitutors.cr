@@ -70,6 +70,21 @@ module Asciidoctor
   module Substitutors
     @passthroughs : Array(PassthroughEntry) = [] of PassthroughEntry
 
+    # Apply header substitutions to the text.
+    def apply_header_subs(text : String) : String
+      apply_subs(text, [:specialcharacters, :attributes])
+    end
+
+    # Apply normal substitutions to the text.
+    def apply_normal_subs(text : String) : String
+      apply_subs(text, [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements])
+    end
+
+    # Apply reftext substitutions to the text.
+    def apply_reftext_subs(text : String) : String
+      apply_subs(text, [:specialcharacters, :quotes, :replacements])
+    end
+
     # Apply the specified substitutions to the text.
     def apply_subs(text : String, subs : Array(Symbol)) : String
       return text if subs.empty?
@@ -547,6 +562,120 @@ module Asciidoctor
     # Substitute source code with optional callout processing.
     def sub_source(source : String, process_callouts : Bool) : String
       process_callouts ? sub_callouts(sub_specialchars(source)) : sub_specialchars(source)
+    end
+
+    # Extract the callout numbers from the source to prepare it for syntax highlighting.
+    def extract_callouts(source : String) : Tuple(String, Hash(Int32, Array(Tuple(String?, String)))?)
+      callout_marks = {} of Int32 => Array(Tuple(String?, String))
+      autonum = 0
+      lineno = 0
+      last_lineno : Int32? = nil
+      callout_rx = CalloutExtractRx
+      lines = source.split(LF, remove_empty: false)
+      result_lines = lines.map do |line|
+        lineno += 1
+        line.gsub(callout_rx) do |match_str, md|
+          if md[2]?
+            # honor the escape
+            match_str.sub(RS, "")
+          else
+            guard = md[1]?
+            comment_type = md[3]?
+            guard_pair = comment_type == "--" ? "<!--,-->" : guard
+            num_str = md[4]? || ""
+            num = num_str == "." ? (autonum += 1).to_s : num_str
+            marks = callout_marks[lineno]? || ([] of Tuple(String?, String))
+            marks << {guard_pair, num}
+            callout_marks[lineno] = marks
+            last_lineno = lineno
+            ""
+          end
+        end
+      end
+      result = result_lines.join(LF)
+      if last_lineno
+        result = "#{result}#{LF}" if last_lineno == lineno
+      else
+        return {result, nil}
+      end
+      {result, callout_marks}
+    end
+
+    # Highlight source code using the registered syntax highlighter.
+    def highlight_source(source : String, process_callouts : Bool) : String
+      # NOTE: syntax highlighting is a stub for now; return sub_source as fallback
+      return sub_source(source, process_callouts) unless (syntax_hl = document.syntax_highlighter)
+      if process_callouts
+        source, callout_marks = extract_callouts(source)
+      end
+      # For now, just apply special chars since we don't have a full highlighter implementation
+      highlighted = sub_specialchars(source)
+      if callout_marks
+        highlighted = restore_callouts(highlighted, callout_marks)
+      end
+      highlighted
+    end
+
+    # Resolve the line numbers in the specified source to highlight from the provided spec.
+    def resolve_lines_to_highlight(source : String, spec : String, start : Int32? = nil) : Array(Int32)
+      lines = [] of Int32
+      spec = spec.delete(' ') if spec.includes?(' ')
+      entries = spec.includes?(',') ? spec.split(',') : spec.split(';')
+      entries.each do |entry|
+        negate = false
+        if entry.starts_with?('!')
+          entry = entry[1..]
+          negate = true
+        end
+        delim = entry.includes?("..") ? ".." : (entry.includes?('-') ? "-" : nil)
+        if delim
+          from_str, _, to_str = entry.partition(delim)
+          from = from_str.to_i
+          to = (to_str.empty? || to_str.to_i < 0) ? (source.count(LF) + 1) : to_str.to_i
+          range = (from..to).to_a
+          if negate
+            lines = lines - range
+          else
+            lines = (lines | range)
+          end
+        elsif negate
+          lines.delete(entry.to_i)
+        else
+          line = entry.to_i
+          lines << line unless lines.includes?(line)
+        end
+      end
+      shift = start ? start - 1 : 0
+      unless shift == 0
+        lines = lines.map { |l| l - shift }
+      end
+      lines.sort
+    end
+
+    # Restore the callout numbers to the highlighted source.
+    def restore_callouts(source : String, callout_marks : Hash(Int32, Array(Tuple(String?, String))), source_offset : Int32? = nil) : String
+      preamble = ""
+      if source_offset
+        preamble = source[0, source_offset]
+        source = source[source_offset..]
+      end
+      lineno = 0
+      lines = source.split(LF, remove_empty: false)
+      result_lines = lines.map do |line|
+        lineno += 1
+        if (conums = callout_marks[lineno]?)
+          callout_marks.delete(lineno)
+          callout_strs = conums.map do |guard, numeral|
+            Inline.new(self.as(AbstractBlock), :callout, numeral,
+              id: document.callouts.read_next_id.to_s,
+              attributes: {"guard" => guard || ""}).convert
+          end
+          "#{line}#{callout_strs.join(' ')}"
+        else
+          line
+        end
+      end
+      "#{preamble}#{result_lines.join(LF)}"
     end
 
     # Internal: Convert a quoted text region.
