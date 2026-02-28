@@ -1,9 +1,9 @@
 module Asciidoctor
   # Handles parsing AsciiDoc attribute lists into a Hash of key/value pairs.
   class AttributeList
-    APOS      = '\''
-    BACKSLASH = '\\'
-    QUOT      = '"'
+    APOS      = "'"
+    BACKSLASH = "\\"
+    QUOT      = "\""
 
     BOUNDARY_RX = {
       QUOT => /.*?[^\\](?=")/,
@@ -80,10 +80,10 @@ module Asciidoctor
       value : String? = nil
       single_quoted = false
 
-      if first == QUOT[0]?
+      if first && first == QUOT[0]?
         get_byte
         name = parse_attribute_value(QUOT)
-      elsif first == APOS[0]?
+      elsif first && first == APOS[0]?
         get_byte
         name = parse_attribute_value(APOS)
         single_quoted = true unless name && name.starts_with?(APOS)
@@ -102,9 +102,9 @@ module Asciidoctor
             if c == '='
               skip_blank
               c2 = get_byte
-              if c2 && c2.to_s == QUOT
+              if c2 && c2 == QUOT[0]?
                 value = parse_attribute_value(QUOT)
-              elsif c2 && c2.to_s == APOS
+              elsif c2 && c2 == APOS[0]?
                 value = parse_attribute_value(APOS)
                 single_quoted = true unless value && value.starts_with?(APOS)
               elsif c2 && c2.to_s == @delimiter

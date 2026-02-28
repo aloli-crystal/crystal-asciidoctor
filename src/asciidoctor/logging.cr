@@ -63,6 +63,10 @@ module Asciidoctor
       add(Severity::ERROR, message)
     end
 
+    def error(&block : -> String) : Nil
+      add(Severity::ERROR, block.call)
+    end
+
     def fatal(message : String) : Nil
       add(Severity::FATAL, message)
     end
@@ -125,6 +129,10 @@ module Asciidoctor
       add(Severity::ERROR, message)
     end
 
+    def error(&block : -> String) : Bool
+      add(Severity::ERROR, block.call)
+    end
+
     def fatal(message : String) : Bool
       add(Severity::FATAL, message)
     end
@@ -171,6 +179,10 @@ module Asciidoctor
 
     def error(message : String) : Bool
       add(Severity::ERROR, message)
+    end
+
+    def error(&block : -> String) : Bool
+      add(Severity::ERROR, block.call)
     end
 
     def fatal(message : String) : Bool

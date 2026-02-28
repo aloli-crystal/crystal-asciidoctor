@@ -565,13 +565,13 @@ module Asciidoctor
           id = (attributes = parse_quoted_text_attributes(attrlist))["id"]?
           type = :unquoted if type == :mark
         end
-        "#{md[1]?}#{Inline.new(self.as(AbstractBlock), :quoted, md[3]? || "", type: type, id: id, attributes: attributes).convert}"
+        "#{md[1]?}#{Inline.new(self.as(AbstractBlock), :quoted, md[3]? || "", type: type, id: id, attributes: attributes || {} of String => String).convert}"
       else
         if (attrlist = md[1]?)
           id = (attributes = parse_quoted_text_attributes(attrlist))["id"]?
           type = :unquoted if type == :mark
         end
-        Inline.new(self.as(AbstractBlock), :quoted, md[2]? || "", type: type, id: id, attributes: attributes).convert
+        Inline.new(self.as(AbstractBlock), :quoted, md[2]? || "", type: type, id: id, attributes: attributes || {} of String => String).convert
       end
     end
 
@@ -614,7 +614,7 @@ module Asciidoctor
     # Highlight the source code in the given text using the syntax highlighter
     # registered with the document, if available.
     def highlight_source(source : String, process_callouts : Bool) : String
-      syntax_hl = @document.syntax_highlighter
+      syntax_hl = document.syntax_highlighter
       return sub_specialchars(source) unless syntax_hl && syntax_hl.highlight?
 
       # For server-side highlighting, delegate to the syntax highlighter

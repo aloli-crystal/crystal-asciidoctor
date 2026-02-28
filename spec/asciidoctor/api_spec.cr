@@ -24,7 +24,11 @@ describe Asciidoctor do
 
     it "loads a document with attributes" do
       doc = Asciidoctor.load("= My Title\n\nHello", {"attributes" => "toc=left,icons=font"})
-      doc.attributes["toc"]?.should eq("left")
+      # After save_attributes, toc value is normalized per Ruby AsciiDoctor behavior:
+      # toc-placement defaults to 'macro' (not 'auto'), so position resolves to 'macro'
+      doc.attributes["toc"]?.should eq("")
+      doc.attributes["toc-position"]?.should eq("content")
+      doc.attributes["toc-placement"]?.should eq("macro")
       doc.attributes["icons"]?.should eq("font")
     end
 

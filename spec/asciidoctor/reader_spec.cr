@@ -366,6 +366,357 @@ describe Asciidoctor::Reader do
   end
 end
 
+describe Asciidoctor::PreprocessorReader do
+  describe "#initialize" do
+    it "creates a preprocessor reader with a document" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1", "line 2"])
+      reader.has_more_lines?.should be_true
+    end
+
+    it "creates a preprocessor reader with nil data" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, nil)
+      reader.has_more_lines?.should be_false
+    end
+  end
+
+  describe "#include_depth" do
+    it "returns 0 when no includes are active" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.include_depth.should eq(0)
+    end
+  end
+
+  describe "#include_processors?" do
+    it "returns false by default" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.include_processors?.should be_false
+    end
+  end
+
+  describe "#push_include and #pop_include" do
+    it "pushes and pops an include" do
+      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["original line"])
+      reader.read_line # consume original line
+
+      reader.push_include(["included line 1", "included line 2"], "/tmp/inc.adoc", "inc.adoc", 1)
+      reader.has_more_lines?.should be_true
+      reader.include_depth.should eq(1)
+      reader.path.should eq("inc.adoc")
+
+      reader.read_line.should eq("included line 1")
+      reader.read_line.should eq("included line 2")
+
+      reader.pop_include
+      reader.include_depth.should eq(0)
+    end
+
+    it "pushes include from string data" do
+      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["original"])
+      reader.read_line
+
+      reader.push_include("line A\nline B", "/tmp/inc.adoc", "inc.adoc", 1)
+      reader.read_line.should eq("line A")
+      reader.read_line.should eq("line B")
+    end
+
+    it "supports nested includes" do
+      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["root"])
+      reader.read_line
+
+      reader.push_include(["level 1"], "/tmp/l1.adoc", "l1.adoc", 1)
+      reader.include_depth.should eq(1)
+
+      reader.push_include(["level 2"], "/tmp/l2.adoc", "l2.adoc", 1)
+      reader.include_depth.should eq(2)
+
+      reader.pop_include
+      reader.include_depth.should eq(1)
+
+      reader.pop_include
+      reader.include_depth.should eq(0)
+    end
+  end
+
+  describe "#create_include_cursor" do
+    it "creates a cursor for an include" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      cursor = reader.create_include_cursor("/tmp/inc.adoc", "inc.adoc", 5)
+      cursor.file.should eq("/tmp/inc.adoc")
+      cursor.path.should eq("inc.adoc")
+      cursor.lineno.should eq(5)
+    end
+  end
+
+  describe "#exceeds_max_depth?" do
+    it "returns nil when max depth is not exceeded" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.exceeds_max_depth?.should be_nil
+    end
+  end
+
+  describe "#resolve_expr_val" do
+    it "resolves a string value" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.resolve_expr_val("'hello'").should eq("hello")
+    end
+
+    it "resolves an integer value" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.resolve_expr_val("42").should eq(42)
+    end
+
+    it "resolves a float value" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.resolve_expr_val("3.14").should eq(3.14)
+    end
+
+    it "resolves an attribute reference" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["myattr"] = "myvalue"
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.resolve_expr_val("{myattr}").should eq("myvalue")
+    end
+
+    it "resolves unresolved attribute reference as string" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      # When attribute is not defined, the reference is left as-is
+      result = reader.resolve_expr_val("{nonexistent}")
+      result.should eq("{nonexistent}")
+    end
+
+    it "resolves a bare word as a string" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["backend"] = "html5"
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      # Bare words without {} are treated as literal strings, not attribute lookups
+      reader.resolve_expr_val("backend").should eq("backend")
+    end
+  end
+
+  describe "#skip_front_matter!" do
+    it "skips YAML front matter" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      data = ["---", "title: My Doc", "author: John", "---", "= Document Title", "", "Content"]
+      front_matter = reader.skip_front_matter!(data)
+      front_matter.should_not be_nil
+      front_matter.not_nil!.should eq(["title: My Doc", "author: John"])
+      data.first.should eq("= Document Title")
+    end
+
+    it "returns nil when no front matter" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      data = ["= Document Title", "", "Content"]
+      front_matter = reader.skip_front_matter!(data)
+      front_matter.should be_nil
+    end
+
+    it "returns nil when front matter is not terminated" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      data = ["---", "title: My Doc", "author: John"]
+      front_matter = reader.skip_front_matter!(data)
+      front_matter.should be_nil
+    end
+  end
+
+  describe "#preprocess_conditional_directive" do
+    it "processes ifdef with defined attribute" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["backend"] = "html5"
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifdef::backend[]",
+        "Backend is defined",
+        "endif::[]",
+        "After endif",
+      ])
+      lines = reader.read_lines
+      lines.should contain("Backend is defined")
+      lines.should contain("After endif")
+    end
+
+    it "processes ifdef with undefined attribute" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifdef::nonexistent[]",
+        "Should not appear",
+        "endif::[]",
+        "After endif",
+      ])
+      lines = reader.read_lines
+      lines.should_not contain("Should not appear")
+      lines.should contain("After endif")
+    end
+
+    it "processes ifndef with undefined attribute" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifndef::nonexistent[]",
+        "Should appear",
+        "endif::[]",
+        "After endif",
+      ])
+      lines = reader.read_lines
+      lines.should contain("Should appear")
+      lines.should contain("After endif")
+    end
+
+    it "processes ifndef with defined attribute" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["backend"] = "html5"
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifndef::backend[]",
+        "Should not appear",
+        "endif::[]",
+        "After endif",
+      ])
+      lines = reader.read_lines
+      lines.should_not contain("Should not appear")
+      lines.should contain("After endif")
+    end
+
+    it "processes ifdef with inline content" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["backend"] = "html5"
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifdef::backend[Backend is defined]",
+        "Next line",
+      ])
+      lines = reader.read_lines
+      lines[0].should eq("Backend is defined")
+      lines.should contain("Next line")
+    end
+
+    it "processes ifdef with multiple attributes using any (comma)" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["html"] = ""
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifdef::html,docbook[]",
+        "One of them is defined",
+        "endif::[]",
+      ])
+      lines = reader.read_lines
+      lines.should contain("One of them is defined")
+    end
+
+    it "processes ifdef with multiple attributes using all (plus)" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["html"] = ""
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifdef::html+docbook[]",
+        "Both should be defined",
+        "endif::[]",
+      ])
+      lines = reader.read_lines
+      lines.should_not contain("Both should be defined")
+    end
+
+    it "processes nested ifdefs" do
+      doc = Asciidoctor::Document.new
+      doc.attributes["outer"] = ""
+      doc.attributes["inner"] = ""
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "ifdef::outer[]",
+        "Outer content",
+        "ifdef::inner[]",
+        "Inner content",
+        "endif::[]",
+        "After inner endif",
+        "endif::[]",
+        "After outer endif",
+      ])
+      lines = reader.read_lines
+      lines.should contain("Outer content")
+      lines.should contain("Inner content")
+      lines.should contain("After inner endif")
+      lines.should contain("After outer endif")
+    end
+  end
+
+  describe "process_line with preprocessor directives" do
+    it "passes through single-line comments (handled by parser)" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "line 1",
+        "// this is a comment",
+        "line 2",
+      ])
+      lines = reader.read_lines
+      # Comments are not stripped by the preprocessor reader;
+      # they are handled by the parser during block processing
+      lines.should contain("line 1")
+      lines.should contain("line 2")
+      lines.size.should eq(3)
+    end
+
+    it "passes through block comment delimiters (handled by parser)" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, [
+        "line 1",
+        "////",
+        "block comment line 1",
+        "block comment line 2",
+        "////",
+        "line 2",
+      ])
+      lines = reader.read_lines
+      # Block comments are not stripped by the preprocessor reader;
+      # they are handled by the parser during block processing
+      lines.should contain("line 1")
+      lines.should contain("line 2")
+      lines.size.should eq(6)
+    end
+  end
+
+  describe "empty? and eof? for PreprocessorReader" do
+    it "returns true when no lines remain" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, [] of String)
+      reader.empty?.should be_true
+      reader.eof?.should be_true
+    end
+
+    it "returns false when lines remain" do
+      doc = Asciidoctor::Document.new
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
+      reader.empty?.should be_false
+      reader.eof?.should be_false
+    end
+
+    it "returns true after include stack is exhausted" do
+      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["root"])
+      reader.read_line
+      reader.push_include(["included"], "/tmp/inc.adoc", "inc.adoc", 1)
+      reader.read_line
+      reader.pop_include
+      reader.empty?.should be_true
+    end
+  end
+
+  describe "has_more_lines? for PreprocessorReader" do
+    it "returns true when lines remain in current or include stack" do
+      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
+      reader = Asciidoctor::PreprocessorReader.new(doc, ["root"])
+      reader.has_more_lines?.should be_true
+    end
+  end
+end
+
 describe Asciidoctor::Cursor do
   describe "#initialize" do
     it "creates a cursor with file info" do
@@ -382,6 +733,17 @@ describe Asciidoctor::Cursor do
       cursor.dir.should eq(".")
       cursor.path.should eq("<stdin>")
     end
+
+    it "creates a cursor with custom lineno" do
+      cursor = Asciidoctor::Cursor.new("/tmp/test.adoc", lineno: 10)
+      cursor.lineno.should eq(10)
+    end
+
+    it "creates a cursor with custom dir and path" do
+      cursor = Asciidoctor::Cursor.new("/tmp/test.adoc", dir: "/custom", path: "custom.adoc")
+      cursor.dir.should eq("/custom")
+      cursor.path.should eq("custom.adoc")
+    end
   end
 
   describe "#advance" do
@@ -390,12 +752,39 @@ describe Asciidoctor::Cursor do
       cursor.advance(5)
       cursor.lineno.should eq(6)
     end
+
+    it "advances by 1" do
+      cursor = Asciidoctor::Cursor.new(nil)
+      cursor.advance(1)
+      cursor.lineno.should eq(2)
+    end
   end
 
   describe "#line_info" do
     it "returns formatted line info" do
       cursor = Asciidoctor::Cursor.new("/tmp/test.adoc", lineno: 42)
       cursor.line_info.should eq("test.adoc: line 42")
+    end
+
+    it "returns stdin line info when no file" do
+      cursor = Asciidoctor::Cursor.new(nil)
+      cursor.line_info.should eq("<stdin>: line 1")
+    end
+  end
+
+  describe "#to_source_location" do
+    it "converts to a SourceLocation" do
+      cursor = Asciidoctor::Cursor.new("/tmp/test.adoc", lineno: 5)
+      loc = cursor.to_source_location
+      loc.should be_a(Asciidoctor::SourceLocation)
+      loc.lineno.should eq(5)
+    end
+  end
+
+  describe "#to_s" do
+    it "returns the line_info string" do
+      cursor = Asciidoctor::Cursor.new("/tmp/test.adoc", lineno: 3)
+      cursor.to_s.should eq("test.adoc: line 3")
     end
   end
 end
