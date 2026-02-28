@@ -221,6 +221,18 @@ module Asciidoctor
 
     # Public: Parses AsciiDoc source read from the Reader into the Document.
     def parse(reader : Reader, document : Document, header_only : Bool = false) : Document
+      # Hook: run Preprocessors before parsing
+      if document.extensions?
+        registry = document.extensions!
+        if registry.preprocessors?
+          registry.preprocessors.each do |ext|
+            preprocessor = ext.instance.as(Extensions::Preprocessor)
+            result = preprocessor.process(document, reader)
+            reader = result if result
+          end
+        end
+      end
+
       block_attributes = parse_document_header(reader, document, header_only)
 
       unless header_only
@@ -229,6 +241,18 @@ module Asciidoctor
           if new_section
             document.assign_numeral(new_section)
             document.blocks << new_section
+          end
+        end
+      end
+
+      # Hook: run TreeProcessors after parsing
+      if document.extensions?
+        registry = document.extensions!
+        if registry.tree_processors?
+          registry.tree_processors.each do |ext|
+            tree_processor = ext.instance.as(Extensions::TreeProcessor)
+            result = tree_processor.process(document)
+            # If the tree processor returns a new document, use it
           end
         end
       end
@@ -686,6 +710,27 @@ module Asciidoctor
 
           # Check for block macros
           if this_line.ends_with?(']') && this_line.includes?("::")
+            # Hook: check for BlockMacroProcessor extensions
+            if document.extensions?
+              registry = document.extensions!
+              if registry.block_macros?
+                if (bm_match = CustomBlockMacroRx.match(this_line))
+                  macro_name = bm_match[1]
+                  if (ext = registry.find_block_macro_extension(macro_name))
+                    macro_target = bm_match[2]? || ""
+                    raw_attrs = bm_match[3]? || ""
+                    macro_attrs = {} of String => String
+                    parse_block_attribute_list(raw_attrs, macro_attrs) unless raw_attrs.empty?
+                    processor = ext.instance.as(Extensions::BlockMacroProcessor)
+                    result = processor.process(parent, macro_target, macro_attrs)
+                    if result.is_a?(AbstractBlock)
+                      return finalize_block(result, document, reader, attributes, style)
+                    end
+                  end
+                end
+              end
+            end
+
             if (ch0 == 'i' || this_line.starts_with?("video:") || this_line.starts_with?("audio:")) && (m = BlockMediaMacroRx.match(this_line))
               blk_ctx = string_to_block_context(m[1]) || :image
               target = m[2]

@@ -92,7 +92,7 @@ module Asciidoctor
     getter doctype : String
 
     # The activated Extensions::Registry associated with this document.
-    getter extensions : Extensions?
+    property extensions : Extensions::Registry?
 
     # The level-0 Section (i.e., doctitle).
     property header : Section?
@@ -224,6 +224,11 @@ module Asciidoctor
     # Check if the document has extensions.
     def extensions? : Bool
       !@extensions.nil?
+    end
+
+    # Get the extensions registry, raising if nil.
+    def extensions! : Extensions::Registry
+      @extensions.not_nil!
     end
 
     # Get the first section of the document.
@@ -379,6 +384,5 @@ module Asciidoctor
   class SyntaxHighlighter
   end
 
-  class Extensions
-  end
+
 end
