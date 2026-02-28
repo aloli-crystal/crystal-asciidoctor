@@ -100,7 +100,8 @@ module Asciidoctor
         @caption = doc_caption
         return
       end
-      if (attr_name = CAPTION_ATTRIBUTE_NAMES[caption_context]?) && (prefix = document.attributes[attr_name]?)
+      ctx_str = caption_context.to_s
+      if (attr_name = CAPTION_ATTRIBUTE_NAMES[ctx_str]?) && (prefix = document.attributes[attr_name]?)
         @numeral = document.increment_and_store_counter("#{caption_context}-number", self)
         @caption = "#{prefix} #{@numeral}. "
       end

@@ -15,5 +15,8 @@ module Asciidoctor
 
     # This block has no content
     Empty
+
+    # This block should be skipped (e.g., comment blocks)
+    Skip
   end
 end

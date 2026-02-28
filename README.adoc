@@ -4,11 +4,11 @@
 
 A Crystal port of the https://github.com/asciidoctor/asciidoctor[Asciidoctor] document processor.
 
-This shard provides an Abstract Syntax Tree (AST) model for AsciiDoc documents, faithfully ported from the Ruby implementation. It is the foundation for a full AsciiDoc processing pipeline in Crystal.
+This shard provides an Abstract Syntax Tree (AST) model and a parser for AsciiDoc documents, faithfully ported from the Ruby implementation. It is the foundation for a full AsciiDoc processing pipeline in Crystal.
 
 == Status
 
-*Work in progress* -- This shard currently implements the AST data model only. The parser and converters will be added in future iterations.
+*Work in progress* -- This shard currently implements the AST data model, the Reader, and the Parser. Converters will be added in future iterations.
 
 === Implemented
 
@@ -18,24 +18,27 @@ This shard provides an Abstract Syntax Tree (AST) model for AsciiDoc documents, 
 
 | Abstract node (base class) | `Asciidoctor::AbstractNode` | `abstract_node.rb`
 | Abstract block | `Asciidoctor::AbstractBlock` | `abstract_block.rb`
-| Document | `Asciidoctor::Document` | `document.rb`
 | Block | `Asciidoctor::Block` | `block.rb`
-| Section | `Asciidoctor::Section` | `section.rb`
+| Callouts | `Asciidoctor::Callouts` | `callouts.rb`
+| Constants | `Asciidoctor::*` | `asciidoctor.rb`
+| Content model (enum) | `Asciidoctor::ContentModel` | (symbols in Ruby)
+| Document | `Asciidoctor::Document` | `document.rb`
+| Document catalog | `Asciidoctor::Catalog` | (part of `document.rb`)
+| Helpers | `Asciidoctor::Helpers` | `helpers.rb`
 | Inline | `Asciidoctor::Inline` | `inline.rb`
 | List / ListItem | `Asciidoctor::List`, `Asciidoctor::ListItem` | `list.rb`
-| Table / Column / Cell | `Asciidoctor::Table`, `Table::Column`, `Table::Cell` | `table.rb`
-| Callouts | `Asciidoctor::Callouts` | `callouts.rb`
-| Document catalog | `Asciidoctor::Catalog` | (part of `document.rb`)
-| Content model (enum) | `Asciidoctor::ContentModel` | (symbols in Ruby)
-| Substitution (flags enum) | `Asciidoctor::Substitution` | `substitutors.rb`
+| Parser | `Asciidoctor::Parser` | `parser.rb`
+| Reader / PreprocessorReader | `Asciidoctor::Reader` | `reader.rb`
+| Regular expressions | `Asciidoctor::*Rx` | `rx.rb`
 | Safe mode | `Asciidoctor::SafeMode` | (constants in `asciidoctor.rb`)
+| Section | `Asciidoctor::Section` | `section.rb`
 | Source location | `Asciidoctor::SourceLocation` | (part of `abstract_block.rb`)
-| Constants | `Asciidoctor::*` | `asciidoctor.rb`
+| Substitution (flags enum) | `Asciidoctor::Substitution` | `substitutors.rb`
+| Table / Column / Cell | `Asciidoctor::Table`, `Table::Column`, `Table::Cell` | `table.rb`
 |===
 
 === Not yet implemented
 
-* Lexer / Parser
 * Converters (HTML5, DocBook, Manpage)
 * Extensions API
 * Syntax highlighting integration
@@ -60,6 +63,46 @@ Run `shards install`.
 ----
 require "crystal-asciidoctor"
 
+# Parse an AsciiDoc document from a string
+source = <<-ASCIIDOC
+= My Document
+Author Name
+
+== Introduction
+
+This is a paragraph.
+
+== Details
+
+Another paragraph with *bold* text.
+ASCIIDOC
+
+doc = Asciidoctor::Document.new
+reader = Asciidoctor::Reader.new(source.lines)
+Asciidoctor::Parser.parse(reader, doc)
+
+# Access the document title
+puts doc.doctitle  # => "My Document"
+
+# Traverse the tree
+doc.find_by(context: :paragraph).each do |block|
+  puts block.as(Asciidoctor::Block).source
+end
+
+# Access sections
+doc.blocks.each do |block|
+  if block.is_a?(Asciidoctor::Section)
+    puts "Section: #{block.title} (level #{block.level})"
+  end
+end
+----
+
+=== Building the AST manually
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
 # Create a document
 doc = Asciidoctor::Document.new
 
@@ -74,11 +117,6 @@ section << para
 
 # Create an inline node
 inline = Asciidoctor::Inline.new(para, :anchor, "click here", type: :xref, target: "#intro")
-
-# Traverse the tree
-doc.find_by(context: :paragraph).each do |block|
-  puts block.as(Asciidoctor::Block).source
-end
 ----
 
 == Development
@@ -106,4 +144,4 @@ This project is licensed under the MIT License -- see the `LICENSE` file for det
 
 == Acknowledgements
 
-This project is a Crystal port of https://github.com/asciidoctor/asciidoctor[Asciidoctor], originally written in Ruby by Dan Allen, Sarah White, and the Asciidoctor community. The AST model follows the same architecture and naming conventions as the original.
+This project is a Crystal port of https://github.com/asciidoctor/asciidoctor[Asciidoctor], originally written in Ruby by Dan Allen, Sarah White, and the Asciidoctor community. The AST model and parser follow the same architecture and naming conventions as the original.

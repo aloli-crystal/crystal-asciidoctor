@@ -142,6 +142,23 @@ module Asciidoctor
       super(block)
     end
 
+    # Assign a numeral to a section.
+    def assign_numeral(section : Section) : Nil
+      if section.numbered
+        if section.level == 1
+          section.numeral = (next_section_index + 1).to_s
+        end
+      end
+    end
+
+    # Finalize the document header after parsing.
+    def finalize_header(block_attrs : Hash(String, String), apply_header : Bool = true) : Hash(String, String)
+      block_attrs.each do |key, val|
+        @attributes[key] = val unless @attributes.has_key?(key)
+      end
+      block_attrs
+    end
+
     # Get the author.
     def author : String?
       @attributes["author"]?

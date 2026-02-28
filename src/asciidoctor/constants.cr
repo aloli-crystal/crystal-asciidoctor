@@ -1,18 +1,33 @@
 module Asciidoctor
+  ADMONITION_STYLE_HEADS = Set{'C', 'I', 'N', 'T', 'W'}
+
   ADMONITION_STYLES = Set{"CAUTION", "IMPORTANT", "NOTE", "TIP", "WARNING"}
 
-  ASCIIDOC_EXTENSIONS = Set{".ad", ".adoc", ".asc", ".asciidoc", ".txt"}
+  ASCIIDOC_EXTENSIONS = {
+    ".ad"       => true,
+    ".adoc"     => true,
+    ".asc"      => true,
+    ".asciidoc" => true,
+    ".txt"      => true,
+  }
+
+  ATTR_REF_HEAD = '{'
 
   BACKEND_ALIASES = {
     "docbook" => "docbook5",
     "html"    => "html5",
   }
 
+  BLOCK_MATH_DELIMITERS = {
+    "asciimath" => {"\\$", "\\$"},
+    "latexmath" => {"\\[", "\\]"},
+  }
+
   CAPTION_ATTRIBUTE_NAMES = {
-    :example => "example-caption",
-    :figure  => "figure-caption",
-    :listing => "listing-caption",
-    :table   => "table-caption",
+    "example" => "example-caption",
+    "figure"  => "figure-caption",
+    "listing" => "listing-caption",
+    "table"   => "table-caption",
   }
 
   DEFAULT_ATTRIBUTES = {
@@ -57,6 +72,53 @@ module Asciidoctor
 
   DEFAULT_STYLESHEET_NAME = "asciidoctor.css"
 
+  DELIMITED_BLOCKS = {
+    "--"   => {:open, Set{"comment", "example", "literal", "listing", "pass", "quote", "sidebar", "source", "verse", "admonition", "abstract", "partintro"}},
+    "----" => {:listing, Set{"literal", "source"}},
+    "...." => {:literal, Set{"listing", "source"}},
+    "====" => {:example, Set{"admonition"}},
+    "****" => {:sidebar, Set(String).new},
+    "____" => {:quote, Set{"verse"}},
+    "++++" => {:pass, Set{"stem", "latexmath", "asciimath"}},
+    "|===" => {:table, Set(String).new},
+    ",===" => {:table, Set(String).new},
+    ":===" => {:table, Set(String).new},
+    "!===" => {:table, Set(String).new},
+    "~~~~" => {:open, Set{"abstract", "partintro"}},
+    "////" => {:comment, Set(String).new},
+    "```"  => {:fenced_code, Set(String).new},
+  }
+
+  DELIMITED_BLOCK_HEADS = {
+    "--" => true, "--" => true, ".." => true, "==" => true,
+    "**" => true, "__" => true, "++" => true, "|=" => true,
+    ",=" => true, ":=" => true, "!=" => true, "~~" => true,
+    "//" => true, "``" => true,
+  }
+
+  DELIMITED_BLOCK_TAILS = {
+    "----" => "-", "...." => ".", "====" => "=", "****" => "*",
+    "____" => "_", "++++" => "+", "|===" => "=", ",===" => "=",
+    ":===" => "=", "!===" => "=", "~~~~" => "~", "////" => "/",
+  }
+
+  FLEXIBLE_ATTRIBUTES = ["sectnums"]
+
+  HARD_LINE_BREAK = " +"
+
+  HYBRID_LAYOUT_BREAK_CHARS = {
+    '\'' => :thematic_break,
+    '<'  => :page_break,
+    '-'  => :thematic_break,
+    '*'  => :thematic_break,
+    '_'  => :thematic_break,
+  }
+
+  INLINE_MATH_DELIMITERS = {
+    "asciimath" => {"\\$", "\\$"},
+    "latexmath" => {"\\(", "\\)"},
+  }
+
   INTRINSIC_ATTRIBUTES = {
     "amp"            => "&",
     "apos"           => "&#39;",
@@ -91,11 +153,26 @@ module Asciidoctor
     "zwsp"           => "&#8203;",
   }
 
+  LAYOUT_BREAK_CHARS = {
+    "'" => :thematic_break,
+    "<" => :page_break,
+  }
+
   # The newline character used for output.
   LF = '\n'
 
+  LINE_CONTINUATION        = " \\"
+  LINE_CONTINUATION_LEGACY = " +"
+  LIST_CONTINUATION        = "+"
+
   # Maximum integer value for "boundless" operations.
   MAX_INT = 9007199254740991_i64
+
+  MARKDOWN_THEMATIC_BREAK_CHARS = {
+    '-' => :thematic_break,
+    '*' => :thematic_break,
+    '_' => :thematic_break,
+  }
 
   NESTABLE_LIST_CONTEXTS = [:dlist, :olist, :ulist]
 
@@ -123,6 +200,13 @@ module Asciidoctor
     '^' => 3,
     '+' => 4,
   }
+
+  STEM_TYPE_ALIASES = {
+    "latex"     => "latexmath",
+    "latexmath" => "latexmath",
+    "tex"       => "latexmath",
+  }
+  STEM_TYPE_DEFAULT = "asciimath"
 
   # Tab character.
   TAB = '\t'
