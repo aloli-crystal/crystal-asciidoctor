@@ -3,11 +3,14 @@ require "./asciidoctor/constants"
 require "./asciidoctor/content_model"
 require "./asciidoctor/helpers"
 require "./asciidoctor/logging"
+require "./asciidoctor/path_resolver"
 require "./asciidoctor/rx"
 require "./asciidoctor/safe_mode"
 require "./asciidoctor/source_location"
 require "./asciidoctor/substitution"
 require "./asciidoctor/substitutors"
+require "./asciidoctor/timings"
+require "./asciidoctor/writer"
 require "./asciidoctor/abstract_node"
 require "./asciidoctor/abstract_block"
 require "./asciidoctor/attribute_list"
@@ -26,6 +29,10 @@ require "./asciidoctor/converter/manpage"
 require "./asciidoctor/api"
 require "./asciidoctor/cli/options"
 require "./asciidoctor/cli/invoker"
+
+# Custom exception for security violations (does not exist in Crystal stdlib).
+class SecurityError < Exception
+end
 
 module Asciidoctor
   VERSION = "0.1.0"
