@@ -65,8 +65,8 @@ module Asciidoctor
       when ContentModel::Compound
         @blocks.map { |b| b.convert }.join('\n')
       when ContentModel::Simple
-        # TODO: apply_subs(@lines.join('\n'), @subs)
-        @lines.join('\n')
+        text = @lines.join('\n')
+        subs_list.empty? ? text : apply_subs(text, subs_list)
       when ContentModel::Verbatim, ContentModel::Raw
         result = @lines.dup
         joined = if result.size < 2

@@ -1097,6 +1097,28 @@ module Asciidoctor
             parts = credit_line.split(", ", 2)
             attributes["attribution"] = parts[0] unless parts[0].empty?
             attributes["citetitle"] = parts[1] if parts.size > 1
+          elsif style && VERBATIM_STYLES.includes?(style)
+            # Restyle paragraph as verbatim block based on style attribute
+            case style
+            when "literal"
+              block = Block.new(parent, :literal, content_model: ContentModel::Verbatim, source: lines)
+            when "listing"
+              block = Block.new(parent, :listing, content_model: ContentModel::Verbatim, source: lines)
+            when "source"
+              block = Block.new(parent, :listing, content_model: ContentModel::Verbatim, source: lines)
+              attributes["style"] = "source"
+              unless attributes.has_key?("language")
+                if (lang = attributes["2"]?) && !lang.empty?
+                  attributes["language"] = lang
+                elsif (src_lang = doc_attrs["source-language"]?)
+                  attributes["language"] = src_lang
+                end
+              end
+            when "verse"
+              block = Block.new(parent, :verse, content_model: ContentModel::Verbatim, source: lines)
+            else
+              block = Block.new(parent, :paragraph, content_model: ContentModel::Simple, source: lines)
+            end
           else
             block = Block.new(parent, :paragraph, content_model: ContentModel::Simple, source: lines)
           end
@@ -1221,6 +1243,8 @@ module Asciidoctor
         end
       end
       block.update_attributes(attributes) unless attributes.empty?
+      # Resolve substitutions based on content model and custom subs attribute
+      block.commit_subs if block.responds_to?(:commit_subs)
       block
     end
 

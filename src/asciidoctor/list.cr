@@ -109,8 +109,15 @@ module Asciidoctor
 
     # Get the String text of this ListItem with substitutions applied.
     def text : String?
-      # TODO: apply_subs(@text, @subs)
-      @text
+      if (t = @text)
+        subs_to_apply = subs_list
+        if subs_to_apply.empty?
+          subs_to_apply = [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol
+        end
+        apply_subs(t, subs_to_apply)
+      else
+        nil
+      end
     end
 
     # Set the String text assigned to this ListItem.

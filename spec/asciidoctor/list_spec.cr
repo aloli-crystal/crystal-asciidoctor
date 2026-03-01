@@ -183,8 +183,7 @@ describe "Lists" do
   # Bulleted lists - Lists with inline markup
   # =========================================================================
   describe "Bulleted lists - Lists with inline markup" do
-    pending "quoted text" do
-      # Convertisseur Crystal ne traite pas encore l'inline markup dans les listes
+    it "quoted text" do
       input = "= List\n\n- I am *strong*.\n- I am _stressed_.\n- I am `flexible`."
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
@@ -194,8 +193,7 @@ describe "Lists" do
       output.should contain("<code>")
     end
 
-    pending "attribute substitutions" do
-      # Convertisseur Crystal ne traite pas encore les substitutions d'attributs dans les listes
+    it "attribute substitutions" do
       input = "= List\n:foo: bar\n\n- side a {vbar} side b\n- Take me to a {foo}."
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)

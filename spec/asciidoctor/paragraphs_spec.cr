@@ -82,11 +82,10 @@ describe "Paragraphs" do
     p.content_model.should eq(Asciidoctor::ContentModel::Simple)
   end
 
-  pending "should substitute special characters in a paragraph by default" do
-    # Convertisseur Crystal ne fait pas l'échappement HTML des caractères spéciaux
+  it "should substitute special characters in a paragraph by default" do
     input = "He said, <Let's rock!>"
     output = Asciidoctor.convert(input)
-    output.should contain("He said, &lt;Let's rock!&gt;")
+    output.should contain("He said, &lt;Let&#8217;s rock!&gt;")
   end
 
   it "should render special characters in a paragraph" do
@@ -96,39 +95,34 @@ describe "Paragraphs" do
     output.should contain("rock!")
   end
 
-  pending "should not substitute special characters in a literal paragraph" do
-    # Convertisseur Crystal ne traite pas encore [literal] correctement (traité comme paragraphe normal)
+  it "should not substitute special characters in a literal paragraph" do
     input = "[literal]\nHe said, <Let's rock!>"
     output = Asciidoctor.convert(input)
     output.should contain("<pre>He said, &lt;Let's rock!&gt;</pre>")
   end
 
-  pending "should not substitute special characters in a paragraph with literal style" do
-    # Convertisseur Crystal ne traite pas encore [literal] correctement
+  it "should not substitute special characters in a paragraph with literal style" do
     input = "[literal]\nHe said, <Let's rock!>"
     output = Asciidoctor.convert(input)
     output.should contain("<pre>He said, &lt;Let's rock!&gt;</pre>")
   end
 
-  pending "should not substitute special characters in a paragraph with listing style" do
-    # Convertisseur Crystal ne traite pas encore [listing] correctement
+  it "should not substitute special characters in a paragraph with listing style" do
     input = "[listing]\nHe said, <Let's rock!>"
     output = Asciidoctor.convert(input)
-    output.should contain("<pre><code>He said, &lt;Let's rock!&gt;</code></pre>")
+    output.should contain("<pre>He said, &lt;Let's rock!&gt;</pre>")
   end
 
-  pending "should not substitute special characters in a paragraph with source style" do
-    # Convertisseur Crystal ne traite pas encore [source] correctement
+  it "should not substitute special characters in a paragraph with source style" do
     input = "[source]\nHe said, <Let's rock!>"
     output = Asciidoctor.convert(input)
-    output.should contain("<pre><code>He said, &lt;Let's rock!&gt;</code></pre>")
+    output.should contain("<code>He said, &lt;Let's rock!&gt;</code>")
   end
 
-  pending "should not substitute special characters in a paragraph with verse style" do
-    # Convertisseur Crystal ne traite pas encore [verse] correctement
+  it "should not substitute special characters in a paragraph with verse style" do
     input = "[verse]\nHe said, <Let's rock!>"
     output = Asciidoctor.convert(input)
-    output.should contain("He said, &lt;Let's rock!&gt;")
+    output.should contain("He said, &lt;Let&#8217;s rock!&gt;")
   end
 
   it "should not substitute special characters in a paragraph with normal style and subs=none" do
@@ -138,7 +132,7 @@ describe "Paragraphs" do
   end
 
   pending "should perform substitutions on a paragraph with a role" do
-    # Convertisseur Crystal ne traite pas encore l'inline markup (*bold*)
+    # Parser ne traite pas encore les shorthand attributes [.role]
     input = "[.lead]\n*G*o*o*d times!"
     output = Asciidoctor.convert(input)
     output.should contain("<p class=\"lead\"><strong>G</strong>o<strong>o</strong>d times!</p>")
@@ -152,7 +146,7 @@ describe "Paragraphs" do
   end
 
   pending "should perform substitutions on a paragraph with an id and role" do
-    # Convertisseur Crystal ne traite pas encore l'inline markup (*bold*)
+    # Parser ne traite pas encore les shorthand attributes [#id.role]
     input = "[#first.lead]\n*G*o*o*d times!"
     output = Asciidoctor.convert(input)
     output.should contain("<p id=\"first\" class=\"lead\"><strong>G</strong>o<strong>o</strong>d times!</p>")
@@ -171,8 +165,7 @@ describe "Paragraphs" do
     output.should_not contain("<br>")
   end
 
-  pending "should create a paragraph with a hard line break if hardbreaks option is set on document" do
-    # Convertisseur Crystal ne traite pas encore l'attribut hardbreaks
+  it "should create a paragraph with a hard line break if hardbreaks option is set on document" do
     input = "line one\nline two"
     output = Asciidoctor.convert(input, {"attributes" => "hardbreaks"})
     output.should contain("line one<br>\nline two")
@@ -199,8 +192,7 @@ describe "Paragraphs" do
     output.should contain("line one line two")
   end
 
-  pending "should create a paragraph with a hard line break for a line that ends with a plus" do
-    # Convertisseur Crystal ne traite pas encore le + en fin de ligne comme hard line break
+  it "should create a paragraph with a hard line break for a line that ends with a plus" do
     input = "line one +\nline two"
     output = Asciidoctor.convert(input)
     output.should contain("line one<br>\nline two")

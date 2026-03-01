@@ -112,24 +112,21 @@ module Asciidoctor
 
     # Commit substitutions based on content model and custom subs attribute.
     def commit_subs
-      default_subs = @default_subs
-      unless default_subs
-        default_subs = case @content_model
-                       when ContentModel::Simple
-                         [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements]
-                       when ContentModel::Verbatim
-                         @context == :verse ? [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] : [:specialcharacters, :callouts]
-                       when ContentModel::Raw
-                         @context == :stem ? [:specialcharacters] : [] of Symbol
-                       else
-                         return @subs_list
-                       end
-      end
+      resolved_defaults = case @content_model
+                          when ContentModel::Simple
+                            [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol
+                          when ContentModel::Verbatim
+                            @context == :verse ? [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol : [:specialcharacters, :callouts] of Symbol
+                          when ContentModel::Raw
+                            @context == :stem ? [:specialcharacters] of Symbol : [] of Symbol
+                          else
+                            return @subs_list
+                          end
 
       if (custom_subs = @attributes["subs"]?)
-        @subs_list = resolve_block_subs(custom_subs, default_subs) || [] of Symbol
+        @subs_list = resolve_block_subs(custom_subs, resolved_defaults) || [] of Symbol
       else
-        @subs_list = default_subs.dup
+        @subs_list = resolved_defaults.dup
       end
       nil
     end
@@ -506,8 +503,8 @@ module Asciidoctor
 
     # Substitute post replacements (hard line breaks).
     def sub_post_replacements(text : String) : String
-      if (self.responds_to?(:attributes) && self.attributes["hardbreaks-option"]?) ||
-         (self.responds_to?(:document) && self.document.attributes["hardbreaks-option"]?)
+      if (self.responds_to?(:attributes) && (self.attributes["hardbreaks-option"]? || self.attributes["hardbreaks"]?)) ||
+         (self.responds_to?(:document) && (self.document.attributes["hardbreaks-option"]? || self.document.attributes["hardbreaks"]?))
         lines = text.split("\n", remove_empty: false)
         return text if lines.size < 2
         last = lines.pop

@@ -253,7 +253,7 @@ module Asciidoctor
   # --------------------------------------------------------------------------
 
   # Matches a trailing + preceded by at least one space (hard line break).
-  HardLineBreakRx = /^(.*) \+$/
+  HardLineBreakRx = /^(.*) \+$/m
 
   # Matches a Markdown horizontal rule.
   MarkdownThematicBreakRx = /^ {0,3}([-*_])( *)\1\2\1$/
