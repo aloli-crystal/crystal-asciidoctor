@@ -81,7 +81,7 @@ module Asciidoctor
           end
 
           p.on("-S SAFE_MODE", "--safe-mode=SAFE_MODE", "Set safe mode: unsafe, safe, server, secure (default: unsafe)") do |mode|
-            opts.safe_mode = SafeMode.value_for_name(mode)
+            opts.safe_mode = SafeMode.value_for_name(mode) || SafeMode::UNSAFE
           end
 
           p.on("--sourcemap", "Add source location information to each parsed block") do

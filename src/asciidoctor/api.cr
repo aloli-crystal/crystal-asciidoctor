@@ -41,6 +41,9 @@ module Asciidoctor
     reader = Reader.new(source)
     Parser.parse(reader, doc)
 
+    # Initialize syntax highlighter based on document attributes
+    doc.init_syntax_highlighter
+
     doc
   end
 

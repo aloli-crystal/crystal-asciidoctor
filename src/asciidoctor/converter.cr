@@ -55,9 +55,10 @@ module Asciidoctor
     class CustomFactory
       @registry : Hash(String, Base.class)
 
-      def initialize(seed_registry : Hash(String, Base.class) | Nil = nil)
-        if seed_registry
-          @registry = seed_registry
+      def initialize(seed_registry = nil)
+        if sr = seed_registry
+          @registry = {} of String => Base.class
+          sr.each { |k, v| @registry[k] = v }
         else
           @registry = {} of String => Base.class
         end

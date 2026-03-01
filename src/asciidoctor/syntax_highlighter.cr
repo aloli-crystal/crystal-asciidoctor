@@ -40,8 +40,13 @@ module Asciidoctor
     class CustomFactory
       @registry : Hash(String, SyntaxHighlighterBase.class)
 
-      def initialize(seed_registry : Hash(String, SyntaxHighlighterBase.class) | Nil = nil)
-        @registry = seed_registry || {} of String => SyntaxHighlighterBase.class
+      def initialize(seed_registry = nil)
+        if sr = seed_registry
+          @registry = {} of String => SyntaxHighlighterBase.class
+          sr.each { |k, v| @registry[k] = v }
+        else
+          @registry = {} of String => SyntaxHighlighterBase.class
+        end
       end
 
       # Resolve the name to a syntax highlighter instance, if found in the registry.
