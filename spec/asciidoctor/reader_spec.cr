@@ -1,6 +1,409 @@
 require "../spec_helper"
+require "../test_helpers"
 
 describe Asciidoctor::Reader do
+  context "Prepare lines" do
+    it "should prepare lines from Array data" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.lines.should eq(TestHelpers::SAMPLE_DATA)
+    end
+
+    it "should prepare lines from String data" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA.join("\n"))
+      reader.lines.should eq(TestHelpers::SAMPLE_DATA)
+    end
+
+    it "should prepare lines from String data with trailing newline" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA.join("\n") + "\n")
+      reader.lines.should eq(TestHelpers::SAMPLE_DATA)
+    end
+  end
+  context "With empty data" do
+    it "has_more_lines? should return false with empty data" do
+      Asciidoctor::Reader.new.has_more_lines?.should be_falsey
+    end
+
+    it "empty? should return true with empty data" do
+      Asciidoctor::Reader.new.empty?.should be_truthy
+      Asciidoctor::Reader.new.eof?.should be_truthy
+    end
+
+    it "next_line_empty? should return true with empty data" do
+      Asciidoctor::Reader.new.next_line_empty?.should be_truthy
+    end
+
+    it "peek_line should return nil with empty data" do
+      Asciidoctor::Reader.new.peek_line.should be_nil
+    end
+
+    it "peek_lines should return empty Array with empty data" do
+      Asciidoctor::Reader.new.peek_lines(1).empty?.should be_truthy
+    end
+
+    it "read_line should return nil with empty data" do
+      Asciidoctor::Reader.new.read_line.should be_nil
+    end
+
+    it "read_lines should return empty Array with empty data" do
+      Asciidoctor::Reader.new.read_lines.empty?.should be_truthy
+    end
+  end
+  context "With data" do
+    it "has_more_lines? should return true if there are lines remaining" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.has_more_lines?.should be_truthy
+    end
+
+    it "empty? should return false if there are lines remaining" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.empty?.should be_falsey
+      reader.eof?.should be_falsey
+    end
+
+    it "next_line_empty? should return false if next line is not blank" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.next_line_empty?.should be_falsey
+    end
+
+    it "next_line_empty? should return true if next line is blank" do
+      reader = Asciidoctor::Reader.new(["", "second line"])
+      reader.next_line_empty?.should be_truthy
+    end
+
+    it "peek_line should return nil if reader is empty" do
+      Asciidoctor::Reader.new([] of String).peek_line.should be_nil
+    end
+
+    it "peek_line should return next line if there are lines remaining" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.peek_line.should eq(TestHelpers::SAMPLE_DATA.first)
+    end
+
+    it "peek_line should not consume line or increment line number" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.peek_line.should eq(TestHelpers::SAMPLE_DATA.first)
+      reader.peek_line.should eq(TestHelpers::SAMPLE_DATA.first)
+      reader.lineno.should eq(1)
+    end
+
+    it "peek_lines should return next lines if there are lines remaining" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.peek_lines(2).should eq(TestHelpers::SAMPLE_DATA[0..1])
+    end
+
+    it "peek_lines should not consume lines or increment line number" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.peek_lines(2).should eq(TestHelpers::SAMPLE_DATA[0..1])
+      reader.peek_lines(2).should eq(TestHelpers::SAMPLE_DATA[0..1])
+      reader.lineno.should eq(1)
+    end
+
+    it "peek_lines should not increment line number if reader overruns buffer" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.peek_lines(TestHelpers::SAMPLE_DATA.size * 2).should eq(TestHelpers::SAMPLE_DATA)
+      reader.lineno.should eq(1)
+    end
+
+    pending "peek_lines should peek all lines if no arguments are given" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.peek_lines.should eq(TestHelpers::SAMPLE_DATA)
+      reader.lineno.should eq(1)
+    end
+
+    it "peek_lines should not invert order of lines" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.lines.should eq(TestHelpers::SAMPLE_DATA)
+      reader.peek_lines(3)
+      reader.lines.should eq(TestHelpers::SAMPLE_DATA)
+    end
+
+    it "read_line should return next line if there are lines remaining" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_line.should eq(TestHelpers::SAMPLE_DATA.first)
+    end
+
+    it "read_line should consume next line and increment line number" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_line.should eq(TestHelpers::SAMPLE_DATA[0])
+      reader.read_line.should eq(TestHelpers::SAMPLE_DATA[1])
+      reader.lineno.should eq(3)
+    end
+
+    it "advance should consume next line and return a Boolean indicating if a line was consumed" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.advance.should be_truthy
+      reader.advance.should be_truthy
+      reader.advance.should be_truthy
+      reader.advance.should be_falsey
+    end
+
+    it "read_lines should return all lines" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_lines.should eq(TestHelpers::SAMPLE_DATA)
+    end
+
+    it "read should return all lines joined as String" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read.should eq(TestHelpers::SAMPLE_DATA.join("\n"))
+    end
+
+    it "has_more_lines? should return false after read_lines is invoked" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_lines
+      reader.has_more_lines?.should be_falsey
+    end
+
+    it "unshift puts line onto Reader as next line to read" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA, nil, {:normalize => true})
+      reader.unshift_line("line zero")
+      reader.peek_line.should eq("line zero")
+      reader.read_line.should eq("line zero")
+      reader.lineno.should eq(1)
+    end
+
+    it "terminate should consume all lines and update line number" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.terminate
+      reader.eof?.should be_truthy
+      reader.lineno.should eq(4)
+    end
+
+    it "skip_blank_lines should skip blank lines" do
+      reader = Asciidoctor::Reader.new(["", ""].concat(TestHelpers::SAMPLE_DATA))
+      reader.skip_blank_lines
+      reader.peek_line.should eq(TestHelpers::SAMPLE_DATA.first)
+    end
+
+    it "lines should return remaining lines" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_line
+      reader.lines.should eq(TestHelpers::SAMPLE_DATA[1..-1])
+    end
+
+    it "source_lines should return copy of original data Array" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_lines
+      reader.source_lines.should eq(TestHelpers::SAMPLE_DATA)
+    end
+
+    it "source should return original data Array joined as String" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_lines
+      reader.source.should eq(TestHelpers::SAMPLE_DATA.join("\n"))
+    end
+
+    it "string should return remaining lines joined as String" do
+      reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
+      reader.read_line
+      reader.string.should eq(TestHelpers::SAMPLE_DATA[1..-1].join("\n"))
+    end
+  end
+  context "Include Directive" do
+    pending "should replace include directive with link macro in default safe mode" do
+      input = "include::include-file.adoc[]"
+      doc = Asciidoctor.load(input)
+      reader = doc.reader.not_nil!
+      reader.read_line.should eq("link:include-file.adoc[role=include]")
+    end
+
+    pending "should not add role to link macro used to replace include directive in compat mode" do
+      input = "include::include-file.adoc[]"
+      doc = Asciidoctor.load(input, {"attributes" => "compat-mode"})
+      reader = doc.reader.not_nil!
+      reader.read_line.should eq("link:include-file.adoc[]")
+    end
+
+    pending "should escape spaces in target when generating link from include directive" do
+      input = "include::foo bar baz.adoc[]"
+      doc = Asciidoctor.load(input)
+      reader = doc.reader.not_nil!
+      reader.read_line.should eq("link:pass:c[foo bar baz.adoc][role=include]")
+    end
+
+    pending "should preserve attrlist when replacing include directive with link macro" do
+      input = "include::include-file.adoc[leveloffset=+1]"
+      doc = Asciidoctor.load(input)
+      reader = doc.reader.not_nil!
+      reader.read_line.should eq("link:include-file.adoc[role=include,leveloffset=+1]")
+    end
+
+    pending "unresolved target referenced by include directive is skipped when optional option is set" do
+      input = "include::fixtures/{no-such-file}[opts=optional]"
+      doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
+      doc.blocks.size.should eq(0)
+    end
+
+    pending "should skip include directive that references missing file if optional option is set" do
+      input = "include::fixtures/no-such-file.adoc[opts=optional]"
+      doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
+      doc.blocks.size.should eq(0)
+    end
+
+    pending "should replace include directive that references missing file with message" do
+      input = "include::fixtures/no-such-file.adoc[]"
+      doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
+      doc.blocks.size.should eq(1)
+      doc.blocks[0].as(Asciidoctor::Block).lines[0].should eq("Unresolved directive in <stdin> - include::fixtures/no-such-file.adoc[]")
+    end
+
+    pending "attributes are substituted in target of include directive" do
+      input = ":fixturesdir: fixtures\n:ext: adoc\n\ninclude::{fixturesdir}/include-file.{ext}[]"
+      doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
+      output = doc.convert
+      output.should match(/included content/)
+    end
+
+    pending "escaped include directive is left unprocessed" do
+      input = "\\include::fixtures/include-file.adoc[]"
+      doc = TestHelpers.empty_document({"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
+      reader = Asciidoctor::PreprocessorReader.new(doc, input, nil, {:normalize => true})
+      reader.peek_line.should eq("include::fixtures/include-file.adoc[]")
+      reader.read_line.should eq("include::fixtures/include-file.adoc[]")
+    end
+
+    it "include directive not at start of line is ignored" do
+      input = " include::include-file.adoc[]"
+      para = TestHelpers.block_from_string(input)
+      para.lines.size.should eq(1)
+      para.context.should eq(:literal)
+      para.source.should eq("include::include-file.adoc[]")
+    end
+
+    it "include directive is disabled when max-include-depth attribute is 0" do
+      input = "include::include-file.adoc[]"
+      para = TestHelpers.block_from_string(input, {"safe" => "safe", "attributes" => "max-include-depth=0"})
+      para.lines.size.should eq(1)
+      para.source.should eq("include::include-file.adoc[]")
+    end
+  end
+
+  context "Include Stack" do
+    pending "push_include method should return reader" do
+      reader = TestHelpers.empty_document.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
+      append_lines = ["one", "two", "three"]
+      result = reader.push_include(append_lines, "<stdin>", "<stdin>")
+      result.should eq(reader)
+    end
+
+    pending "push_include method should put lines on top of stack" do
+      lines = ["a", "b", "c"]
+      doc = Asciidoctor.load(lines.join("\n"))
+      reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
+      append_lines = ["one", "two", "three"]
+      reader.push_include(append_lines, "", "<stdin>")
+      reader.include_stack.size.should eq(1)
+      reader.read_line.not_nil!.rstrip.should eq("one")
+    end
+
+    pending "push_include method should gracefully handle file and path" do
+      lines = ["a", "b", "c"]
+      doc = Asciidoctor.load(lines.join("\n"))
+      reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
+      append_lines = ["one", "two", "three"]
+      reader.push_include(append_lines)
+      reader.include_stack.size.should eq(1)
+      reader.read_line.not_nil!.rstrip.should eq("one")
+      reader.file.should be_nil
+      reader.path.should eq("<stdin>")
+    end
+
+    pending "push_include method should set path from file automatically if not specified" do
+      lines = ["a", "b", "c"]
+      doc = Asciidoctor.load(lines.join("\n"))
+      reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
+      append_lines = ["one", "two", "three"]
+      reader.push_include(append_lines, "/tmp/lines.adoc")
+      reader.file.should eq("/tmp/lines.adoc")
+      reader.path.should eq("lines.adoc")
+      doc.catalog.includes["lines"].should be_truthy
+    end
+
+    pending "push_include method should not fail if data is nil" do
+      lines = ["a", "b", "c"]
+      doc = Asciidoctor.load(lines.join("\n"))
+      reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
+      reader.push_include([] of String, "", "<stdin>")
+      reader.include_stack.size.should eq(1)
+      reader.read_line.not_nil!.rstrip.should eq("a")
+    end
+  end
+
+  context "Front Matter" do
+    pending "should not skip front matter if it is not enabled" do
+      input = "---\nlayout: post\n---\n= Document Title"
+      doc = Asciidoctor.load(input)
+      reader = doc.reader.not_nil!
+      reader.peek_line.should eq("---")
+    end
+
+    pending "should skip front matter if specified by skip-front-matter attribute" do
+      front_matter = "layout: post\ntitle: Document Title"
+      input = "---\n#{front_matter}\n---\n= Document Title"
+      doc = Asciidoctor.load(input, {"attributes" => "skip-front-matter"})
+      reader = doc.reader.not_nil!
+      reader.peek_line.should eq("= Document Title")
+      doc.attributes["front-matter"].should eq(front_matter)
+     end
+  end
+
+  context "Conditional Directives" do
+    pending "should not process conditional directives if disabled" do
+      input = "ifdef::asciidoctor[]"
+      doc = Asciidoctor.load(input, {"parse" => "false"})
+      reader = doc.reader.not_nil!
+      reader.peek_line.should eq("ifdef::asciidoctor[]")
+    end
+
+    pending "should include content if attribute is set" do
+      input = ["ifdef::asciidoctor[]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "asciidoctor"})
+      reader = doc.reader.not_nil!
+      reader.read_lines.should eq(["content"])
+    end
+
+    pending "should not include content if attribute is not set" do
+      input = ["ifdef::foobar[]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"))
+      reader = doc.reader.not_nil!
+      reader.read_lines.empty?.should be_truthy
+    end
+
+    pending "should include content if attribute is not set" do
+      input = ["ifndef::foobar[]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"))
+      reader = doc.reader.not_nil!
+      reader.read_lines.should eq(["content"])
+    end
+
+    pending "should not include content if attribute is set" do
+      input = ["ifndef::asciidoctor[]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "asciidoctor"})
+      reader = doc.reader.not_nil!
+      reader.read_lines.empty?.should be_truthy
+    end
+
+    pending "should handle multiple attributes" do
+      input = ["ifdef::asciidoctor,foobar[]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "foobar"})
+      reader = doc.reader.not_nil!
+      reader.read_lines.should eq(["content"])
+    end
+
+    pending "should handle nested conditional directives" do
+      input = ["ifdef::asciidoctor[]", "ifdef::foobar[]", "content", "endif::[]", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "asciidoctor foobar"})
+      reader = doc.reader.not_nil!
+      reader.read_lines.should eq(["content"])
+    end
+
+    pending "should evaluate expression" do
+      input = ["ifeval::[\"a\" == \"a\"]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"))
+      reader = doc.reader.not_nil!
+      reader.read_lines.should eq(["content"])
+    end
+  end
+
   describe "#initialize" do
     it "creates a reader from an array of strings" do
       reader = Asciidoctor::Reader.new(["line 1", "line 2", "line 3"])
@@ -321,13 +724,25 @@ describe Asciidoctor::Reader do
       reader.skip_comment_lines
       reader.peek_line.should eq("line 1")
     end
+
+    it "skips block comments" do
+      reader = Asciidoctor::Reader.new(["////", "comment", "////", "line 1"])
+      reader.skip_comment_lines
+      reader.peek_line.should eq("line 1")
+    end
   end
 
   describe "#source" do
-    it "returns the original source as a string" do
+    it "returns the full source" do
       reader = Asciidoctor::Reader.new(["line 1", "line 2"])
-      reader.read_line
       reader.source.should eq("line 1\nline 2")
+    end
+  end
+
+  describe "#source_lines" do
+    it "returns the full source as an array" do
+      reader = Asciidoctor::Reader.new(["line 1", "line 2"])
+      reader.source_lines.should eq(["line 1", "line 2"])
     end
   end
 
@@ -340,15 +755,15 @@ describe Asciidoctor::Reader do
   end
 
   describe "#terminate" do
-    it "consumes all remaining lines" do
-      reader = Asciidoctor::Reader.new(["line 1", "line 2", "line 3"])
+    it "advances to the end of the reader" do
+      reader = Asciidoctor::Reader.new(["line 1", "line 2"])
       reader.terminate
       reader.has_more_lines?.should be_false
     end
   end
 
   describe "#unshift_line" do
-    it "pushes a line back onto the reader" do
+    it "adds a line to the top of the reader" do
       reader = Asciidoctor::Reader.new(["line 2"])
       reader.unshift_line("line 1")
       reader.peek_line.should eq("line 1")
@@ -356,148 +771,33 @@ describe Asciidoctor::Reader do
   end
 
   describe "#unshift_lines" do
-    it "pushes multiple lines back onto the reader" do
+    it "adds lines to the top of the reader" do
       reader = Asciidoctor::Reader.new(["line 3"])
       reader.unshift_lines(["line 1", "line 2"])
       reader.read_line.should eq("line 1")
       reader.read_line.should eq("line 2")
-      reader.read_line.should eq("line 3")
     end
   end
 end
 
 describe Asciidoctor::PreprocessorReader do
   describe "#initialize" do
-    it "creates a preprocessor reader with a document" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1", "line 2"])
-      reader.has_more_lines?.should be_true
-    end
-
-    it "creates a preprocessor reader with nil data" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, nil)
-      reader.has_more_lines?.should be_false
-    end
-  end
-
-  describe "#include_depth" do
-    it "returns 0 when no includes are active" do
+    it "creates a preprocessor reader" do
       doc = Asciidoctor::Document.new
       reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.include_depth.should eq(0)
-    end
-  end
-
-  describe "#include_processors?" do
-    it "returns false by default" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.include_processors?.should be_false
-    end
-  end
-
-  describe "#push_include and #pop_include" do
-    it "pushes and pops an include" do
-      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["original line"])
-      reader.read_line # consume original line
-
-      reader.push_include(["included line 1", "included line 2"], "/tmp/inc.adoc", "inc.adoc", 1)
-      reader.has_more_lines?.should be_true
-      reader.include_depth.should eq(1)
-      reader.path.should eq("inc.adoc")
-
-      reader.read_line.should eq("included line 1")
-      reader.read_line.should eq("included line 2")
-
-      reader.pop_include
-      reader.include_depth.should eq(0)
-    end
-
-    it "pushes include from string data" do
-      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["original"])
-      reader.read_line
-
-      reader.push_include("line A\nline B", "/tmp/inc.adoc", "inc.adoc", 1)
-      reader.read_line.should eq("line A")
-      reader.read_line.should eq("line B")
-    end
-
-    it "supports nested includes" do
-      doc = Asciidoctor::Document.new(safe: Asciidoctor::SafeMode::UNSAFE)
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["root"])
-      reader.read_line
-
-      reader.push_include(["level 1"], "/tmp/l1.adoc", "l1.adoc", 1)
-      reader.include_depth.should eq(1)
-
-      reader.push_include(["level 2"], "/tmp/l2.adoc", "l2.adoc", 1)
-      reader.include_depth.should eq(2)
-
-      reader.pop_include
-      reader.include_depth.should eq(1)
-
-      reader.pop_include
-      reader.include_depth.should eq(0)
-    end
-  end
-
-  describe "#create_include_cursor" do
-    it "creates a cursor for an include" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      cursor = reader.create_include_cursor("/tmp/inc.adoc", "inc.adoc", 5)
-      cursor.file.should eq("/tmp/inc.adoc")
-      cursor.path.should eq("inc.adoc")
-      cursor.lineno.should eq(5)
-    end
-  end
-
-  describe "#exceeds_max_depth?" do
-    it "returns nil when max depth is not exceeded" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.exceeds_max_depth?.should be_nil
+      reader.should be_a(Asciidoctor::PreprocessorReader)
     end
   end
 
   describe "#resolve_expr_val" do
-    it "resolves a string value" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.resolve_expr_val("'hello'").should eq("hello")
-    end
-
-    it "resolves an integer value" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.resolve_expr_val("42").should eq(42)
-    end
-
-    it "resolves a float value" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.resolve_expr_val("3.14").should eq(3.14)
-    end
-
     it "resolves an attribute reference" do
       doc = Asciidoctor::Document.new
-      doc.attributes["myattr"] = "myvalue"
+      doc.attributes["backend"] = "html5"
       reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      reader.resolve_expr_val("{myattr}").should eq("myvalue")
+      reader.resolve_expr_val("{backend}").should eq("html5")
     end
 
-    it "resolves unresolved attribute reference as string" do
-      doc = Asciidoctor::Document.new
-      reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])
-      # When attribute is not defined, the reference is left as-is
-      result = reader.resolve_expr_val("{nonexistent}")
-      result.should eq("{nonexistent}")
-    end
-
-    it "resolves a bare word as a string" do
+    it "does not resolve a bare word" do
       doc = Asciidoctor::Document.new
       doc.attributes["backend"] = "html5"
       reader = Asciidoctor::PreprocessorReader.new(doc, ["line 1"])

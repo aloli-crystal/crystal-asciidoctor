@@ -861,4 +861,168 @@ describe Asciidoctor::Document do
       catalog.callouts.should_not be_nil
     end
   end
+
+  context "Document Title" do
+    pending "document title" do
+      input = "= My Title\n\npreamble"
+      doc = Asciidoctor.load(input)
+      doc.doctitle.should eq("My Title")
+      doc.header?.should be_truthy
+    end
+
+    pending "safe mode level set to SECURE by default" do
+      doc = Asciidoctor.load("")
+      doc.safe.should eq(Asciidoctor::SafeMode::SECURE)
+    end
+
+    pending "safe mode level set using string" do
+      doc = Asciidoctor.load("", {"safe" => "1"})
+      doc.safe.should eq(Asciidoctor::SafeMode::SAFE)
+    end
+
+    pending "document with no doctitle" do
+      doc = Asciidoctor.load("Snorf")
+      doc.doctitle.should eq("")
+      doc.header?.should be_falsey
+    end
+
+    pending "document with doctitle defined as attribute entry" do
+      input = ":doctitle: Document Title\n\npreamble\n\n== First Section\n\ntext"
+      doc = Asciidoctor.load(input)
+      doc.doctitle.should eq("Document Title")
+      doc.header?.should be_truthy
+    end
+
+    pending "document with doctitle defined as attribute entry followed by block with title" do
+      input = ":doctitle: Document Title\n\n.Block title\nBlock content"
+      doc = Asciidoctor.load(input)
+      doc.doctitle.should eq("Document Title")
+      doc.header?.should be_truthy
+      doc.blocks.size.should eq(1)
+      doc.blocks[0].context.should eq(:paragraph)
+    end
+
+    pending "document header can reference intrinsic doctitle attribute" do
+      input = "= ACME Documentation\n:intro: Welcome to the {doctitle}!\n\n{intro}"
+      doc = Asciidoctor.load(input)
+      doc.attr("intro").should eq("Welcome to the ACME Documentation!")
+    end
+
+    pending "should recognize document title when preceded by blank lines" do
+      input = "= Title\n\npreamble\n\n== Section 1\n\ntext"
+      output = Asciidoctor.convert(input, {"safe" => "1"})
+      output.to_s.should contain("<h1>Title</h1>")
+    end
+
+    pending "should apply max-width to each top-level container" do
+      input = ":max-width: 50em\n\n= Title\n\ncontent"
+      output = Asciidoctor.convert(input)
+      output.to_s.should contain("max-width: 50em")
+    end
+
+    it "should set doctype to article by default" do
+      doc = Asciidoctor.load("")
+      doc.doctype.should eq("article")
+    end
+
+    it "should set doctype to book when specified" do
+      doc = Asciidoctor.load("", {"doctype" => "book"})
+      doc.doctype.should eq("book")
+    end
+
+    it "should set backend to html5 by default" do
+      doc = Asciidoctor.load("")
+      doc.backend.should eq("html5")
+    end
+
+    it "should set backend to docbook5 when specified" do
+      doc = Asciidoctor.load("", {"backend" => "docbook5"})
+      doc.backend.should eq("docbook5")
+    end
+
+    it "should have empty blocks when document is empty" do
+      doc = Asciidoctor.load("")
+      doc.blocks.should be_empty
+    end
+
+    it "should parse preamble as first block" do
+      input = "= Title\n\npreamble text\n\n== Section"
+      doc = Asciidoctor.load(input)
+      doc.blocks.should_not be_empty
+    end
+
+    pending "should set safe mode attributes on document" do
+      doc = Asciidoctor.load("")
+      doc.attr?("safe-mode-name").should be_truthy
+      doc.attr("safe-mode-name").should eq("secure")
+    end
+
+    pending "should set backend attributes" do
+      doc = Asciidoctor.load("")
+      doc.attr?("backend").should be_truthy
+      doc.attr("backend").should eq("html5")
+      doc.attr?("backend-html5").should be_truthy
+    end
+
+    pending "should set doctype attributes" do
+      doc = Asciidoctor.load("")
+      doc.attr?("doctype").should be_truthy
+      doc.attr("doctype").should eq("article")
+      doc.attr?("doctype-article").should be_truthy
+    end
+
+    pending "should have author info when author line present" do
+      input = "= Title\nJohn Doe <john@example.com>\n\ncontent"
+      doc = Asciidoctor.load(input)
+      doc.attr("author").should eq("John Doe")
+      doc.attr("email").should eq("john@example.com")
+      doc.attr("firstname").should eq("John")
+      doc.attr("lastname").should eq("Doe")
+    end
+
+    pending "should have revision info when revision line present" do
+      input = "= Title\nAuthor Name\nv1.0, 2020-01-01\n\ncontent"
+      doc = Asciidoctor.load(input)
+      doc.attr("revnumber").should eq("v1.0")
+      doc.attr("revdate").should eq("2020-01-01")
+    end
+
+    it "should set attribute via header" do
+      input = "= Title\n:foo: bar\n\n{foo}"
+      doc = Asciidoctor.load(input)
+      doc.attr("foo").should eq("bar")
+    end
+
+    it "should unset attribute via header" do
+      input = "= Title\n:foo: bar\n:!foo:\n\n{foo}"
+      doc = Asciidoctor.load(input)
+      doc.attr?("foo").should be_falsey
+    end
+
+    pending "should set attribute via API" do
+      doc = Asciidoctor.load("content", {"foo" => "bar"})
+      doc.attr("foo").should eq("bar")
+    end
+
+    it "should have correct content model" do
+      doc = Asciidoctor.load("content")
+      doc.content_model.should eq(Asciidoctor::ContentModel::Compound)
+    end
+
+    it "should have correct context" do
+      doc = Asciidoctor.load("content")
+      doc.context.should eq(:document)
+    end
+
+    it "should have source_location nil by default" do
+      doc = Asciidoctor.load("content")
+      doc.source_location.should be_nil
+    end
+
+    it "should count blocks correctly" do
+      input = "paragraph 1\n\nparagraph 2\n\nparagraph 3"
+      doc = Asciidoctor.load(input)
+      doc.blocks.size.should eq(3)
+    end
+  end
 end

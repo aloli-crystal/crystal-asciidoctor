@@ -4,6 +4,7 @@ require "./spec_helper"
 # Test helper methods ported from Ruby Asciidoctor test_helper.rb
 module TestHelpers
   BACKSLASH = "\\"
+  SAMPLE_DATA = ["first line", "second line", "third line"]
 
   # Parse the source string into a Document.
   def self.document_from_string(src : String, opts : Hash(String, String) = {} of String => String) : Asciidoctor::Document

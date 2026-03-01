@@ -141,7 +141,7 @@ module Asciidoctor
     @max_attribute_value_size : Int32?
 
     # The Reader associated with this document.
-    @reader : Reader?
+    getter reader : Reader?
 
     # The source location of the document.
     @source_location_doc : SourceLocation?
