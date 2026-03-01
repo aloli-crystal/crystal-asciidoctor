@@ -988,8 +988,8 @@ describe Asciidoctor::Section do
       input = "= Document Title\n\nJust a paragraph."
       doc = document_from_string(input)
       doc.blocks.size.should eq(1)
-      # Crystal parser creates a paragraph block, not a preamble
-      doc.blocks[0].context.should eq(:paragraph)
+      # With header, parser creates a preamble block wrapping the paragraph
+      doc.blocks[0].context.should eq(:preamble)
     end
 
     pending "should parse section with attribute references in title" do
@@ -1035,8 +1035,8 @@ describe Asciidoctor::Section do
       input = "= Title\n\nPreamble text.\n\n== Section One\n\nSection content."
       doc = document_from_string(input)
       doc.blocks.size.should eq(2)
-      # Crystal parser creates a paragraph block for preamble content, not a preamble wrapper
-      doc.blocks[0].context.should eq(:paragraph)
+      # With header, parser creates a preamble block wrapping the paragraph
+      doc.blocks[0].context.should eq(:preamble)
       doc.blocks[1].context.should eq(:section)
     end
 

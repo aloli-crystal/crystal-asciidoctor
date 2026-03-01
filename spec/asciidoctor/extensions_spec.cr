@@ -998,9 +998,17 @@ describe Asciidoctor::Extensions do
       reader = Asciidoctor::Reader.new(source)
       Asciidoctor::Parser.parse(reader, doc)
 
-      # The document should contain a pass block from the macro
+      # The document should contain a pass block from the macro (may be in preamble)
       found = false
-      doc.blocks.each do |block|
+      all_blocks = [] of Asciidoctor::AbstractBlock
+      doc.blocks.each do |b|
+        if b.is_a?(Asciidoctor::AbstractBlock) && b.context == :preamble
+          b.blocks.each { |c| all_blocks << c }
+        else
+          all_blocks << b
+        end
+      end
+      all_blocks.each do |block|
         if block.is_a?(Asciidoctor::Block) && block.context == :pass
           found = true
           block.lines.first?.not_nil!.should contain("example.com/app.js")
@@ -1021,7 +1029,15 @@ describe Asciidoctor::Extensions do
       Asciidoctor::Parser.parse(reader, doc)
 
       found = false
-      doc.blocks.each do |block|
+      all_blocks2 = [] of Asciidoctor::AbstractBlock
+      doc.blocks.each do |b|
+        if b.is_a?(Asciidoctor::AbstractBlock) && b.context == :preamble
+          b.blocks.each { |c| all_blocks2 << c }
+        else
+          all_blocks2 << b
+        end
+      end
+      all_blocks2.each do |block|
         if block.is_a?(Asciidoctor::Block) && block.context == :image
           found = true
           block.attributes["target"]?.should eq("photo.png")
@@ -1042,7 +1058,15 @@ describe Asciidoctor::Extensions do
       Asciidoctor::Parser.parse(reader, doc)
 
       found = false
-      doc.blocks.each do |block|
+      all_blocks3 = [] of Asciidoctor::AbstractBlock
+      doc.blocks.each do |b|
+        if b.is_a?(Asciidoctor::AbstractBlock) && b.context == :preamble
+          b.blocks.each { |c| all_blocks3 << c }
+        else
+          all_blocks3 << b
+        end
+      end
+      all_blocks3.each do |block|
         if block.is_a?(Asciidoctor::Block) && block.context == :pass
           found = true
           block.lines.first?.not_nil!.should contain("_mode=debug")

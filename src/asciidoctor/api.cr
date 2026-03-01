@@ -19,7 +19,14 @@ module Asciidoctor
 
     backend = attributes.delete("backend") || options.fetch("backend", "html5")
     doctype = attributes.delete("doctype") || options.fetch("doctype", "article")
-    standalone = options.has_key?("standalone") ? options["standalone"] != "false" : false
+    # header_footer=false is equivalent to standalone=false (embedded mode)
+    standalone = if options.has_key?("header_footer")
+                   options["header_footer"] != "false"
+                 elsif options.has_key?("standalone")
+                   options["standalone"] != "false"
+                 else
+                   false
+                 end
     safe_mode_str = options.fetch("safe", "unsafe")
     safe_mode = SafeMode.value_for_name(safe_mode_str) || SafeMode::UNSAFE
     sourcemap = options.has_key?("sourcemap") && options["sourcemap"] != "false"
@@ -31,6 +38,8 @@ module Asciidoctor
       sourcemap: sourcemap
     )
 
+    # Initialize default attributes
+    DEFAULT_ATTRIBUTES.each { |k, v| doc.attributes[k] = v }
     doc.attributes["standalone"] = "" if standalone
     attributes.each { |k, v| doc.attributes[k] = v }
 

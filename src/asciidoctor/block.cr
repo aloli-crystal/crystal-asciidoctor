@@ -69,7 +69,7 @@ module Asciidoctor
         @lines.join('\n')
       when ContentModel::Verbatim, ContentModel::Raw
         result = @lines.dup
-        if result.size < 2
+        joined = if result.size < 2
           result.first? || ""
         else
           while (first = result.first?) && first.strip.empty?
@@ -80,6 +80,14 @@ module Asciidoctor
           end
           result.join('\n')
         end
+        effective_subs = if !subs_list.empty?
+          subs_list
+        elsif @context == :verse
+          [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol
+        else
+          [:specialcharacters, :callouts] of Symbol
+        end
+        effective_subs.empty? ? joined : apply_subs(joined, effective_subs)
       when ContentModel::Empty
         nil
       else

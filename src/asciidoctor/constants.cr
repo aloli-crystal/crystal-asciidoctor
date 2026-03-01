@@ -42,7 +42,6 @@ module Asciidoctor
     "note-caption"      => "Note",
     "part-refsig"       => "Part",
     "prewrap"           => "",
-    "sectids"           => "",
     "section-refsig"    => "Section",
     "table-caption"     => "Table",
     "tip-caption"       => "Tip",

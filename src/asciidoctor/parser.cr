@@ -581,12 +581,16 @@ module Asciidoctor
 
       if next_line.starts_with?('[')
         if next_line.starts_with?("[[")
-          if next_line.ends_with?("]]") && (m = BlockAnchorRx.match(next_line))
-            attributes["id"] = m[1]
-            if (reftext = m[2]?)
-              attributes["reftext"] = reftext
+          # Skip empty block anchors [[]]
+          return true if next_line == "[[]]"
+          if next_line.ends_with?("]]")
+            if (m = BlockAnchorRx.match(next_line))
+              attributes["id"] = m[1]
+              if (reftext = m[2]?)
+                attributes["reftext"] = reftext
+              end
+              return true
             end
-            return true
           end
         elsif next_line.ends_with?(']') && (m = BlockAttributeListRx.match(next_line))
           if (raw = m[1]?) && !raw.empty?
@@ -628,7 +632,8 @@ module Asciidoctor
           if part.includes?('=')
             key, _, value = part.partition('=')
             key = key.strip
-            value = value.strip.strip('"')
+            value = value.strip
+            value = value[1..-2] if (value.starts_with?('"') && value.ends_with?('"')) || (value.starts_with?("'") && value.ends_with?("'"))
             attributes[key] = value
           else
             idx += 1
@@ -849,14 +854,14 @@ module Asciidoctor
     end
 
     # Parse and return the next Block at the Reader's current location.
-    def next_block(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String, parse_metadata : Bool = true) : AbstractBlock?
+    def next_block(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String, parse_metadata : Bool = true, text_only : Bool = false) : AbstractBlock?
       skipped = reader.skip_blank_lines
       return nil unless skipped
-
+      # If skipped blank/placeholder lines, assume list continuation was used and block content is acceptable
+      text_only = false if text_only && skipped > 0
       document = parent.document
-
       if parse_metadata
-        while parse_block_metadata_line(reader, document, attributes)
+        while parse_block_metadata_line(reader, document, attributes, text_only)
           reader.advance
           reader.skip_blank_lines || return nil
         end
@@ -932,6 +937,45 @@ module Asciidoctor
               target = m[2]
               block = Block.new(parent, blk_ctx, content_model: ContentModel::Empty)
               attributes["target"] = target
+              # Parse macro attributes from the bracket content using AttributeList
+              raw_attrs = m[3]? || ""
+              # Apply attribute substitutions if needed
+              if raw_attrs.includes?(ATTR_REF_HEAD)
+                raw_attrs = document.sub_attributes(raw_attrs)
+              end
+              unless raw_attrs.empty?
+                al = AttributeList.new(raw_attrs)
+                parsed = al.parse
+                parsed.each do |k, v|
+                  key = k.is_a?(Int32) ? k.to_s : k.as(String)
+                  # Macro attributes override block attributes (positional attrs 1,2,3 and named attrs)
+                  attributes[key] = v
+                end
+              end
+              # Map positional attributes for image/video/audio
+              if blk_ctx == :image
+                if !attributes.has_key?("alt")
+                  attributes["alt"] = attributes.delete("1") || File.basename(target, File.extname(target))
+                else
+                  attributes.delete("1")
+                end
+                if attributes.has_key?("2") && !attributes.has_key?("width")
+                  attributes["width"] = attributes.delete("2").not_nil!
+                end
+                if attributes.has_key?("3") && !attributes.has_key?("height")
+                  attributes["height"] = attributes.delete("3").not_nil!
+                end
+              elsif blk_ctx == :video
+                if attributes.has_key?("1") && !attributes.has_key?("poster")
+                  attributes["poster"] = attributes.delete("1").not_nil!
+                end
+                if attributes.has_key?("2") && !attributes.has_key?("width")
+                  attributes["width"] = attributes.delete("2").not_nil!
+                end
+                if attributes.has_key?("3") && !attributes.has_key?("height")
+                  attributes["height"] = attributes.delete("3").not_nil!
+                end
+              end
               return finalize_block(block, document, reader, attributes, style)
             elsif ch0 == 't' && this_line.starts_with?("toc:") && BlockTocMacroRx.matches?(this_line)
               block = Block.new(parent, :toc, content_model: ContentModel::Empty)
@@ -959,7 +1003,7 @@ module Asciidoctor
           end
 
           # Check for admonition paragraph
-          if ADMONITION_STYLE_HEADS.includes?(ch0.to_s) && this_line.includes?(':') && (m = AdmonitionParagraphRx.match(this_line))
+          if ch0 && ADMONITION_STYLE_HEADS.includes?(ch0) && this_line.includes?(':') && (m = AdmonitionParagraphRx.match(this_line))
             reader.unshift_line(this_line)
             lines = read_paragraph_lines(reader)
             lines[0] = this_line[(m[0].size)..]
@@ -974,27 +1018,110 @@ module Asciidoctor
 
         # Normal or literal paragraph
         reader.unshift_line(this_line)
+        # If style is comment, skip the paragraph
+        if style == "comment"
+          read_paragraph_lines(reader, text_only)
+          attributes.clear
+          return nil
+        end
         if indented && style != "normal"
-          lines = read_paragraph_lines(reader)
+          lines = read_paragraph_lines(reader, text_only)
           adjust_indentation!(lines)
           block = Block.new(parent, :literal, content_model: ContentModel::Verbatim, source: lines)
         else
-          lines = read_paragraph_lines(reader)
+          lines = read_paragraph_lines(reader, text_only)
           if indented && style == "normal"
             adjust_indentation!(lines)
           end
-          block = Block.new(parent, :paragraph, content_model: ContentModel::Simple, source: lines)
+          # Markdown-style quote block: lines starting with '> '
+          if !text_only && ch0 == '>' && this_line.starts_with?("\> ")
+            lines.map! { |line| line == ">" ? line[1..] : (line.starts_with?("\> ") ? line[2..] : line) }
+            credit_line = nil
+            if !lines.empty? && lines[-1].starts_with?("-- ")
+              credit_line = lines.pop[3..]
+              while !lines.empty? && lines[-1].empty?
+                lines.pop
+              end
+            end
+            attributes["style"] = "quote"
+            block_reader = Reader.new(lines)
+            quote_block = Block.new(parent, :quote, content_model: ContentModel::Compound)
+            parse_blocks(block_reader, quote_block)
+            block = quote_block
+            if credit_line
+              parts = credit_line.split(", ", 2)
+              attributes["attribution"] = parts[0] unless parts[0].empty?
+              attributes["citetitle"] = parts[1] if parts.size > 1
+            end
+          # Quoted paragraph-style quote block: starts with '"', ends with '"' then '-- '
+          elsif !text_only && ch0 == '"' && lines.size > 1 && lines[-1].starts_with?("-- ") && lines[-2].ends_with?('"')
+            lines[0] = this_line[1..] # strip leading quote
+            credit_line = lines.pop[3..]
+            while !lines.empty? && lines[-1].empty?
+              lines.pop
+            end
+            lines[-1] = lines[-1][..-2] # strip trailing quote
+            attributes["style"] = "quote"
+            block = Block.new(parent, :quote, content_model: ContentModel::Simple, source: lines)
+            parts = credit_line.split(", ", 2)
+            attributes["attribution"] = parts[0] unless parts[0].empty?
+            attributes["citetitle"] = parts[1] if parts.size > 1
+          else
+            block = Block.new(parent, :paragraph, content_model: ContentModel::Simple, source: lines)
+          end
         end
-
         return finalize_block(block, document, reader, attributes, style)
       end
 
       # Process delimited blocks
       case block_context
       when :listing, :source
+        # Promote listing block to source if no explicit style but has a second positional argument (language)
+        if block_context == :source
+          # :source block - map positional attrs
+          unless attributes.has_key?("language")
+            if (lang = attributes["2"]?) && !lang.empty?
+              attributes["language"] = lang
+            elsif (src_lang = doc_attrs["source-language"]?)
+              attributes["language"] = src_lang
+            end
+          end
+        else
+          # :listing block - promote to source if attr[1] is empty/nil and attr[2] is set
+          attr1 = attributes["1"]?
+          if (attr1.nil? || attr1.empty?) && (lang = attributes["2"]?) && !lang.empty?
+            style = "source"
+            attributes["style"] = "source"
+            attributes["language"] = lang
+          end
+        end
         block = build_block(:listing, ContentModel::Verbatim, terminator, parent, reader, attributes)
       when :fenced_code
+        style = "source"
         attributes["style"] = "source"
+        # Extract language from the fenced code block delimiter line (e.g. ```ruby or ```ruby,numbered)
+        if this_line && this_line.size > 3
+          lang_part = this_line[3..].lstrip
+          unless lang_part.empty?
+            if (comma_idx = lang_part.index(','))
+              if comma_idx > 0
+                language = lang_part[0, comma_idx].strip
+                attributes["linenums"] = "" if comma_idx < lang_part.size - 1
+              else
+                attributes["linenums"] = ""
+                language = nil
+              end
+            else
+              language = lang_part
+            end
+            attributes["language"] = language if language && !language.empty?
+          end
+        end
+        unless attributes.has_key?("language")
+          if (src_lang = doc_attrs["source-language"]?)
+            attributes["language"] = src_lang
+          end
+        end
         term = terminator.not_nil!
         term = term[0, 3] if term.size > 3
         block = build_block(:listing, ContentModel::Verbatim, term, parent, reader, attributes)
@@ -1017,8 +1144,14 @@ module Asciidoctor
       when :example
         block = build_block(:example, ContentModel::Compound, terminator, parent, reader, attributes)
       when :quote
+        # Map positional attributes 2 and 3 to attribution and citetitle
+        attributes["attribution"] = attributes["2"] if attributes.has_key?("2") && !attributes.has_key?("attribution")
+        attributes["citetitle"] = attributes["3"] if attributes.has_key?("3") && !attributes.has_key?("citetitle")
         block = build_block(:quote, ContentModel::Compound, terminator, parent, reader, attributes)
       when :verse
+        # Map positional attributes 2 and 3 to attribution and citetitle
+        attributes["attribution"] = attributes["2"] if attributes.has_key?("2") && !attributes.has_key?("attribution")
+        attributes["citetitle"] = attributes["3"] if attributes.has_key?("3") && !attributes.has_key?("citetitle")
         block = build_block(:verse, ContentModel::Verbatim, terminator, parent, reader, attributes)
       when :stem, :latexmath, :asciimath
         block = build_block(:stem, ContentModel::Raw, terminator, parent, reader, attributes)
@@ -1045,9 +1178,16 @@ module Asciidoctor
           block.assign_caption(attributes.delete("caption"))
         end
       end
-      block.style = style || attributes["style"]?
+      block.style = style || attributes["style"]? || block.style
       if (block_id = attributes["id"]?)
         block.id = block_id
+      end
+      # Expand options attribute into individual -option attributes
+      if (opts_val = attributes.delete("options"))
+        opts_val.split(',').each do |opt|
+          opt = opt.strip
+          attributes["#{opt}-option"] = "" unless opt.empty?
+        end
       end
       block.update_attributes(attributes) unless attributes.empty?
       block
@@ -1169,59 +1309,18 @@ module Asciidoctor
       end
 
       list_rx = LIST_RX_MAP[list_type.to_s]? || UnorderedListRx
+      style = list.attributes["style"]?
 
       while reader.has_more_lines?
         line = reader.peek_line
         break unless line
-
-        if (m = list_rx.match(line))
-          reader.advance
-          marker = m[1]
-          text = m[2]
-
-          item = ListItem.new(list, text)
-          item.marker = marker
-
-          # Read continuation lines for this list item
-          while reader.has_more_lines?
-            next_line = reader.peek_line
-            break unless next_line
-            if next_line.empty?
-              reader.advance
-              # Check if next non-blank line continues the list
-              reader.skip_blank_lines
-              cont_line = reader.peek_line
-              break unless cont_line
-              if cont_line == LIST_CONTINUATION
-                reader.advance
-                # Read the next block as continuation
-                if (cont_block = next_block(reader, item))
-                  item.blocks << cont_block
-                end
-              elsif list_rx.matches?(cont_line)
-                break # sibling list item
-              else
-                break
-              end
-            elsif next_line == LIST_CONTINUATION
-              reader.advance
-              if (cont_block = next_block(reader, item))
-                item.blocks << cont_block
-              end
-            elsif list_rx.matches?(next_line)
-              break # sibling list item
-            elsif is_delimited_block?(next_line)
-              break
-            else
-              reader.advance
-              item.text = "#{item.text}\n#{next_line}"
-            end
-          end
-
-          list.items << item
-        else
-          break
+        m = list_rx.match(line)
+        break unless m
+        sibling_trait = resolve_list_marker(list_type, m[1])
+        if (list_item = parse_list_item(reader, list, m, sibling_trait, style))
+          list.items << list_item
         end
+        reader.skip_blank_lines || break
       end
 
       list
@@ -1267,7 +1366,24 @@ module Asciidoctor
             end
           end
         when :olist
-          list_item.marker = sibling_trait.to_s
+          first = list_block.items.empty?
+          ordinal = list_block.items.size
+          validate = true
+          if (list_start = list_block.attributes["start"]?)
+            ordinal += list_start.to_i - 1
+          elsif first && (list_start_val = resolve_ordered_list_start(sibling_trait.to_s)) != 1
+            list_block.attributes["start"] = list_start_val.to_s
+            ordinal += list_start_val - 1
+            validate = false
+          end
+          resolved_marker, implicit_style = resolve_ordered_list_marker(sibling_trait.to_s, ordinal, validate, reader)
+          sibling_trait = resolved_marker
+          list_item.marker = resolved_marker
+          if first && !style
+            # Style based on marker length (for . markers) or implicit style from resolve_ordered_list_marker
+            computed_style = implicit_style || ORDERED_LIST_STYLES[(resolved_marker.size - 1) % ORDERED_LIST_STYLES.size]
+            list_block.style = computed_style.to_s
+          end
           if item_text.starts_with?("[[") && (am = LeadingInlineAnchorRx.match(item_text))
             catalog_inline_anchor(am[1], am[2]?, list_item, reader)
           end
@@ -1290,10 +1406,13 @@ module Asciidoctor
           list_item_reader.unshift_lines(comment_lines) unless comment_lines.empty?
           unless subsequent_line.empty?
             content_adjacent = true
-            has_text = true unless dlist
+            # treat lines as paragraph text if continuation does not connect first block
+            has_text = nil unless dlist
           end
         end
-        if (block = next_block(list_item_reader, list_item))
+        # text_only: true when content_adjacent (has_text = nil) to prevent block title interpretation
+        first_text_only = !has_text
+        if (block = next_block(list_item_reader, list_item, text_only: first_text_only))
           list_item.blocks << block
         end
         while list_item_reader.has_more_lines?
@@ -1548,8 +1667,12 @@ module Asciidoctor
     end
 
     # Read paragraph lines until a break condition is met.
-    def read_paragraph_lines(reader : Reader) : Array(String)
-      reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true)
+    def read_paragraph_lines(reader : Reader, break_on_list : Bool = false) : Array(String)
+      if break_on_list
+        reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true, skip_line_comments: true) { |line| AnyListRx.matches?(line) || !!is_delimited_block?(line) }
+      else
+        reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true, skip_line_comments: true) { |line| !!is_delimited_block?(line) }
+      end
     end
 
     # Resolve the 0-index marker for a list item.

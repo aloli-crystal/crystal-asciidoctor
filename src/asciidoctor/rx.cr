@@ -284,7 +284,7 @@ module Asciidoctor
   TrailingDigitsRx = /\d+$/
 
   # Matches callout source markers.
-  CalloutSourceRx = /((?:\/\/|#|--|;;) ?)?(\\)?&lt;!?(|--)([\d]+|\.)\3&gt;(?=(?: ?\\?&lt;!?\3(?:\d+|\.)\3&gt;)*$)/
+  CalloutSourceRx = /((?:\/\/|#|--|;;) ?)?(\\)?&lt;!?(|--)([\d]+|\.)\3&gt;(?=(?: ?\\?&lt;!?\3(?:\d+|\.)\3&gt;)*$)/m
 
   # Detects strings that resemble URIs.
   UriSniffRx = /\A\p{L}[\p{Xan}.+-]+:\/{0,2}/

@@ -52,6 +52,10 @@ module Asciidoctor
 
       def convert(node : AbstractNode, transform : String? = nil) : String
         transform ||= node.node_name
+        # Si le document n'est pas standalone, utiliser convert_embedded
+        if transform == "document" && node.is_a?(Document) && !node.attr?("standalone")
+          transform = "embedded"
+        end
         dispatch(node, transform)
       end
 
@@ -134,12 +138,14 @@ module Asciidoctor
         classes << node.role.not_nil! if node.role
         class_attr = %( class="#{classes.join(" ")}")
         title_el = node.is_a?(AbstractBlock) && node.title? ? %(<div class="title">#{node.title}</div>\n) : ""
+        raw_target = node.attr("target") || ""
+        target = raw_target.starts_with?("http://") || raw_target.starts_with?("https://") ? raw_target : node.media_uri(raw_target)
         start_t = node.attr("start")
         end_t = node.attr("end")
         time_anchor = (start_t || end_t) ? "#t=#{start_t || ""}#{end_t ? ",#{end_t}" : ""}" : ""
         %(<div#{id_attr}#{class_attr}>
 #{title_el}<div class="content">
-<audio src="#{node.attr("target") || ""}#{time_anchor}"#{node.option?("autoplay") ? append_boolean_attribute("autoplay") : ""}#{node.option?("nocontrols") ? "" : append_boolean_attribute("controls")}#{node.option?("loop") ? append_boolean_attribute("loop") : ""}>
+<audio src="#{target}#{time_anchor}"#{node.option?("autoplay") ? append_boolean_attribute("autoplay") : ""}#{node.option?("nocontrols") ? "" : append_boolean_attribute("controls")}#{node.option?("loop") ? append_boolean_attribute("loop") : ""}>
 Your browser does not support the audio tag.
 </audio>
 </div>
@@ -672,8 +678,16 @@ Your browser does not support the audio tag.
 
       def convert_paragraph(node : AbstractNode) : String
         content = node.is_a?(AbstractBlock) ? (node.content || "") : ""
+        para_style = node.is_a?(AbstractBlock) ? node.style : nil
+        if para_style == "abstract"
+          id_attr = node.id ? %( id="#{node.id}") : ""
+          role_attr = node.role ? " #{node.role}" : ""
+          title_el = node.is_a?(AbstractBlock) && node.title? ? %(<div class="title">#{node.title}</div>\n) : ""
+          return %(<div#{id_attr} class="quoteblock abstract#{role_attr}">\n#{title_el}<blockquote>\n#{content}\n</blockquote>\n</div>)
+        end
         if node.role
-          attributes = %(#{node.id ? %( id="#{node.id}") : ""} class="paragraph #{node.role}")
+          extra_class = para_style && para_style != "normal" ? " #{para_style}" : ""
+          attributes = %(#{node.id ? %( id="#{node.id}") : ""} class="paragraph#{extra_class} #{node.role}")
         elsif node.id
           attributes = %( id="#{node.id}" class="paragraph")
         else
@@ -958,11 +972,73 @@ Your browser does not support the audio tag.
         title_el = node.is_a?(AbstractBlock) && node.title? ? %(\n<div class="title">#{node.title}</div>) : ""
         width_attr = node.attr?("width") ? %( width="#{node.attr("width")}") : ""
         height_attr = node.attr?("height") ? %( height="#{node.attr("height")}") : ""
-        target = node.attr("target") || ""
-        start_t = node.attr("start")
-        end_t = node.attr("end")
-        time_anchor = (start_t || end_t) ? "#t=#{start_t || ""}#{end_t ? ",#{end_t}" : ""}" : ""
-        %(<div#{id_attr}#{class_attr}>#{title_el}\n<div class="content">\n<video src="#{target}#{time_anchor}"#{width_attr}#{height_attr}#{node.option?("autoplay") ? append_boolean_attribute("autoplay") : ""}#{node.option?("muted") ? append_boolean_attribute("muted") : ""}#{node.option?("nocontrols") ? "" : append_boolean_attribute("controls")}#{node.option?("loop") ? append_boolean_attribute("loop") : ""}>\nYour browser does not support the video tag.\n</video>\n</div>\n</div>)
+        raw_target = node.attr("target") || ""
+        poster = node.attr("poster") || ""
+        asset_uri_scheme = node.document.attr("asset-uri-scheme", "https")
+        asset_uri_scheme = "#{asset_uri_scheme}:" unless asset_uri_scheme.empty?
+        case poster
+        when "vimeo"
+          start_anchor = node.attr?("start") ? %(#at=#{node.attr("start")}) : ""
+          delimiter = ["?"]
+          target_parts = raw_target.split("/", 2)
+          target = target_parts[0]
+          hash = target_parts.size > 1 ? target_parts[1] : node.attr("hash")
+          hash_param = hash ? %(#{delimiter.pop? || "&amp;"}h=#{hash}) : ""
+          autoplay_param = node.option?("autoplay") ? %(#{delimiter.pop? || "&amp;"}autoplay=1) : ""
+          loop_param = node.option?("loop") ? %(#{delimiter.pop? || "&amp;"}loop=1) : ""
+          muted_param = node.option?("muted") ? %(#{delimiter.pop? || "&amp;"}muted=1) : ""
+          nofullscreen = node.option?("nofullscreen") ? "" : append_boolean_attribute("allowfullscreen")
+          %(<div#{id_attr}#{class_attr}>#{title_el}\n<div class="content">\n<iframe#{width_attr}#{height_attr} src="#{asset_uri_scheme}//player.vimeo.com/video/#{target}#{hash_param}#{autoplay_param}#{loop_param}#{muted_param}#{start_anchor}" frameborder="0"#{nofullscreen}></iframe>\n</div>\n</div>)
+        when "youtube"
+          rel_param_val = node.option?("related") ? 1 : 0
+          start_param = node.attr?("start") ? %(&amp;start=#{node.attr("start")}) : ""
+          end_param = node.attr?("end") ? %(&amp;end=#{node.attr("end")}) : ""
+          autoplay_param = node.option?("autoplay") ? "&amp;autoplay=1" : ""
+          has_loop_param = node.option?("loop")
+          loop_param = has_loop_param ? "&amp;loop=1" : ""
+          mute_param = node.option?("muted") ? "&amp;mute=1" : ""
+          controls_param = node.option?("nocontrols") ? "&amp;controls=0" : ""
+          if node.option?("nofullscreen")
+            fs_param = "&amp;fs=0"
+            fs_attribute = ""
+          else
+            fs_param = ""
+            fs_attribute = append_boolean_attribute("allowfullscreen")
+          end
+          modest_param = node.option?("modest") ? "&amp;modestbranding=1" : ""
+          theme_param = node.attr?("theme") ? %(&amp;theme=#{node.attr("theme")}) : ""
+          hl_param = node.attr?("lang") ? %(&amp;hl=#{node.attr("lang")}) : ""
+          target_parts = raw_target.split("/", 2)
+          target = target_parts[0]
+          list = target_parts.size > 1 ? target_parts[1] : node.attr("list")
+          if list
+            list_param = %(&amp;list=#{list})
+          else
+            target_playlist = target.split(",", 2)
+            target = target_playlist[0]
+            playlist = target_playlist.size > 1 ? target_playlist[1] : node.attr("playlist")
+            if playlist
+              list_param = %(&amp;playlist=#{target},#{playlist})
+            else
+              list_param = has_loop_param ? %(&amp;playlist=#{target}) : ""
+            end
+          end
+          %(<div#{id_attr}#{class_attr}>#{title_el}\n<div class="content">\n<iframe#{width_attr}#{height_attr} src="#{asset_uri_scheme}//www.youtube.com/embed/#{target}?rel=#{rel_param_val}#{start_param}#{end_param}#{autoplay_param}#{loop_param}#{mute_param}#{controls_param}#{list_param}#{fs_param}#{modest_param}#{theme_param}#{hl_param}" frameborder="0"#{fs_attribute}></iframe>\n</div>\n</div>)
+        else
+          target = raw_target.starts_with?("http://") || raw_target.starts_with?("https://") ? raw_target : node.media_uri(raw_target)
+          start_t = node.attr("start")
+          end_t = node.attr("end")
+          time_anchor = (start_t || end_t) ? "#t=#{start_t || ""}#{end_t ? ",#{end_t}" : ""}" : ""
+          poster_attr = if !poster.empty?
+                          poster_uri = poster.starts_with?("http://") || poster.starts_with?("https://") ? poster : node.media_uri(poster)
+                          %( poster="#{poster_uri}")
+                        else
+                          ""
+                        end
+          %(<div#{id_attr}#{class_attr}>#{title_el}\n<div class="content">\n<video src="#{target}#{time_anchor}"#{width_attr}#{height_attr}#{poster_attr}#{node.option?("autoplay") ? append_boolean_attribute("autoplay") : ""}#{node.option?("muted") ? append_boolean_attribute("muted") : ""}#{node.option?("nocontrols") ? "" : append_boolean_attribute("controls")}#{node.option?("loop") ? append_boolean_attribute("loop") : ""}>
+Your browser does not support the video tag.
+</video>\n</div>\n</div>)
+        end
       end
 
       # Helper: void element slash for self-closing tags.

@@ -6,7 +6,7 @@ def convert_string(input : String) : String
 end
 
 def convert_string_to_embedded(input : String) : String
-  Asciidoctor.convert(input, {"backend" => "html5"})
+  Asciidoctor.convert(input, {"backend" => "html5", "standalone" => "false"})
 end
 
 def load_string(input : String) : Asciidoctor::Document

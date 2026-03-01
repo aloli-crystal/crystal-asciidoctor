@@ -501,6 +501,12 @@ module Asciidoctor
       end
       clear_playback_attributes(block_attrs)
       save_attributes
+      # Create a header Section if the document has a title
+      if apply_header && (doctitle = @attributes["doctitle"]?) && !doctitle.empty?
+        header_section = Section.new(self, self, 0)
+        header_section.title = doctitle
+        @header = header_section
+      end
       block_attrs
     end
 

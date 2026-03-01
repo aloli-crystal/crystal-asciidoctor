@@ -333,12 +333,13 @@ module Asciidoctor
     end
 
     # Skip blank lines at the cursor.
+    # Also skips LIST_CONTINUATION_PLACEHOLDER lines (treated as blank in Ruby AsciiDoctor).
     def skip_blank_lines : Int32?
       return nil if empty?
 
       num_skipped = 0
       while (next_line = peek_line)
-        return num_skipped unless next_line.empty?
+        return num_skipped unless next_line.empty? || next_line == LIST_CONTINUATION_PLACEHOLDER
         shift
         num_skipped += 1
       end
@@ -472,23 +473,22 @@ module Asciidoctor
       shift if skip_first_line
 
       while (line = read_line)
+        is_list_cont = break_on_list_continuation && line_read && (line == LIST_CONTINUATION || line == LIST_CONTINUATION_PLACEHOLDER)
         should_break = if terminator
                          line == terminator
                        else
                          (break_on_blank_lines && line.empty?) ||
-                           (break_on_list_continuation && line_read && line == LIST_CONTINUATION) ||
+                           is_list_cont ||
                            (yield line)
                        end
-
         if should_break
           result << line if read_last_line
-          if preserve_last_line || (break_on_list_continuation && line_read && line == LIST_CONTINUATION)
+          if preserve_last_line || is_list_cont
             unshift(line)
             line_restored = true
           end
           break
         end
-
         unless skip_line_comments && line.starts_with?("//") && !line.starts_with?("///")
           result << line
           line_read = true
@@ -536,22 +536,21 @@ module Asciidoctor
       shift if skip_first_line
 
       while (line = read_line)
+        is_list_cont = break_on_list_continuation && line_read && (line == LIST_CONTINUATION || line == LIST_CONTINUATION_PLACEHOLDER)
         should_break = if terminator
                          line == terminator
                        else
                          (break_on_blank_lines && line.empty?) ||
-                           (break_on_list_continuation && line_read && line == LIST_CONTINUATION)
+                           is_list_cont
                        end
-
         if should_break
           result << line if read_last_line
-          if preserve_last_line || (break_on_list_continuation && line_read && line == LIST_CONTINUATION)
+          if preserve_last_line || is_list_cont
             unshift(line)
             line_restored = true
           end
           break
         end
-
         unless skip_line_comments && line.starts_with?("//") && !line.starts_with?("///")
           result << line
           line_read = true
