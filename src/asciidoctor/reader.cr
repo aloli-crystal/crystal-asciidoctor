@@ -202,7 +202,7 @@ module Asciidoctor
     def peek_lines(num : Int32? = nil, direct : Bool = false) : Array(String)
       old_look_ahead = @look_ahead
       result = [] of String
-      max = num || MAX_INT.to_i32
+      max = num || @lines.size
       max.times do
         line = direct ? shift : read_line
         if line

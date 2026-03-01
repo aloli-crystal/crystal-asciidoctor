@@ -131,8 +131,7 @@ describe "Paragraphs" do
     output.should contain("He said, &lt;Let's rock!&gt;")
   end
 
-  pending "should not substitute special characters in a paragraph with normal style and subs=none" do
-    # Convertisseur Crystal ne traite pas encore [subs=none] correctement
+  it "should not substitute special characters in a paragraph with normal style and subs=none" do
     input = "[subs=none]\nHe said, <Let's rock!>"
     output = Asciidoctor.convert(input)
     output.should contain("He said, <Let's rock!>")

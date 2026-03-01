@@ -198,14 +198,13 @@ module Asciidoctor
       end
     end
 
-    # Assign a numeral to a section.
-    def assign_numeral(section : Section) : Nil
-      if section.numbered
-        if section.level == 1
-          section.numeral = (next_section_index + 1).to_s
-        end
-      end
-    end
+    # Assign a numeral to a section (delegates to AbstractBlock).
+    # This override is needed because Document also calls assign_numeral
+    # from the parser's parse() method for top-level sections.
+    # We simply call super to use the AbstractBlock implementation.
+    # :nodoc:
+    # Note: This method is intentionally left to delegate to super.
+    # Removing it would also work since Document < AbstractBlock.
 
     # Check if the specified attribute is locked (set via overrides).
     def attribute_locked?(name : String) : Bool

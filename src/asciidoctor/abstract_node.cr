@@ -26,7 +26,8 @@ module Asciidoctor
     abstract def inline? : Bool
     abstract def document : Document
 
-    def initialize(@context : Symbol, @attributes : Hash(String, String) = {} of String => String)
+    def initialize(@context : Symbol, attributes : Hash(String, String) = {} of String => String)
+      @attributes = attributes.dup
       @node_name = @context.to_s
       @parent = nil
     end

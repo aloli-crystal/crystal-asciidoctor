@@ -85,19 +85,19 @@ describe Asciidoctor::Section do
       sec.id.should eq("one")
     end
 
-    pending "title substitutions are applied before generating id" do
+    it "title substitutions are applied before generating id" do
       sec = block_from_string(":sectids:\n\n== Section{sp}One\n")
       sec.id.should eq("_section_one")
     end
 
-    pending "duplicate synthetic id is automatically enumerated" do
+    it "duplicate synthetic id is automatically enumerated" do
       doc = document_from_string(":sectids:\n\n== Section One\n\n== Section One")
       doc.blocks.size.should eq(2)
       doc.blocks[0].id.should eq("_section_one")
       doc.blocks[1].id.should eq("_section_one_2")
     end
 
-    pending "explicit id can be defined using an embedded anchor" do
+    it "explicit id can be defined using an embedded anchor" do
       sec = block_from_string(":sectids:\n\n== Section One [[one]] ==")
       sec.id.should eq("one")
       sec.title.should eq("Section One")
@@ -239,20 +239,20 @@ describe Asciidoctor::Section do
   # Discrete Heading
   # ==========================================================================
   describe "Discrete Heading" do
-    pending "should create discrete heading instead of section if style is discrete" do
+    it "should create discrete heading instead of section if style is discrete" do
       input = "[discrete]\n=== Independent Heading!\n\nnot in section"
       output = convert_string_to_embedded(input)
       output.should contain("Independent Heading!")
       output.should contain("discrete")
     end
 
-    pending "should create discrete heading instead of section if style is float" do
+    it "should create discrete heading instead of section if style is float" do
       input = "[float]\n= Independent Heading!\n\nnot in section"
       output = convert_string_to_embedded(input)
       output.should contain("Independent Heading!")
     end
 
-    pending "discrete heading should be a block with context floating_title" do
+    it "discrete heading should be a block with context floating_title" do
       input = "[float]\n=== Independent Heading!\n\nnot in section"
       doc = document_from_string(input)
       heading = doc.blocks.first
@@ -260,7 +260,7 @@ describe Asciidoctor::Section do
       heading.context.should eq(:floating_title)
     end
 
-    pending "can assign explicit id to discrete heading" do
+    it "can assign explicit id to discrete heading" do
       input = "[[unchained]]\n[float]\n=== Independent Heading!\n\nnot in section"
       doc = document_from_string(input)
       heading = doc.blocks.first
@@ -368,7 +368,7 @@ describe Asciidoctor::Section do
       doc.blocks[1].level.should eq(1)
     end
 
-    pending "second section should have correct numeral" do
+    it "second section should have correct numeral" do
       input = "= Title\n:sectnums:\n\n== Section_1\n\ntext\n\n== Section_2\n\ntext"
       doc = document_from_string(input)
       sect1 = doc.blocks[0].as(Asciidoctor::Section)
@@ -377,7 +377,7 @@ describe Asciidoctor::Section do
       sect2.numeral.should eq("2")
     end
 
-    pending "section numbers should not increment when numbered attribute is turned off within document" do
+    it "section numbers should not increment when numbered attribute is turned off within document" do
       input = "= Document Title\n:numbered:\n\n:numbered!:\n\n== Colophon Section\n\n== Another Colophon Section\n\n:numbered:\n\n== Section One\n\n=== Section One Subsection\n\n== Section Two\n\n== Section Three"
       output = convert_string(input)
       output.should contain("Colophon Section")
@@ -405,7 +405,7 @@ describe Asciidoctor::Section do
       output.should contain("#_installation")
     end
 
-    pending "should link section if sectlinks document attribute is set" do
+    it "should link section if sectlinks document attribute is set" do
       input = ":sectids:\n:sectlinks:\n\n== Installation\n\nInstallation section."
       output = convert_string_to_embedded(input)
       output.should contain("class=\"link\"")
@@ -427,21 +427,21 @@ describe Asciidoctor::Section do
       end
     end
 
-    pending "should prefix appendix title by numbered label even when section numbering is disabled" do
+    it "should prefix appendix title by numbered label even when section numbering is disabled" do
       input = ":sectids:\n\n[appendix]\n== Attribute Options\n\nDetails"
       output = convert_string_to_embedded(input)
       output.should contain("Appendix A")
       output.should contain("Attribute Options")
     end
 
-    pending "should use custom appendix caption if specified" do
+    it "should use custom appendix caption if specified" do
       input = ":sectids:\n:appendix-caption: App\n\n[appendix]\n== Attribute Options\n\nDetails"
       output = convert_string_to_embedded(input)
       output.should contain("App A")
       output.should contain("Attribute Options")
     end
 
-    pending "should increment appendix number for each appendix section" do
+    it "should increment appendix number for each appendix section" do
       input = ":sectids:\n\n[appendix]\n== Attribute Options\n\nDetails\n\n[appendix]\n== Migration\n\nDetails"
       output = convert_string_to_embedded(input)
       output.should contain("Appendix A")
@@ -456,7 +456,7 @@ describe Asciidoctor::Section do
       output.should contain("2. Migration")
     end
 
-    pending "should number appendix subsections using appendix letter" do
+    it "should number appendix subsections using appendix letter" do
       input = ":numbered:\n:sectids:\n\n[appendix]\n== Attribute Options\n\nDetails\n\n=== Optional Attributes\n\nDetails"
       output = convert_string_to_embedded(input)
       output.should contain("Appendix A")
@@ -469,7 +469,7 @@ describe Asciidoctor::Section do
       output.should contain("Level_4")
     end
 
-    pending "should only number levels up to value defined by sectnumlevels attribute" do
+    it "should only number levels up to value defined by sectnumlevels attribute" do
       input = ":numbered:\n:sectnumlevels: 2\n:sectids:\n\n== Level_1\n\n=== Level_2\n\n==== Level_3\n\n===== Level_4\n\ntext"
       output = convert_string_to_embedded(input)
       output.should contain("1. Level_1")
@@ -612,7 +612,7 @@ describe Asciidoctor::Section do
       output.should contain("Part 2")
     end
 
-    pending "should add class matching role to part" do
+    it "should add class matching role to part" do
       input = "= Book Title\n:doctype: book\n:sectids:\n\n[.newbie]\n= Part 1\n\n== Chapter A\n\ncontent"
       output = convert_string_to_embedded(input)
       output.should contain("newbie")
@@ -992,7 +992,7 @@ describe Asciidoctor::Section do
       doc.blocks[0].context.should eq(:preamble)
     end
 
-    pending "should parse section with attribute references in title" do
+    it "should parse section with attribute references in title" do
       input = "= Document Title\n:product: Crystal\n\n== About {product}\n\ncontent"
       doc = document_from_string(input)
       sect = doc.blocks[0]

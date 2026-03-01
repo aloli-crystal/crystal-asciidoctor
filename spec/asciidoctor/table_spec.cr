@@ -262,19 +262,19 @@ describe Asciidoctor::Table do
       output.should contain("stripes-odd")
     end
 
-    pending "should set stripes class to even" do
+    it "should set stripes class to even" do
       input = "[stripes=even]\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("stripes-even")
     end
 
-    pending "should include table number in caption" do
+    it "should include table number in caption" do
       input = ".Simple psv table\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("Table 1. Simple psv table")
     end
 
-    pending "only increments table counter for tables that have a title" do
+    it "only increments table counter for tables that have a title" do
       input = ".First\n|===\n|1 |2 |3\n|===\n\n|===\n|4 |5 |6\n|===\n\n.Second\n|===\n|7 |8 |9\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("Table 1. First")
@@ -288,7 +288,7 @@ describe Asciidoctor::Table do
       output.should contain("a | there")
     end
 
-    pending "table and column width not assigned when autowidth option is specified" do
+    it "table and column width not assigned when autowidth option is specified" do
       input = "[%autowidth]\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("fit-content")
@@ -310,43 +310,43 @@ describe Asciidoctor::Table do
       table.rows.body.size.should eq(2)
     end
 
-    pending "should preserve frame value ends when converting to HTML" do
+    it "should preserve frame value ends when converting to HTML" do
       input = "[frame=ends]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("frame-ends")
     end
 
-    pending "should normalize frame value topbot as ends when converting to HTML" do
+    it "should normalize frame value topbot as ends when converting to HTML" do
       input = "[frame=topbot]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("frame-ends")
     end
 
-    pending "should support frame=none" do
+    it "should support frame=none" do
       input = "[frame=none]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("frame-none")
     end
 
-    pending "should support frame=sides" do
+    it "should support frame=sides" do
       input = "[frame=sides]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("frame-sides")
     end
 
-    pending "should support grid=rows" do
+    it "should support grid=rows" do
       input = "[grid=rows]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("grid-rows")
     end
 
-    pending "should support grid=cols" do
+    it "should support grid=cols" do
       input = "[grid=cols]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("grid-cols")
     end
 
-    pending "should support grid=none" do
+    it "should support grid=none" do
       input = "[grid=none]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("grid-none")
@@ -373,7 +373,7 @@ describe Asciidoctor::Table do
       output.should contain("<th")
     end
 
-    pending "no implicit header row if second line not blank" do
+    it "no implicit header row if second line not blank" do
       input = "|===\n|Column 1 |Column 2\n|Data A1\n|Data B1\n\n|Data A2\n|Data B2\n|==="
       output = table_convert_to_embedded(input)
       output.should_not contain("<thead")
@@ -738,14 +738,13 @@ describe Asciidoctor::Table do
       output.should contain("grid-all")
     end
 
-    # Pending: block attributes not propagated to table node
-    pending "should handle table with role" do
+    it "should handle table with role" do
       input = "[.custom-role]\n|===\n|A |B\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("custom-role")
     end
 
-    pending "should handle table with autowidth option" do
+    it "should handle table with autowidth option" do
       input = "[%autowidth]\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("fit-content")
@@ -757,7 +756,7 @@ describe Asciidoctor::Table do
       output.should contain("75%")
     end
 
-    pending "should handle table with frame=sides" do
+    it "should handle table with frame=sides" do
       input = "[frame=sides]\n|===\n|A |B\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("frame-sides")
@@ -777,13 +776,13 @@ describe Asciidoctor::Table do
       output.should contain("100%")
     end
 
-    pending "should handle table with stripes=all" do
+    it "should handle table with stripes=all" do
       input = "[stripes=all]\n|===\n|A |B\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("stripes-all")
     end
 
-    pending "should handle table with stripes=hover" do
+    it "should handle table with stripes=hover" do
       input = "[stripes=hover]\n|===\n|A |B\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("stripes-hover")

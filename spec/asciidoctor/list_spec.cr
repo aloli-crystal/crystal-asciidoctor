@@ -227,54 +227,47 @@ describe "Lists" do
   # Bulleted lists - Nested lists
   # =========================================================================
   describe "Bulleted lists - Nested lists" do
-    pending "asterisk element mixed with dash elements should be nested" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées mixtes
+    it "asterisk element mixed with dash elements should be nested" do
       input = "= List\n\n- Foo\n* Boo\n- Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(2)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "dash element mixed with asterisks elements should be nested" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées mixtes
+    it "dash element mixed with asterisks elements should be nested" do
       input = "= List\n\n* Foo\n- Boo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(2)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "lines prefixed with alternating list markers separated by blank lines should be nested" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées mixtes
+    it "lines prefixed with alternating list markers separated by blank lines should be nested" do
       input = "= List\n\n- Foo\n\n* Boo\n\n\n- Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(2)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "nested elements (2) with asterisks" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées
+    it "nested elements (2) with asterisks" do
       input = "= List\n\n* Foo\n** Boo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(2)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "nested elements (3) with asterisks" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées
+    it "nested elements (3) with asterisks" do
       input = "= List\n\n* Foo\n** Boo\n*** Snoo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(3)
     end
 
-    pending "nested elements (4) with asterisks" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées
+    it "nested elements (4) with asterisks" do
       input = "= List\n\n* Foo\n** Boo\n*** Snoo\n**** Froo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(4)
     end
 
-    pending "nested elements (5) with asterisks" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul> pour les listes imbriquées
+    it "nested elements (5) with asterisks" do
       input = "= List\n\n* Foo\n** Boo\n*** Snoo\n**** Froo\n***** Groo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(5)
@@ -298,35 +291,31 @@ describe "Lists" do
       output.should contain("•")
     end
 
-    pending "nested ordered elements (2)" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ol> pour les listes imbriquées
+    it "nested ordered elements (2)" do
       input = "= List\n\n. Foo\n.. Boo\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(2)
+      output.scan(/<ol[\s>]/).size.should eq(2)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "nested ordered elements (3)" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ol> pour les listes imbriquées
+    it "nested ordered elements (3)" do
       input = "= List\n\n. Foo\n.. Boo\n... Snoo\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(3)
+      output.scan(/<ol[\s>]/).size.should eq(3)
     end
 
-    pending "nested unordered inside ordered elements" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<ol> pour les listes imbriquées mixtes
+    it "nested unordered inside ordered elements" do
       input = "= List\n\n. Foo\n* Boo\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<ul>").size.should eq(1)
     end
 
-    pending "nested ordered inside unordered elements" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<ol> pour les listes imbriquées mixtes
+    it "nested ordered inside unordered elements" do
       input = "= List\n\n* Foo\n. Boo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
     end
 
     it "three levels of alternating unordered and ordered elements" do
@@ -336,12 +325,11 @@ describe "Lists" do
       output.should contain("olist")
     end
 
-    pending "lines with alternating markers of unordered and ordered list types separated by blank lines should be nested" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<ol> pour les listes imbriquées mixtes
+    it "lines with alternating markers of unordered and ordered list types separated by blank lines should be nested" do
       input = "= List\n\n* Foo\n\n. Boo\n\n\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
     end
 
     it "list item with literal content should not consume nested list of different type" do
@@ -369,12 +357,11 @@ describe "Lists" do
       output.scan("<dl>").size.should eq(1)
     end
 
-    pending "nested ordered with attribute inside unordered elements" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<ol> pour les listes imbriquées
+    it "nested ordered with attribute inside unordered elements" do
       input = "= Blah\n\n* Foo\n[start=2]\n. Boo\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
     end
   end
 
@@ -382,8 +369,7 @@ describe "Lists" do
   # Bulleted lists - List continuations
   # =========================================================================
   describe "Bulleted lists - List continuations" do
-    pending "adjacent list continuation line attaches following paragraph" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<li> pour les continuations
+    it "adjacent list continuation line attaches following paragraph" do
       input = "= Lists\n\n* Item one, paragraph one\n+\nItem one, paragraph two\n+\n* Item two"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
@@ -392,8 +378,7 @@ describe "Lists" do
       output.should contain("Item one, paragraph two")
     end
 
-    pending "adjacent list continuation line attaches following block" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<li> pour les continuations avec blocs
+    it "adjacent list continuation line attaches following block" do
       input = "= Lists\n\n* Item one, paragraph one\n+\n....\nItem one, literal block\n....\n+\n* Item two"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
@@ -408,16 +393,14 @@ describe "Lists" do
       output.scan("<li>").size.should eq(2)
     end
 
-    pending "trailing block title line attached by continuation should not create block" do
-      # Convertisseur Crystal ne gère pas correctement les continuations avec titres de bloc
+    it "trailing block title line attached by continuation should not create block" do
       input = "= Lists\n\n* Item one, paragraph one\n+\n.Disappears into the ether\n\n* Item two"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
       output.scan("<li>").size.should eq(2)
     end
 
-    pending "consecutive blocks in list continuation attach to list item" do
-      # Convertisseur Crystal ne gère pas correctement les blocs consécutifs en continuation
+    it "consecutive blocks in list continuation attach to list item" do
       input = "= Lists\n\n* Item one, paragraph one\n+\n....\nItem one, literal block\n....\n+\n____\nItem one, quote block\n____\n+\n* Item two"
       output = convert_string_to_embedded(input)
       output.scan("<ul>").size.should eq(1)
@@ -426,11 +409,10 @@ describe "Lists" do
       output.should contain("quoteblock")
     end
 
-    pending "list item with hanging indent followed by block attached by list continuation" do
-      # Parser Crystal ne gère pas encore le hanging indent avec continuation
+    it "list item with hanging indent followed by block attached by list continuation" do
       input = "== Lists\n\n. list item 1\n  continued\n+\n--\nopen block in list item 1\n--\n\n. list item 2"
       output = convert_string_to_embedded(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(2)
       output.should contain("openblock")
       output.should contain("open block in list item 1")
@@ -445,8 +427,7 @@ describe "Lists" do
       output.should contain("nested list item paragraph")
     end
 
-    pending "consecutive list continuation lines are folded" do
-      # Convertisseur Crystal ne gère pas correctement les continuations consécutives
+    it "consecutive list continuation lines are folded" do
       input = "= Lists\n\n* Item one, paragraph one\n+\n+\nItem one, paragraph two\n+\n+\n* Item two\n+\n+"
       output = convert_string_to_embedded(input)
       output.scan("<ul>").size.should eq(1)
@@ -483,11 +464,10 @@ describe "Lists" do
   # Ordered lists - Simple lists
   # =========================================================================
   describe "Ordered lists - Simple lists" do
-    pending "dot elements with no blank lines" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ol>/<li> pour les listes ordonnées simples
+    it "dot elements with no blank lines" do
       input = "= List\n\n. Foo\n. Boo\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
 
@@ -529,26 +509,23 @@ describe "Lists" do
       output.should contain("start=\"3\"")
     end
 
-    pending "dot elements separated by blank lines should merge lists" do
-      # Convertisseur Crystal ne fusionne pas les listes ordonnées séparées par des lignes vides
+    it "dot elements separated by blank lines should merge lists" do
       input = "= List\n\n. Foo\n\n. Boo\n\n\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "dot elements separated by line comment offset by blank lines should not merge lists" do
-      # Convertisseur Crystal ne gère pas correctement la séparation des listes ordonnées
+    it "dot elements separated by line comment offset by blank lines should not merge lists" do
       input = "= List\n\n. Foo\n. Boo\n\n//\n\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(2)
+      output.scan(/<ol[\s>]/).size.should eq(2)
     end
 
-    pending "dot elements separated by a block title offset by a blank line should not merge lists" do
-      # Convertisseur Crystal ne gère pas correctement la séparation des listes ordonnées
+    it "dot elements separated by a block title offset by a blank line should not merge lists" do
       input = "= List\n\n. Foo\n. Boo\n\n.Also\n. Blech"
       output = convert_string(input)
-      output.scan("<ol>").size.should eq(2)
+      output.scan(/<ol[\s>]/).size.should eq(2)
       output.should contain("Also")
     end
 

@@ -10,9 +10,9 @@ describe "Attributes" do
       doc.attributes["frog"].should eq("Tanglefoot")
     end
 
-    pending "requires a space after colon following attribute name" do
+    it "requires a space after colon following attribute name" do
       doc = TestHelpers.document_from_string("foo:bar")
-      doc.attributes["foo"].should be_nil
+      doc.attributes["foo"]?.should be_nil
     end
 
     it "does not recognize attribute entry if name contains colon" do
@@ -87,9 +87,9 @@ describe "Attributes" do
       doc.attr("signature").should eq("Linus Torvalds +\nLinux Hacker +\nlinus.torvalds@example.com")
     end
 
-    pending "should delete an attribute that ends with !" do
+    it "should delete an attribute that ends with !" do
       doc = TestHelpers.document_from_string(":frog: Tanglefoot\n:frog!:")
-      doc.attributes["frog"].should be_nil
+      doc.attributes["frog"]?.should be_nil
     end
 
     pending "should delete an attribute that ends with ! set via API" do
@@ -97,9 +97,9 @@ describe "Attributes" do
       doc.attributes["frog"].should be_nil
     end
 
-    pending "should delete an attribute that begins with !" do
+    it "should delete an attribute that begins with !" do
       doc = TestHelpers.document_from_string(":frog: Tanglefoot\n:!frog:")
-      doc.attributes["frog"].should be_nil
+      doc.attributes["frog"]?.should be_nil
     end
 
     pending "should delete an attribute that begins with ! set via API" do
@@ -112,9 +112,9 @@ describe "Attributes" do
       doc.attributes["frog"].should be_nil
     end
 
-    pending "should not choke when deleting a non-existing attribute" do
+    it "should not choke when deleting a non-existing attribute" do
       doc = TestHelpers.document_from_string(":frog!:")
-      doc.attributes["frog"].should be_nil
+      doc.attributes["frog"]?.should be_nil
     end
 
     pending "replaces special characters in attribute value" do

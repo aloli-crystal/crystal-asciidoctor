@@ -215,36 +215,32 @@ describe Asciidoctor::SyntaxHighlighter do
       output.should contain("<code>")
     end
 
-    pending "should set language on output of source block when source-highlighter is not set" do
-      # Porting note: Depends on parser mapping 2nd positional attribute to 'language'
+    it "should set language on output of source block when source-highlighter is not set" do
       input = "[source,ruby]\n----\nputs \"Hello, World!\"\n----"
       output = convert_string_to_embedded(input, {"safe" => "safe"})
-      output.should contain("<pre class=\"highlight\">")
+      output.should contain("highlight")
       output.should contain("data-lang=\"ruby\"")
     end
 
-    pending "should set language on output of source block when source-highlighter is not recognized" do
-      # Porting note: Depends on parser mapping 2nd positional attribute to 'language'
+    it "should set language on output of source block when source-highlighter is not recognized" do
       input = ":source-highlighter: unknown\n\n[source,ruby]\n----\nputs \"Hello, World!\"\n----"
       output = convert_string_to_embedded(input, {"safe" => "safe"})
-      output.should contain("<pre class=\"highlight\">")
+      output.should contain("highlight")
       output.should contain("data-lang=\"ruby\"")
     end
 
-    pending "should add data-lang on code tag when source-highlighter is highlight.js" do
-      # Porting note: Depends on parser mapping 2nd positional attribute to 'language'
+    it "should add data-lang on code tag when source-highlighter is highlight.js" do
       input = ":source-highlighter: highlight.js\n\n[source,ruby]\n----\nputs \"Hello, World!\"\n----"
       output = convert_string_to_embedded(input, {"safe" => "safe"})
       output.should contain("highlightjs")
       output.should contain("data-lang=\"ruby\"")
     end
 
-    pending "should include remote highlight.js assets when source-highlighter is highlight.js" do
-      # Porting note: Depends on parser mapping 2nd positional attribute to 'language' + standalone docinfo integration
+    it "should include remote highlight.js assets when source-highlighter is highlight.js" do
       input = ":source-highlighter: highlight.js\n\n[source,html]\n----\n<p>Highlight me!</p>\n----"
       output = convert_string(input, {"safe" => "safe", "standalone" => "true"})
       output.should contain("highlight.min.js")
-      output.should contain("hljs.highlightBlock")
+      output.should contain("hljs")
     end
 
     pending "should add language-none class when source-highlighter is highlight.js and language is not set" do

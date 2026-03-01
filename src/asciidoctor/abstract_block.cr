@@ -87,6 +87,11 @@ module Asciidoctor
       if section.numbered
         if (sectname = section.sectname) == "appendix"
           section.numeral = (65 + section.index).chr.to_s # A, B, C...
+          # Assign caption for appendix sections (e.g., "Appendix A: ")
+          appendix_caption = section.document.attributes["appendix-caption"]? || "Appendix"
+          unless appendix_caption.empty?
+            section.caption = "#{appendix_caption} #{section.numeral}: "
+          end
         elsif sectname == "chapter"
           section.numeral = (section.index + 1).to_s
         else

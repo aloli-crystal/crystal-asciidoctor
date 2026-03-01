@@ -70,7 +70,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       source.should_not be_nil
     end
 
-    pending "should set proper manpage-related attributes" do
+    it "should set proper manpage-related attributes" do
       doc = manpage_load(SAMPLE_MANPAGE_HEADER)
       doc.attributes["filetype"]?.should eq("man")
       doc.attributes["filetype-man"]?.should eq("")
@@ -86,7 +86,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("LINKSTYLE blue R < >")
     end
 
-    pending "should use linkstyle defined by man-linkstyle attribute" do
+    it "should use linkstyle defined by man-linkstyle attribute" do
       output = manpage_convert(SAMPLE_MANPAGE_HEADER, {"standalone" => "true", "attributes" => "man-linkstyle=cyan B \\[fo] \\[fc]"})
       output.should contain("LINKSTYLE cyan B \\[fo] \\[fc]")
     end
@@ -97,7 +97,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain(".SH \"NAME\"\ngit-describe \\- does stuff\n")
     end
 
-    pending "should output multiple mannames in NAME section" do
+    it "should output multiple mannames in NAME section" do
       input = SAMPLE_MANPAGE_HEADER.gsub("command - ", "command, alt_command - ")
       output = manpage_convert(input, {"standalone" => "true"})
       output.should contain("command, alt_command \\- does stuff")
@@ -297,7 +297,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       result.should contain(".fi")
     end
 
-    pending "should escape repeated spaces in literal content" do
+    it "should escape repeated spaces in literal content" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n....\n  ,---.          ,-----.\n  |Bob|          |Alice|\n  `-+-'          `--+--'\n...."
       output = manpage_convert(input)
       output.should contain(".fam C")
@@ -439,7 +439,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("\\*(Aqcommand\\*(Aq")
     end
 
-    pending "should escape lone period" do
+    it "should escape lone period" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n."
       output = manpage_convert(input)
       output.lines.last.chomp.should eq("\\&.")
@@ -451,7 +451,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("\\&.if 1 .nx")
     end
 
-    pending "should normalize whitespace in a paragraph" do
+    it "should normalize whitespace in a paragraph" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nOh, here it goes again\n  I should have known,\n    should have known,\nshould have known again"
       output = manpage_convert(input)
       output.should contain("Oh, here it goes again\nI should have known,\nshould have known,\nshould have known again")
@@ -573,7 +573,7 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Quote Block
   # ==========================================================================
   describe "Quote Block" do
-    pending "should indent quote block" do
+    it "should indent quote block" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n[,James Baldwin]\n____\nNot everything that is faced can be changed.\nBut nothing can be changed until it is faced.\n____"
       output = manpage_convert(input)
       output.should contain(".RS 3")
@@ -628,7 +628,7 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Page breaks
   # ==========================================================================
   describe "Page breaks" do
-    pending "should insert page break at location of page break macro" do
+    it "should insert page break at location of page break macro" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n== Section With Break\n\nbefore break\n\n<<<\n\nafter break"
       output = manpage_convert(input)
       output.should contain("before break")

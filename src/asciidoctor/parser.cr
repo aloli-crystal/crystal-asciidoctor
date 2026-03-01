@@ -317,6 +317,11 @@ module Asciidoctor
         end
       end
 
+      # Extract manpage attributes from document title and NAME section
+      if document.doctype == "manpage" && document.backend == "manpage"
+        extract_manpage_attributes(document)
+      end
+
       # Hook: run TreeProcessors after parsing
       if document.extensions?
         registry = document.extensions!
@@ -909,8 +914,34 @@ module Asciidoctor
             return finalize_block(block, document, reader, attributes, style)
           end
 
+          # Check for discrete (floating) headings
+          if (style == "discrete" || style == "float") && (ch0 == '=' || (COMPLIANCE_MARKDOWN_SYNTAX && ch0 == '#'))
+            if (sect_level = atx_section_title?(this_line))
+              # Parse the title from the ATX heading line
+              if (m = AtxSectionTitleRx.match(this_line)) || (COMPLIANCE_MARKDOWN_SYNTAX && (m = ExtAtxSectionTitleRx.match(this_line)))
+                float_title = m[2]
+                # Apply attribute substitutions to the title
+                if float_title.includes?(ATTR_REF_HEAD)
+                  float_title = document.sub_attributes(float_title)
+                end
+                float_id = attributes["id"]?
+                block = Block.new(parent, :floating_title, content_model: ContentModel::Empty)
+                block.title = float_title
+                block.level = sect_level
+                block.style = style
+                if float_id
+                  block.id = float_id
+                elsif document.attributes.has_key?("sectids")
+                  block.id = Section.generate_id(float_title, document)
+                end
+                return finalize_block(block, document, reader, attributes, style)
+              end
+            end
+          end
+
           # Check for block macros
           if this_line.ends_with?(']') && this_line.includes?("::")
+
             # Hook: check for BlockMacroProcessor extensions
             if document.extensions?
               registry = document.extensions!
@@ -1244,6 +1275,44 @@ module Asciidoctor
       block
     end
 
+    # Extract manpage-specific attributes from the document title and NAME section.
+    # In Ruby Asciidoctor, the manpage doctype extracts manvolnum, manname, mantitle,
+    # and manpurpose from the document title (e.g., "command (1)") and the NAME section.
+    def extract_manpage_attributes(document : Document) : Nil
+      # Extract manvolnum from document title: "command (1)" -> manvolnum=1
+      if (doctitle = document.doctitle) && (m = doctitle.match(/^(.+?)\s*\((\w+)\)$/))
+        mantitle = m[1].strip.downcase
+        manvolnum = m[2]
+        document.attributes["mantitle"] = mantitle
+        document.attributes["manvolnum"] = manvolnum
+        document.attributes["outfilesuffix"] = ".#{manvolnum}"
+      end
+
+      # Set filetype attributes
+      document.attributes["filetype"] = "man"
+      document.attributes["filetype-man"] = ""
+
+      # Extract manname and manpurpose from the NAME section
+      # The NAME section should contain: "command - does stuff"
+      name_section = document.sections.find { |s| s.title.to_s.upcase == "NAME" }
+      if name_section
+        # Look for a paragraph in the NAME section
+        name_section.blocks.each do |block|
+          if block.is_a?(Block) && block.context == :paragraph
+            text = block.source
+            if text && (dash_idx = text.index(" - "))
+              manname = text[0...dash_idx].strip
+              manpurpose = text[(dash_idx + 3)..].strip
+              document.attributes["manname"] = manname
+              document.attributes["manpurpose"] = manpurpose
+              # If mantitle was not set from doctitle, use manname
+              document.attributes["mantitle"] ||= manname.downcase
+            end
+          end
+        end
+      end
+    end
+
     # Initialize a new Section from the reader.
     def initialize_section(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String) : Section
       document = parent.document
@@ -1282,8 +1351,15 @@ module Asciidoctor
         section.numbered = true
       end
 
+
       if (reftext = sect_reftext || attributes["reftext"]?)
         section.attributes["reftext"] = reftext
+      end
+
+      # Apply attribute substitutions to the section title
+      if sect_title.includes?(ATTR_REF_HEAD)
+        sect_title = document.sub_attributes(sect_title)
+        section.title = sect_title
       end
 
       # Generate an ID if one was not provided
@@ -1291,6 +1367,11 @@ module Asciidoctor
         section.id = nil if id.empty?
       elsif document.attributes.has_key?("sectids")
         section.id = Section.generate_id(sect_title, document)
+      end
+
+      # Register the section in the document catalog for ID deduplication and xrefs
+      if (sect_id_val = section.id)
+        document.register(:refs, {sect_id_val, section.as(AbstractNode)})
       end
 
       section.update_attributes(attributes) unless attributes.empty?

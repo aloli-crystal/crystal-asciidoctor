@@ -863,7 +863,7 @@ describe Asciidoctor::Document do
   end
 
   context "Document Title" do
-    pending "document title" do
+    it "document title" do
       input = "= My Title\n\npreamble"
       doc = Asciidoctor.load(input)
       doc.doctitle.should eq("My Title")
@@ -880,13 +880,13 @@ describe Asciidoctor::Document do
       doc.safe.should eq(Asciidoctor::SafeMode::SAFE)
     end
 
-    pending "document with no doctitle" do
+    it "document with no doctitle" do
       doc = Asciidoctor.load("Snorf")
-      doc.doctitle.should eq("")
+      doc.doctitle.should be_nil
       doc.header?.should be_falsey
     end
 
-    pending "document with doctitle defined as attribute entry" do
+    it "document with doctitle defined as attribute entry" do
       input = ":doctitle: Document Title\n\npreamble\n\n== First Section\n\ntext"
       doc = Asciidoctor.load(input)
       doc.doctitle.should eq("Document Title")
@@ -908,7 +908,7 @@ describe Asciidoctor::Document do
       doc.attr("intro").should eq("Welcome to the ACME Documentation!")
     end
 
-    pending "should recognize document title when preceded by blank lines" do
+    it "should recognize document title when preceded by blank lines" do
       input = "= Title\n\npreamble\n\n== Section 1\n\ntext"
       output = Asciidoctor.convert(input, {"safe" => "1"})
       output.to_s.should contain("<h1>Title</h1>")

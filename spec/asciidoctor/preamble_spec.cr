@@ -1,10 +1,9 @@
 require "../spec_helper"
 
 describe "Preamble" do
-  pending "should create a preamble for a document that has a title and content before the first section" do
-    # Convertisseur Crystal ne génère pas encore le <div id="preamble">
+  it "should create a preamble for a document that has a title and content before the first section" do
     input = "= Title\n\nPreamble paragraph 1.\n\n== First Section\n\nSection paragraph 1."
-    output = Asciidoctor.convert(input, {"standalone" => "true"})
+    output = Asciidoctor.convert(input, {"standalone" => "true", "attributes" => "sectids"})
     output.scan("<p>").size.should eq(2)
     output.should contain("<div id=\"preamble\">")
     output.should contain("<h2 id=\"_first_section\">First Section</h2>")
@@ -33,10 +32,9 @@ describe "Preamble" do
     output.should contain("<preface><title>Preface</title>")
   end
 
-  pending "should create a preamble for a document that has a title and a multi-paragraph preamble" do
-    # Convertisseur Crystal ne génère pas encore le <div id="preamble">
+  it "should create a preamble for a document that has a title and a multi-paragraph preamble" do
     input = "= Title\n\nPreamble paragraph 1.\n\nPreamble paragraph 2.\n\n== First Section\n\nSection paragraph 1."
-    output = Asciidoctor.convert(input, {"standalone" => "true"})
+    output = Asciidoctor.convert(input, {"standalone" => "true", "attributes" => "sectids"})
     output.scan("<p>").size.should eq(3)
     output.should contain("<div id=\"preamble\">")
   end
@@ -65,10 +63,9 @@ describe "Preamble" do
     output.should contain("paragraph")
   end
 
-  pending "should not create a preamble if there is no content before the first section" do
-    # Convertisseur Crystal ne génère pas encore le <div id="preamble">
+  it "should not create a preamble if there is no content before the first section" do
     input = "= Title\n\n== First Section\n\nSection paragraph 1."
-    output = Asciidoctor.convert(input, {"standalone" => "true"})
+    output = Asciidoctor.convert(input, {"standalone" => "true", "attributes" => "sectids"})
     output.scan("<p>").size.should eq(1)
     output.should_not contain("<div id=\"preamble\">")
   end
@@ -81,10 +78,9 @@ describe "Preamble" do
     output.should contain("Section paragraph 1.")
   end
 
-  pending "should not create a preamble if the document has no title" do
-    # Convertisseur Crystal ne génère pas encore le <div id="preamble">
+  it "should not create a preamble if the document has no title" do
     input = "Preamble paragraph 1.\n\n== First Section\n\nSection paragraph 1."
-    output = Asciidoctor.convert(input, {"standalone" => "true"})
+    output = Asciidoctor.convert(input, {"standalone" => "true", "attributes" => "sectids"})
     output.scan("<p>").size.should eq(2)
     output.should_not contain("<div id=\"preamble\">")
   end

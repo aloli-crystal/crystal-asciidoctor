@@ -104,7 +104,7 @@ describe Asciidoctor::Reader do
       reader.lineno.should eq(1)
     end
 
-    pending "peek_lines should peek all lines if no arguments are given" do
+    it "peek_lines should peek all lines if no arguments are given" do
       reader = Asciidoctor::Reader.new(TestHelpers::SAMPLE_DATA)
       reader.peek_lines.should eq(TestHelpers::SAMPLE_DATA)
       reader.lineno.should eq(1)

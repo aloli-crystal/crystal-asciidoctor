@@ -132,14 +132,24 @@ module Asciidoctor
     end
 
     # Generate a String id from the given section title and document.
+    # If the generated id already exists in the document catalog, a numeric
+    # suffix is appended to make it unique (e.g., _my_section_2).
     def self.generate_id(title : String, document : Document) : String
       prefix = document.attributes["idprefix"]? || "_"
       separator = document.attributes["idseparator"]? || "_"
-      id = title.downcase
+      base_id = title.downcase
         .gsub(/[^a-z0-9 -]/, "")
         .strip
         .gsub(/\s+/, separator)
-      "#{prefix}#{id}"
+      candidate = "#{prefix}#{base_id}"
+      if document.catalog.refs.has_key?(candidate)
+        count = 2
+        while document.catalog.refs.has_key?("#{candidate}#{separator}#{count}")
+          count += 1
+        end
+        candidate = "#{candidate}#{separator}#{count}"
+      end
+      candidate
     end
   end
 end
