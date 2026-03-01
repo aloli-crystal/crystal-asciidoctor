@@ -20,7 +20,12 @@ module Asciidoctor
     end
 
     def self.value_for_name(name)
-      case name.to_s.upcase
+      str = name.to_s.strip
+      # Accept numeric values
+      if str =~ /^\d+$/
+        return str.to_i
+      end
+      case str.upcase
       when "UNSAFE" then UNSAFE
       when "SAFE"   then SAFE
       when "SERVER" then SERVER

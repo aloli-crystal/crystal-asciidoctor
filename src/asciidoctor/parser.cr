@@ -1754,7 +1754,9 @@ module Asciidoctor
       end
 
       value = match[2]? || ""
+      # Handle multi-line attribute values
       if value.ends_with?(" \\")
+        # Modern continuation with backslash
         value = value[0, value.size - 2].rstrip
         while reader.advance
           next_line = reader.peek_line || ""
@@ -1762,6 +1764,18 @@ module Asciidoctor
           next_line = next_line.lstrip
           keep_open = next_line.ends_with?(" \\")
           next_line = next_line[0, next_line.size - 2].rstrip if keep_open
+          value = "#{value} #{next_line}"
+          break unless keep_open
+        end
+      elsif value.rstrip.ends_with?(" +")
+        # Legacy continuation with +
+        value = value.rstrip[0...-2].rstrip
+        while reader.advance
+          next_line = reader.peek_line || ""
+          break if next_line.empty?
+          next_line = next_line.lstrip
+          keep_open = next_line.rstrip.ends_with?(" +")
+          next_line = next_line.rstrip[0...-2].rstrip if keep_open
           value = "#{value} #{next_line}"
           break unless keep_open
         end
@@ -2052,11 +2066,34 @@ module Asciidoctor
       name = "hardbreaks-option" if name == "hardbreaks"
 
       if doc
+        # Check if attribute is locked by API override
+        if doc.attribute_overrides.has_key?(name)
+          override_val = doc.attribute_overrides[name]
+          if override_val.nil?
+            # Attribute was unset via API - cannot be set by document
+            doc.attributes.delete(name)
+            return {name, nil}
+          else
+            # Attribute was set via API - cannot be overridden or unset by document
+            return {name, override_val}
+          end
+        end
         if actual_value
           if name == "leveloffset" && (actual_value.starts_with?('+') || actual_value.starts_with?('-'))
             current = (doc.attributes["leveloffset"]? || "0").to_i
             offset = actual_value.to_i
             actual_value = (current + offset).to_s
+          end
+          # Apply attribute substitution: resolve {attr} references
+          if actual_value.includes?('{')
+            actual_value = actual_value.gsub(/\{(\w[\w-]*)\}/) do |match_str, md|
+              attr_name = md[1]
+              doc.attributes[attr_name]? || match_str
+            end
+          end
+          # Apply special character substitution
+          if actual_value.includes?('<') || actual_value.includes?('>') || actual_value.includes?('&')
+            actual_value = actual_value.gsub('&', "&amp;").gsub('<', "&lt;").gsub('>', "&gt;")
           end
           doc.attributes[name] = actual_value
           attrs[name] = actual_value if attrs

@@ -31,6 +31,7 @@ module Asciidoctor
   }
 
   DEFAULT_ATTRIBUTES = {
+    "sectids"           => "",
     "appendix-caption"  => "Appendix",
     "appendix-refsig"   => "Appendix",
     "caution-caption"   => "Caution",

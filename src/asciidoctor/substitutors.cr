@@ -349,7 +349,7 @@ module Asciidoctor
               return text
             end
       text.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
-        attr_name = md[1]
+        attr_name = md[1].downcase
         if (val = doc.attributes[attr_name]?)
           val
         elsif (val = INTRINSIC_ATTRIBUTES[attr_name]?)

@@ -42,6 +42,7 @@ module Asciidoctor
     # Section indexing.
     @next_section_index : Int32
     @next_section_ordinal : Int32
+    @next_appendix_index : Int32
 
     # Default substitutions.
     @default_subs : Substitution?
@@ -60,6 +61,7 @@ module Asciidoctor
       @level = 0
       @next_section_index = 0
       @next_section_ordinal = 1
+      @next_appendix_index = 0
       @numeral = nil
       @passthroughs = [] of PassthroughEntry
       @source_location = nil
@@ -86,7 +88,9 @@ module Asciidoctor
       @next_section_index += 1
       if section.numbered
         if (sectname = section.sectname) == "appendix"
-          section.numeral = (65 + section.index).chr.to_s # A, B, C...
+          appendix_idx = @next_appendix_index
+          @next_appendix_index += 1
+          section.numeral = (65 + appendix_idx).chr.to_s # A, B, C...
           # Assign caption for appendix sections (e.g., "Appendix A: ")
           appendix_caption = section.document.attributes["appendix-caption"]? || "Appendix"
           unless appendix_caption.empty?
@@ -218,6 +222,7 @@ module Asciidoctor
     def reindex_sections : Nil
       @next_section_index = 0
       @next_section_ordinal = 1
+      @next_appendix_index = 0
       @blocks.each do |block|
         if block.context == :section && block.is_a?(Section)
           assign_numeral(block)
@@ -249,7 +254,16 @@ module Asciidoctor
 
     # Get the String title of this Block with title substitutions applied.
     def title : String?
-      @converted_title ||= @title
+      @converted_title ||= if (t = @title)
+        apply_title_subs(t)
+      else
+        nil
+      end
+    end
+
+    # Apply inline substitutions to the title
+    protected def apply_title_subs(title : String) : String
+      apply_subs(title, [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements])
     end
 
     # Set the String block title.

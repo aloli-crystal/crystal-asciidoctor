@@ -129,7 +129,7 @@ module Asciidoctor
     @parsed : Bool
 
     # The attribute overrides (locked attributes).
-    @attribute_overrides : Hash(String, String?)
+    getter attribute_overrides : Hash(String, String?)
 
     # The set of attributes modified during header processing.
     @attributes_modified : Set(String)

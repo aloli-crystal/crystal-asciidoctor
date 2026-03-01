@@ -53,7 +53,7 @@ module Asciidoctor
     def attr(name : String, default_value : String? = nil, fallback_name : String | Bool | Nil = nil) : String?
       @attributes[name]? || begin
         if fallback_name
-          lookup = fallback_name == true ? name : fallback_name.as(String)
+          lookup = fallback_name.is_a?(Bool) ? name : fallback_name.as(String)
           document.attributes[lookup]? || default_value
         else
           default_value
@@ -67,14 +67,14 @@ module Asciidoctor
       if expected_value
         expected_value == (@attributes[name]? || begin
           if fallback_name
-            lookup = fallback_name == true ? name : fallback_name.as(String)
+            lookup = fallback_name.is_a?(Bool) ? name : fallback_name.as(String)
             document.attributes[lookup]?
           end
         end)
       else
         @attributes.has_key?(name) || begin
           if fallback_name
-            lookup = fallback_name == true ? name : fallback_name.as(String)
+            lookup = fallback_name.is_a?(Bool) ? name : fallback_name.as(String)
             document.attributes.has_key?(lookup)
           else
             false

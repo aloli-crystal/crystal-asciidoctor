@@ -30,8 +30,8 @@ describe Asciidoctor::Section do
       sec.id.should eq("_section_one")
     end
 
-    it "synthetic id is not generated when sectids is not set" do
-      sec = block_from_string("== Section One")
+    it "synthetic id is not generated when sectids is unset" do
+      sec = block_from_string(":sectids!:\n\n== Section One")
       sec.id.should be_nil
     end
 
@@ -448,7 +448,7 @@ describe Asciidoctor::Section do
       output.should contain("Appendix B")
     end
 
-    pending "should continue numbering after appendix" do
+    it "should continue numbering after appendix" do
       input = ":numbered:\n:sectids:\n\n== First Section\n\ncontent\n\n[appendix]\n== Attribute Options\n\ncontent\n\n== Migration\n\ncontent"
       output = convert_string_to_embedded(input)
       output.should contain("1. First Section")
@@ -553,7 +553,7 @@ describe Asciidoctor::Section do
       output.should_not contain("id=\"toc\"")
     end
 
-    pending "should output numbered table of contents if toc and numbered attributes are set" do
+    it "should output numbered table of contents if toc and numbered attributes are set" do
       input = "= Article\n:toc:\n:numbered:\n:sectids:\n\n== Section One\n\ntext\n\n== Section Two\n\ntext\n\n=== Interlude\n\ntext\n\n== Section Three\n\ntext"
       output = convert_string(input)
       output.should contain("1. Section One")
@@ -1040,7 +1040,7 @@ describe Asciidoctor::Section do
       doc.blocks[1].context.should eq(:section)
     end
 
-    pending "should handle section title with inline formatting" do
+    it "should handle section title with inline formatting" do
       input = ":sectids:\n\n== Section with *bold* text\n\ncontent"
       output = convert_string_to_embedded(input)
       output.should contain("bold")
