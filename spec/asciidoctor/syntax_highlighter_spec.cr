@@ -243,22 +243,19 @@ describe Asciidoctor::SyntaxHighlighter do
       output.should contain("hljs")
     end
 
-    pending "should add language-none class when source-highlighter is highlight.js and language is not set" do
-      # Porting note: Depends on parser mapping positional attributes for source blocks
+    it "should add language-none class when source-highlighter is highlight.js and language is not set" do
       input = ":source-highlighter: highlight.js\n\n[source]\n----\n[numbers]\none\ntwo\nthree\n----"
       output = convert_string_to_embedded(input, {"safe" => "safe"})
       output.should contain("language-none")
     end
 
-    pending "should set starting line number in DocBook output if linenums option is enabled and start attribute is set" do
-      # Porting note: Depends on parser mapping positional attributes for source blocks
+    it "should set starting line number in DocBook output if linenums option is enabled and start attribute is set" do
       input = "[source%linenums,java,start=3]\n----\npublic class HelloWorld {\n  public static void main(String[] args) {\n    out.println(\"Hello, World!\");\n  }\n}\n----"
       output = convert_string_to_embedded(input, {"backend" => "docbook", "safe" => "safe"})
       output.should contain("startinglinenumber=\"3\"")
     end
 
-    pending "should rename document attribute named language to source-language when compat-mode is enabled" do
-      # Porting note: Depends on compat-mode attribute processing in parser
+    it "should rename document attribute named language to source-language when compat-mode is enabled" do
       input = ":language: ruby\n\n{source-language}"
       output1 = convert_string_to_embedded(input, {"attributes" => "compat-mode="})
       output1.strip.should contain("ruby")
@@ -268,8 +265,7 @@ describe Asciidoctor::SyntaxHighlighter do
   end
 
   describe "Prettify" do
-    pending "should add prettyprint class when source-highlighter is prettify" do
-      # Porting note: Depends on parser mapping 2nd positional attribute to 'language' + prettify adapter
+    it "should add prettyprint class when source-highlighter is prettify" do
       input = "[source,ruby]\n----\nputs \"foo\"\n----"
       output = convert_string_to_embedded(input, {"attributes" => "source-highlighter=prettify"})
       output.should contain("prettyprint")

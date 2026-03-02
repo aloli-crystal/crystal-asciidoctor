@@ -453,7 +453,23 @@ module Asciidoctor
         end
         rest = m.pre_match
       else
-        return { {} of String => String | Int32, line}
+        # Check if the entire fragment is a spec (no content, no leading space needed)
+        # This handles cases like "3*" or "2+" at the start of a fragment
+        # But only if the spec contains meaningful elements (colspan, rowspan, alignment, or valid style)
+        if (m2 = CellSpecStartRx.match(line.strip)) && !m2[0].empty? && line.strip == m2[0]
+          # Verify the match contains meaningful spec elements
+          has_span = m2[1]? && m2[2]?  # colspan/rowspan spec like "2+" or "3*"
+          has_align = m2[3]?  # alignment like "<", ">", "^"
+          has_valid_style = m2[4]? && !m2[4].empty? && TableCellStyles.has_key?(m2[4][0])
+          if has_span || has_align || has_valid_style
+            m = m2
+            rest = ""
+          else
+            return { {} of String => String | Int32, line}
+          end
+        else
+          return { {} of String => String | Int32, line}
+        end
       end
       spec = {} of String => String | Int32
       if m[1]?
@@ -481,7 +497,7 @@ module Asciidoctor
           spec["valign"] = TableCellVertAlignments[rowspec_align[0]]
         end
       end
-      if (style_char = m[4]?) && TableCellStyles.has_key?(style_char)
+      if (style_char = m[4]?) && !style_char.empty? && TableCellStyles.has_key?(style_char[0])
         spec["style"] = style_char
       end
       {spec, rest}
@@ -615,7 +631,9 @@ module Asciidoctor
           end
         elsif next_line.ends_with?(']') && (m = BlockAttributeListRx.match(next_line))
           if (raw = m[1]?) && !raw.empty?
-            parse_block_attribute_list(raw, attributes)
+            # Apply attribute substitutions before parsing the attribute list
+            raw = document.sub_attributes(raw) if raw.includes?('{')
+            parse_block_attribute_list(raw, attributes, document)
           end
           return true
         end
@@ -645,10 +663,10 @@ module Asciidoctor
     end
 
     # Parse a block attribute list into a Hash.
-     def parse_block_attribute_list(raw : String, attributes : Hash(String, String)) : Hash(String, String)
+    def parse_block_attribute_list(raw : String, attributes : Hash(String, String), block : AbstractBlock? = nil) : Hash(String, String)
       return attributes if raw.empty?
       # Use AttributeList for proper parsing (handles quoted values with commas, etc.)
-      al = AttributeList.new(raw)
+      al = AttributeList.new(raw, block)
       parsed = al.parse
       parsed.each do |key, value|
         case key
@@ -1802,42 +1820,192 @@ module Asciidoctor
           end
         end
       end
-      # Collect all cells from all lines
-      all_cells = [] of String
-      all_lines.each do |line|
-        next if line.empty?
-        cells = if format == "csv"
-          parse_csv_cells(line, separator)
-        else
-          # PSV/DSV: handle escaped separators (\| in PSV)
-          escaped_sep = "\\#{separator}"
-          placeholder = "\x00ESCAPED_SEP\x00"
-          safe_line = line.gsub(escaped_sep, placeholder)
-          c = safe_line.split(separator)
-          c.shift if c.first?.try(&.empty?) && format == "psv"
-          c.map { |cell| cell.gsub(placeholder, separator) }
+      # Parse cells with their specs (colspan, rowspan, style, etc.)
+      # Each cell entry: {spec, content}
+      parsed_cells = [] of Tuple(Hash(String, String | Int32), String)
+
+      if format == "csv"
+        # CSV: simple line-by-line parsing, no cell specs
+        all_lines.each do |line|
+          next if line.empty?
+          parse_csv_cells(line, separator).each do |cell_text|
+            parsed_cells << ({ {} of String => String | Int32, cell_text.strip })
+          end
         end
-        all_cells.concat(cells)
+      else
+        # PSV/DSV: handle cell specs (colspan, rowspan, style, etc.)
+        # Concatenate all lines with \n for multi-line cell support
+        escaped_sep = "\\#{separator}"
+        placeholder = "\x00ESCAPED_SEP\x00"
+        full_content = all_lines.join("\n")
+        safe_content = full_content.gsub(escaped_sep, placeholder)
+        # Split by separator
+        fragments = safe_content.split(separator)
+        # Restore escaped separators
+        fragments = fragments.map { |f| f.gsub(placeholder, separator) }
+        # PSV format: [spec]|content[spec]|content...
+        # fragments[0] = before first | (spec for cell 1, matched by CellSpecStartRx)
+        # fragments[i] (i>0) = content of cell i + spec for cell i+1 (matched by CellSpecEndRx)
+        # DSV format: cell1:cell2:cell3 (no leading separator, no cell specs)
+        # fragments[0] = first cell content
+        # fragments[i] = cell i+1 content
+        #
+        # Distinguish PSV from DSV: PSV starts with a separator (fragments[0] is empty or spec-only)
+        # DSV: fragments[0] contains actual cell content
+        is_psv_like = format != "dsv" # PSV and custom formats have leading separator
+
+        if is_psv_like
+          # Parse spec for cell 1 from fragments[0]
+          first_frag = fragments[0]
+          pending_spec = if first_frag.strip.empty?
+            {} of String => String | Int32
+          else
+            # Use CellSpecStartRx directly on the first fragment
+            m = CellSpecStartRx.match(first_frag.strip)
+            if m && !m[0].empty?
+              s = {} of String => String | Int32
+              if m[1]?
+                parts = m[1].split('.')
+                colspec = parts[0]?.try(&.to_i?) || 1
+                rowspec = parts[1]?.try(&.to_i?) || 1
+                case m[2]?
+                when "+"
+                  s["colspan"] = colspec unless colspec == 1
+                  s["rowspan"] = rowspec unless rowspec == 1
+                when "*"
+                  s["repeatcol"] = colspec unless colspec == 1
+                end
+              end
+              if (align = m[3]?)
+                parts = align.split('.')
+                colspec_align = parts[0]? || ""
+                rowspec_align = parts[1]? || ""
+                if !colspec_align.empty? && colspec_align.size == 1 && TableCellHorzAlignments.has_key?(colspec_align[0])
+                  s["halign"] = TableCellHorzAlignments[colspec_align[0]]
+                end
+                if !rowspec_align.empty? && rowspec_align.size == 1 && TableCellVertAlignments.has_key?(rowspec_align[0])
+                  s["valign"] = TableCellVertAlignments[rowspec_align[0]]
+                end
+              end
+              if (style_char = m[4]?) && !style_char.empty? && TableCellStyles.has_key?(style_char[0])
+                s["style"] = style_char
+              end
+              s
+            else
+              {} of String => String | Int32
+            end
+          end
+          (1...fragments.size).each do |i|
+            frag = fragments[i]
+            spec_for_next, cell_content = parse_cellspec(frag, :end)
+            spec_for_next ||= {} of String => String | Int32
+            # Strip leading newline from cell content (from line join)
+            cell_content = cell_content.lstrip('\n').rstrip
+            # Handle repeatcol: duplicate cell
+            repeat = (pending_spec["repeatcol"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1)
+            repeat.times do
+              parsed_cells << ({pending_spec.reject { |k, _| k == "repeatcol" }, cell_content})
+            end
+            pending_spec = spec_for_next
+          end
+        else
+          # DSV: no cell specs, each fragment is a cell content
+          # fragments are separated by newlines within the full_content join
+          # We need to handle multi-line cells: each line is a separate row
+          # DSV: cell1:cell2:cell3\ncell4:cell5:cell6
+          # fragments = ["cell1", "cell2", "cell3\ncell4", "cell5", "cell6"]
+          # The \n in fragments means a new row starts
+          # We need to split fragments at \n boundaries
+          fragments.each do |frag|
+            # Split by newline to handle row boundaries
+            sub_frags = frag.split("\n")
+            sub_frags.each_with_index do |sf, idx|
+              cell_content = sf.strip
+              # Empty fragment at end of line means empty cell (trailing separator)
+              parsed_cells << ({ {} of String => String | Int32, cell_content})
+            end
+          end
+        end
       end
 
       # Determine number of columns
       num_cols = table.columns.size
       if num_cols == 0
-        # Auto-detect: use first row to determine column count
-        # For PSV, the first line determines the column count
+        # Auto-detect from first row: count cells until we fill a row
+        # For PSV with spans, count effective columns in first row
+        first_row_cols = 0
+        parsed_cells.each do |spec, _|
+          colspan = spec["colspan"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1
+          first_row_cols += colspan
+          break if first_row_cols >= (parsed_cells.size > 0 ? parsed_cells.size : 1)
+        end
+        # Simple heuristic: use first non-spanning row to determine column count
+        # Count cells in first logical row
+        col_count = 0
+        parsed_cells.each do |spec, _|
+          colspan = spec["colspan"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1
+          col_count += colspan
+          # Check if we've completed a row by looking at total columns
+          # We'll use a simple approach: count until we have a reasonable number
+          break
+        end
+        # Count effective columns from first row of parsed_cells
+        # A row is complete when effective_cols >= some threshold
+        # Use first line to count: parse specs and sum colspan+repeatcol
         first_line = all_lines.find { |l| !l.empty? }
         if first_line
-          first_cells = if format == "csv"
-            parse_csv_cells(first_line, separator)
+          if format == "csv"
+            num_cols = parse_csv_cells(first_line, separator).size
+          elsif format == "dsv"
+            # DSV: count separators in first line + 1
+            esc_sep = "\\#{separator}"
+            ph = "\x00ESCAPED_SEP\x00"
+            safe_line = first_line.gsub(esc_sep, ph)
+            num_cols = safe_line.split(separator).size
           else
-            escaped_sep = "\\#{separator}"
-            placeholder = "\x00ESCAPED_SEP\x00"
-            safe_line = first_line.gsub(escaped_sep, placeholder)
-            c = safe_line.split(separator)
-            c.shift if c.first?.try(&.empty?) && format == "psv"
-            c.map { |cell| cell.gsub(placeholder, separator) }
+            esc_sep = "\\#{separator}"
+            ph = "\x00ESCAPED_SEP\x00"
+            safe_line = first_line.gsub(esc_sep, ph)
+            first_frags = safe_line.split(separator)
+            # first_frags[0] is the spec before the first |
+            # first_frags[i] (i>0) is content + spec for next cell
+            # Count effective columns in first line
+            pending_first_spec = if first_frags[0].strip.empty?
+              {} of String => String | Int32
+            else
+              m2 = CellSpecStartRx.match(first_frags[0].strip)
+              if m2 && !m2[0].empty?
+                s2 = {} of String => String | Int32
+                if m2[1]?
+                  parts2 = m2[1].split('.')
+                  cs2 = parts2[0]?.try(&.to_i?) || 1
+                  rs2 = parts2[1]?.try(&.to_i?) || 1
+                  case m2[2]?
+                  when "+"
+                    s2["colspan"] = cs2 unless cs2 == 1
+                    s2["rowspan"] = rs2 unless rs2 == 1
+                  when "*"
+                    s2["repeatcol"] = cs2 unless cs2 == 1
+                  end
+                end
+                s2
+              else
+                {} of String => String | Int32
+              end
+            end
+            effective_cols = 0
+            (1...first_frags.size).each do |fi|
+              frag_r = first_frags[fi].gsub(ph, separator)
+              spec_next, _ = parse_cellspec(frag_r, :end)
+              spec_next ||= {} of String => String | Int32
+              # Count this cell's effective columns
+              colspan_f = pending_first_spec["colspan"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1
+              repeat_f = pending_first_spec["repeatcol"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1
+              effective_cols += colspan_f * repeat_f
+              pending_first_spec = spec_next
+            end
+            num_cols = effective_cols if effective_cols > 0
           end
-          num_cols = first_cells.size
         end
         num_cols = 1 if num_cols == 0
         # Create columns
@@ -1847,24 +2015,113 @@ module Asciidoctor
         end
       end
 
-      # Distribute cells into rows based on column count
-      all_cells.each_with_index do |cell_text, idx|
-        col_idx = idx % num_cols
-        row_num = idx // num_cols
+      # Distribute cells into rows based on column count, respecting colspan/rowspan
+      # Track which cells are occupied by rowspans
+      current_row = [] of Table::Cell
+      current_row_cols = 0  # effective columns used in current row (accounting for colspan)
+      row_num = 0
+      # Grid to track rowspan occupancy: grid[row][col] = true if occupied
+      rowspan_grid = Array(Array(Bool)).new
+
+      parsed_cells.each do |spec, cell_text|
+        colspan = spec["colspan"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1
+        rowspan = spec["rowspan"]?.try { |v| v.is_a?(Int32) ? v : v.to_s.to_i? } || 1
+        halign = spec["halign"]?.try { |v| v.is_a?(String) ? v : nil }
+        valign = spec["valign"]?.try { |v| v.is_a?(String) ? v : nil }
+        style_char = spec["style"]?.try { |v| v.is_a?(String) ? v : nil }
+        cell_style = if style_char
+          case style_char
+          when "d" then :none
+          when "s" then :strong
+          when "e" then :emphasis
+          when "m" then :monospaced
+          when "h" then :header
+          when "l" then :literal
+          when "a" then :asciidoc
+          else nil
+          end
+        end
+
+        # Ensure rowspan_grid has enough rows
+        (rowspan_grid.size..row_num + rowspan).each do |r|
+          rowspan_grid << Array(Bool).new(num_cols, false)
+        end
+
+        # Find next available column in current row
+        col_idx = 0
+        while col_idx < num_cols
+          row_arr = rowspan_grid[row_num]? || Array(Bool).new(num_cols, false)
+          break unless row_arr[col_idx]? == true
+          col_idx += 1
+        end
+
+        # Skip if no column available (shouldn't happen in well-formed tables)
+        next if col_idx >= num_cols
+
         # Ensure column exists
         while table.columns.size <= col_idx
           col = Table::Column.new(table, table.columns.size)
           table.columns << col
         end
-        cell = Table::Cell.new(table.columns[col_idx], cell_text.strip)
-        # Add to appropriate row
+
+        # Create cell attributes
+        cell_attrs = {} of String => String
+        cell_attrs["halign"] = halign if halign
+        cell_attrs["valign"] = valign if valign
+
+        cell = Table::Cell.new(table.columns[col_idx], cell_text,
+          attributes: cell_attrs,
+          colspan: colspan > 1 ? colspan : nil,
+          rowspan: rowspan > 1 ? rowspan : nil,
+          style: cell_style)
+
+        # Mark rowspan_grid for occupied cells
+        rowspan.times do |r|
+          colspan.times do |c|
+            gr = row_num + r
+            gc = col_idx + c
+            while rowspan_grid.size <= gr
+              rowspan_grid << Array(Bool).new(num_cols, false)
+            end
+            while rowspan_grid[gr].size <= gc
+              rowspan_grid[gr] << false
+            end
+            rowspan_grid[gr][gc] = true
+          end
+        end
+
+        current_row << cell
+        current_row_cols += colspan
+
+        # Check if current row is complete
+        # Count effective columns used (including rowspan-occupied slots)
+        effective_used = 0
+        num_cols.times do |c|
+          row_arr = rowspan_grid[row_num]? || Array(Bool).new(num_cols, false)
+          effective_used += 1 if row_arr[c]? == true
+        end
+
+        if effective_used >= num_cols
+          # Row is complete
+          if has_header && row_num == 0
+            table.rows.head << current_row
+          else
+            body_row = has_header ? row_num - 1 : row_num
+            table.rows.body << current_row
+          end
+          current_row = [] of Table::Cell
+          current_row_cols = 0
+          row_num += 1
+        end
+      end
+
+      # Add any remaining cells as a partial row
+      unless current_row.empty?
         if has_header && row_num == 0
-          table.rows.head << [] of Table::Cell if table.rows.head.size <= row_num
-          table.rows.head[row_num] << cell
+          table.rows.head << current_row
         else
           body_row = has_header ? row_num - 1 : row_num
-          table.rows.body << [] of Table::Cell if table.rows.body.size <= body_row
-          table.rows.body[body_row] << cell
+          table.rows.body << current_row
         end
       end
 
@@ -2015,16 +2272,31 @@ module Asciidoctor
       value = match[2]? || ""
       # Handle multi-line attribute values
       if value.ends_with?(" \\")
-        # Modern continuation with backslash
-        value = value[0, value.size - 2].rstrip
-        while reader.advance
-          next_line = reader.peek_line || ""
-          break if next_line.empty?
-          next_line = next_line.lstrip
-          keep_open = next_line.ends_with?(" \\")
-          next_line = next_line[0, next_line.size - 2].rstrip if keep_open
-          value = "#{value} #{next_line}"
-          break unless keep_open
+        # Check if it's a line-break continuation: ends with " + \"
+        if value.rstrip.ends_with?(" + \\")
+          # Line-break continuation: preserve + and join with \n
+          value = value.rstrip[0...-2].rstrip  # remove " \\"
+          while reader.advance
+            next_line = reader.peek_line || ""
+            break if next_line.empty?
+            next_line = next_line.lstrip
+            keep_open = next_line.ends_with?(" \\")
+            next_line = next_line[0, next_line.size - 2].rstrip if keep_open
+            value = "#{value}\n#{next_line}"
+            break unless keep_open
+          end
+        else
+          # Modern continuation with backslash: join with space
+          value = value[0, value.size - 2].rstrip
+          while reader.advance
+            next_line = reader.peek_line || ""
+            break if next_line.empty?
+            next_line = next_line.lstrip
+            keep_open = next_line.ends_with?(" \\")
+            next_line = next_line[0, next_line.size - 2].rstrip if keep_open
+            value = "#{value} #{next_line}"
+            break unless keep_open
+          end
         end
       elsif value.rstrip.ends_with?(" +")
         # Legacy continuation with +

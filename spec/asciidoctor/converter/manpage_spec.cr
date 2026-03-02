@@ -444,7 +444,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.lines.last.chomp.should eq("\\&.")
     end
 
-    pending "should escape raw macro" do
+    it "should escape raw macro" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nAAA this line of text should be show\n.if 1 .nx\nBBB this line and the one above it should be visible"
       output = manpage_convert(input)
       output.should contain("\\&.if 1 .nx")
@@ -473,13 +473,13 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Backslash handling
   # ==========================================================================
   describe "Backslash" do
-    pending "should preserve literal backslashes in content" do
+    it "should preserve literal backslashes in content" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n\\.foo \\ bar \\\\ baz\\\nmore"
       output = manpage_convert(input)
       output.should contain("\\(rs.foo \\(rs bar \\(rs\\(rs baz\\(rs")
     end
 
-    pending "should escape literal escape sequence" do
+    it "should escape literal escape sequence" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n \\fB makes text bold"
       output = manpage_convert(input)
       output.should contain("\\(rsfB makes text bold")

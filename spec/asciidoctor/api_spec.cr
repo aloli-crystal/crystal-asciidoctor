@@ -52,7 +52,7 @@ describe Asciidoctor do
       doc.converter.should be_a(Asciidoctor::Converter::ManPageConverter)
     end
 
-    pending "should load input file" do
+    it "should load input file" do
       sample_input_path = "sample.adoc"
       File.write(sample_input_path, "= Document Title")
       doc = File.open(sample_input_path) do |file|
@@ -76,7 +76,7 @@ describe Asciidoctor do
       File.delete(sample_input_path)
     end
 
-    pending "should load input IO" do
+    it "should load input IO" do
       input = IO::Memory.new("=\n\npreamble")
       doc = Asciidoctor.load(input, {"safe" => "safe"})
       doc.doctitle.should be_nil
@@ -143,7 +143,7 @@ describe Asciidoctor do
       doc.attributes.should be_a(Hash(String, String))
     end
 
-    pending "should accept attributes as nil" do
+    it "should accept attributes as nil" do
       doc = Asciidoctor.load("text", {"attributes" => nil})
       doc.attributes.should be_a(Hash(String, String))
     end

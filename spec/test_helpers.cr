@@ -12,6 +12,22 @@ module TestHelpers
     Asciidoctor.load(src, opts)
   end
 
+  # Parse the source string into a Document (with nullable values).
+  # nil values are treated as attribute deletions (equivalent to !key)
+  def self.document_from_string(src : String, opts : Hash(String, String?)) : Asciidoctor::Document
+    normalized = {} of String => String
+    opts.each do |k, v|
+      if v.nil?
+        # nil value means delete the attribute (equivalent to !key)
+        normalized["!#{k}"] = ""
+      else
+        normalized[k] = v
+      end
+    end
+    normalized["standalone"] = "false" unless normalized.has_key?("standalone")
+    Asciidoctor.load(src, normalized)
+  end
+
   # Parse the source string into a Document and return the first block.
   def self.block_from_string(src : String, opts : Hash(String, String) = {} of String => String) : Asciidoctor::Block
     opts["standalone"] = "false"
@@ -47,7 +63,7 @@ module TestHelpers
 
   # Create an empty document.
   def self.empty_document(opts : Hash(String, String) = {} of String => String) : Asciidoctor::Document
-    Asciidoctor.load("", opts)
+    Asciidoctor.load("", opts.merge({"parse" => "false"}))
   end
 
   # Count XPath matches in HTML/XML content.

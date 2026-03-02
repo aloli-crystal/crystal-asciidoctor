@@ -576,7 +576,13 @@ module Asciidoctor
       return nil if @lines.empty?
       @lineno += 1
       @look_ahead -= 1 unless @look_ahead == 0
-      @lines.pop
+      line = @lines.pop
+      if @unescape_next_line
+        @unescape_next_line = false
+        line ? line[1..] : nil
+      else
+        line
+      end
     end
 
     # Restore the line to the stack and decrement the lineno.
@@ -853,22 +859,33 @@ module Asciidoctor
         return false
       end
 
+      # Substitute attributes in target
+      resolved_target = doc.sub_attributes(target)
+
       # Resolve the include path
-      inc_path = doc.normalize_system_path(target, @dir)
+      inc_path = doc.normalize_system_path(resolved_target, @dir)
 
-      unless File.file?(inc_path)
-        logger.error { "include file not found: #{inc_path}" }
-        replace_next_line("Unresolved directive in #{@path} - include::#{target}[#{attrlist}]")
-        return false
-      end
-
-      # Parse attributes from attrlist
+      # Parse attributes from attrlist first (needed for opts=optional check)
       parsed_attrs = {} of String => String
       if attrlist && !attrlist.empty?
         attrlist.split(",").each do |entry|
           key, _, val = entry.partition("=")
           parsed_attrs[key.strip] = val.strip
         end
+      end
+
+      # Check for optional option
+      optional = (parsed_attrs["opts"]? || "").split(";").includes?("optional")
+
+      unless File.file?(inc_path)
+        if optional
+          # Skip silently if optional
+          shift
+          return true
+        end
+        logger.error { "include file not found: #{inc_path}" }
+        replace_next_line("Unresolved directive in #{@path} - include::#{target}[#{attrlist}]")
+        return false
       end
 
       # Determine line selection or tag selection

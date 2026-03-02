@@ -104,7 +104,7 @@ describe "Preamble" do
     output.should contain("<div id=\"preamble\">\n<div id=\"toc\" class=\"toc\">")
   end
 
-  pending "should move abstract in implicit preface to info tag when converting to DocBook" do
+  it "should move abstract in implicit preface to info tag when converting to DocBook" do
     # Convertisseur Crystal DocBook5 non encore testé pour les abstracts
     input = "= Document Title\n\n[abstract]\nThis is the abstract.\n\n== Fin"
     ["article", "book"].each do |doctype|
@@ -113,14 +113,14 @@ describe "Preamble" do
     end
   end
 
-  pending "should move abstract as first section to info tag when converting to DocBook" do
+  it "should move abstract as first section to info tag when converting to DocBook" do
     # Convertisseur Crystal DocBook5 non encore testé pour les abstracts
     input = "= Document Title\n\n[abstract]\n== Abstract\n\nThis is the abstract.\n\n== Fin"
     output = Asciidoctor.convert(input, {"backend" => "docbook5"})
     output.should contain("<abstract>")
   end
 
-  pending "should move abstract in preface section to info tag when converting to DocBook" do
+  it "should move abstract in preface section to info tag when converting to DocBook" do
     # Convertisseur Crystal DocBook5 non encore testé pour les abstracts
     input = "= Document Title\n:doctype: book\n\n[preface]\n== Preface\n\n[abstract]\nThis is the abstract.\n\n== Fin"
     output = Asciidoctor.convert(input, {"backend" => "docbook5", "attributes" => "doctype=book"})

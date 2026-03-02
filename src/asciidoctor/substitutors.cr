@@ -88,7 +88,10 @@ module Asciidoctor
     # Apply the specified substitutions to the text.
     def apply_subs(text : String, subs : Array(Symbol)) : String
       return text if subs.empty?
-      result = text
+      # Extract passthroughs before any substitutions (if text contains passthrough markers)
+      has_passthroughs = (text.includes?("++") || text.includes?("$$") || text.includes?("ss:")) &&
+                         (subs.includes?(:macros) || subs.includes?(:quotes) || subs.includes?(:attributes))
+      result = has_passthroughs ? extract_passthroughs(text) : text
       subs.each do |sub|
         result = case sub
                  when :specialcharacters then sub_specialchars(result)
@@ -102,7 +105,8 @@ module Asciidoctor
                  else                         result
                  end
       end
-      result
+      # Restore passthroughs after all substitutions
+      has_passthroughs ? restore_passthroughs(result) : result
     end
 
     # Apply substitutions to a String value (convenience for AttributeList).
@@ -463,9 +467,13 @@ module Asciidoctor
         end
         return processed_lines.join('\n')
       end
-      result = text.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
-        attr_name = md[1].downcase
-        if (val = doc.attributes[attr_name]?)
+      result = text.gsub(/(\\)?\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
+        escaped = md[1]?
+        attr_name = md[2].downcase
+        if escaped == "\\"
+          # Escaped attribute reference: remove backslash and keep {attr_name}
+          "{#{attr_name}}"
+        elsif (val = doc.attributes[attr_name]?)
           val
         elsif (val = INTRINSIC_ATTRIBUTES[attr_name]?)
           val

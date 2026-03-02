@@ -309,10 +309,13 @@ module Asciidoctor
 
         if node.style == "source"
           lang = node.attr("language")
+          linenums = node.option?("linenums") || node.option?("linenumbering")
+          linenumbering = linenums ? "numbered" : "unnumbered"
+          start_attr = linenums && node.attr?("start") ? %( startinglinenumber="#{node.attr("start")}") : ""
           if lang
-            wrapped_content = %(<programlisting#{informal ? common_attrs : ""} language="#{lang}" linenumbering="unnumbered">#{content}</programlisting>)
+            wrapped_content = %(<programlisting#{informal ? common_attrs : ""} language="#{lang}" linenumbering="#{linenumbering}"#{start_attr}>#{content}</programlisting>)
           else
-            wrapped_content = %(<screen#{informal ? common_attrs : ""} linenumbering="unnumbered">#{content}</screen>)
+            wrapped_content = %(<screen#{informal ? common_attrs : ""} linenumbering="#{linenumbering}"#{start_attr}>#{content}</screen>)
           end
         else
           wrapped_content = %(<screen#{informal ? common_attrs : ""}>#{content}</screen>)
@@ -416,7 +419,9 @@ module Asciidoctor
       end
 
       def convert_paragraph(node : AbstractBlock) : String
-        if node.title?
+        if node.style == "abstract"
+          %(<abstract>\n<simpara>#{node.content}</simpara>\n</abstract>)
+        elsif node.title?
           %(<formalpara#{common_attributes(node.id, node.role, node.reftext)}>\n<title>#{node.title}</title>\n<para>#{node.content}</para>\n</formalpara>)
         else
           %(<simpara#{common_attributes(node.id, node.role, node.reftext)}>#{node.content}</simpara>)
@@ -425,9 +430,20 @@ module Asciidoctor
 
       def convert_preamble(node : AbstractBlock) : String
         if node.document.doctype == "book"
-          # Use preface-title attribute if set, otherwise use node title (may be empty)
-          preface_title = node.document.attributes["preface-title"]? || node.title || ""
-          %(<preface#{common_attributes(node.id, node.role, node.reftext)}>\n<title>#{preface_title}</title>\n#{node.content}\n</preface>)
+          # Check if preamble contains an abstract block
+          abstract_content = node.blocks.find { |b| b.is_a?(AbstractBlock) && b.style == "abstract" }
+          if abstract_content
+            abstract_str = %(<abstract>\n<simpara>#{abstract_content.is_a?(AbstractBlock) ? abstract_content.content : ""}</simpara>\n</abstract>)
+            other_content = node.blocks.reject { |b| b.is_a?(AbstractBlock) && b.style == "abstract" }
+            other_str = other_content.map { |b| b.is_a?(AbstractBlock) ? convert(b) : "" }.join("\n")
+            # Use preface-title attribute if set, otherwise use node title (may be empty)
+            preface_title = node.document.attributes["preface-title"]? || node.title || ""
+            %(<preface#{common_attributes(node.id, node.role, node.reftext)}>\n<title>#{preface_title}</title>\n#{abstract_str}\n#{other_str}\n</preface>)
+          else
+            # Use preface-title attribute if set, otherwise use node title (may be empty)
+            preface_title = node.document.attributes["preface-title"]? || node.title || ""
+            %(<preface#{common_attributes(node.id, node.role, node.reftext)}>\n<title>#{preface_title}</title>\n#{node.content}\n</preface>)
+          end
         else
           node.content.to_s
         end
@@ -438,6 +454,11 @@ module Asciidoctor
       end
 
       def convert_section(node : Section) : String
+        # Special handling for abstract sections in DocBook
+        # The abstract section is rendered without xml:id to match Ruby Asciidoctor behavior
+        if node.sectname == "abstract"
+          return %(<abstract>\n#{node.content}\n</abstract>)
+        end
         tag_name = if node.document.doctype == "manpage"
                      MANPAGE_SECTION_TAGS[node.sectname]? || node.sectname
                    else

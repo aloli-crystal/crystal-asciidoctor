@@ -11,7 +11,9 @@ module Asciidoctor
       WHITESPACE_CHARS = "\n\t "
 
       LiteralBackslashRx  = /\A\\|(#{Regex.escape ESC})?\\/
-      LeadingPeriodRx     = /^\./
+      LeadingPeriodRx     = /^\./m
+      LiteralBackslashInlineRx = /\\(?=[^\\]|$)/
+      TroffEscapeRx       = /\\(?=[a-zA-Z(])/
       EmDashCharRefRx     = /&#8212;(?:&#8203;)?/
       EllipsisCharRefRx   = /&#8230;(?:&#8203;)?/
       WrappedIndentRx     = /\h*\n\h*/
@@ -466,9 +468,15 @@ module Asciidoctor
         else
           str = str.tr(WHITESPACE_CHARS, " ").squeeze(' ')
         end
+        # First, convert literal backslashes in content to \(rs (before generating new backslashes)
+        # Protect ESC_BS markers from being converted
+        str = str
+          .gsub(ESC_BS, "\u001c")  # temporarily hide ESC_BS markers
+          .gsub("\\", "\\(rs")  # convert literal backslashes in content to \(rs
+          .gsub("\u001c", ESC_BS)  # restore ESC_BS markers
         str = str
           .gsub(EllipsisCharRefRx, ".|.|.")
-          .gsub(LeadingPeriodRx, "\\\\&.")
+          .gsub(LeadingPeriodRx, "#{ESC_BS}&.")  # use ESC_BS so it won't be re-converted
           .gsub(EscapedMacroRx) { |_, md|  # unescape troff macro, quote adjacent char, isolate macro line
             macro_part = md[1]? || ""
             adj_char = md[2]? || ""
@@ -480,31 +488,31 @@ module Asciidoctor
               ".#{macro_part}#{dq}#{adj_char.rstrip}#{dq}\n#{rest}"
             end
           }
-          .gsub("-", "\\-")
+          .gsub("-", "#{ESC_BS}-")
           .gsub("&lt;", "<")
           .gsub("&gt;", ">")
           .gsub("&#43;", "+")
-          .gsub("&#160;", "\\~")
-          .gsub("&#169;", "\\(co")
-          .gsub("&#174;", "\\(rg")
-          .gsub("&#8482;", "\\(tm")
-          .gsub("&#176;", "\\(de")
+          .gsub("&#160;", "#{ESC_BS}~")
+          .gsub("&#169;", "#{ESC_BS}(co")
+          .gsub("&#174;", "#{ESC_BS}(rg")
+          .gsub("&#8482;", "#{ESC_BS}(tm")
+          .gsub("&#176;", "#{ESC_BS}(de")
           .gsub("&#8201;", " ")
-          .gsub("&#8211;", "\\(en")
-          .gsub(EmDashCharRefRx, "\\(em")
-          .gsub("&#8216;", "\\(oq")
-          .gsub("&#8217;", "\\(cq")
-          .gsub("&#8220;", "\\(lq")
-          .gsub("&#8221;", "\\(rq")
-          .gsub("&#8592;", "\\(<-")
-          .gsub("&#8594;", "\\(->")
-          .gsub("&#8656;", "\\(lA")
-          .gsub("&#8658;", "\\(rA")
-          .gsub("&#8203;", "\\:")
+          .gsub("&#8211;", "#{ESC_BS}(en")
+          .gsub(EmDashCharRefRx, "#{ESC_BS}(em")
+          .gsub("&#8216;", "#{ESC_BS}(oq")
+          .gsub("&#8217;", "#{ESC_BS}(cq")
+          .gsub("&#8220;", "#{ESC_BS}(lq")
+          .gsub("&#8221;", "#{ESC_BS}(rq")
+          .gsub("&#8592;", "#{ESC_BS}(<-")
+          .gsub("&#8594;", "#{ESC_BS}(->")
+          .gsub("&#8656;", "#{ESC_BS}(lA")
+          .gsub("&#8658;", "#{ESC_BS}(rA")
+          .gsub("&#8203;", "#{ESC_BS}:")
           .gsub("&amp;", "&")
-          .gsub("'", "\\*(Aq")
+          .gsub("'", "#{ESC_BS}*(Aq")
           .gsub(MockMacroRx) { |_, md| md[1]? || "" }  # remove mock boundary markers
-          .gsub(ESC_BS, "\\")
+          .gsub(ESC_BS, "\\")  # restore all ESC_BS as real backslashes
           .gsub(ESC_FS, ".")
           .rstrip
         str

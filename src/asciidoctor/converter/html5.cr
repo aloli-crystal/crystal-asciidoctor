@@ -330,6 +330,17 @@ Your browser does not support the audio tag.
       end
 
       def convert_document(node : AbstractNode) : String
+        # Handle inline doctype: return only the content of the first block
+        doctype_val = node.is_a?(Document) ? node.doctype : (node.attr("doctype") || "article")
+        if doctype_val == "inline"
+          if node.is_a?(Document) && !node.blocks.empty?
+            first_block = node.blocks.first
+            if first_block.is_a?(Block) && first_block.context == :paragraph
+              return first_block.content.to_s
+            end
+          end
+          return ""
+        end
         slash = @void_element_slash.empty? ? "" : " #{@void_element_slash}"
         br = "<br#{slash}>"
         result = [] of String
@@ -670,9 +681,10 @@ Your browser does not support the audio tag.
           lang = node.attr("language")
           syntax_hl = node.document.syntax_highlighter
           if syntax_hl
-            pre_class = syntax_hl.pre_class
-            pre_open = %(<pre class="#{pre_class} highlight#{nowrap ? " nowrap" : ""}"><code#{lang ? %( class="language-#{lang}" data-lang="#{lang}") : ""}>)
-            pre_close = "</code></pre>"
+            # Use the syntax highlighter's format method to generate the pre/code block
+            pre_block = syntax_hl.format(node, lang)
+            return %(<div#{id_attr} class="listingblock#{role ? " #{role}" : ""}">
+#{title_el}<div class="content">\n#{pre_block}\n</div>\n</div>)
           else
             pre_open = %(<pre class="highlight#{nowrap ? " nowrap" : ""}"><code#{lang ? %( class="language-#{lang}" data-lang="#{lang}") : ""}>)
             pre_close = "</code></pre>"
@@ -956,7 +968,7 @@ Your browser does not support the audio tag.
               if tsec == "head"
                 cell_content = cell.text || ""
               else
-                case cell.style
+                case cell.cell_style
                 when :asciidoc
                   cell_content = %(<div class="content">#{cell.content}</div>)
                 when :literal

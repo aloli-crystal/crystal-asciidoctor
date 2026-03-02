@@ -51,6 +51,8 @@ module Asciidoctor
     # If the attribute is not found on this node, fallback_name is set,
     # and this node is not the Document node, get the value from the Document node.
     def attr(name : String, default_value : String? = nil, fallback_name : String | Bool | Nil = nil) : String?
+      # Positional attributes (numeric keys like "1", "2") are not accessible via attr()
+      return default_value if name =~ /^\d+$/
       @attributes[name]? || begin
         if fallback_name
           lookup = fallback_name.is_a?(Bool) ? name : fallback_name.as(String)
@@ -64,6 +66,8 @@ module Asciidoctor
     # Check if the specified attribute is defined, optionally performing a
     # comparison with the expected value.
     def attr?(name : String, expected_value : String? = nil, fallback_name : String | Bool | Nil = nil) : Bool
+      # Positional attributes (numeric keys like "1", "2") are not accessible via attr?()
+      return false if name =~ /^\d+$/
       if expected_value
         expected_value == (@attributes[name]? || begin
           if fallback_name
@@ -142,13 +146,15 @@ module Asciidoctor
 
     # Resolve and normalize a system path from the target and start paths.
     def normalize_system_path(target : String, start : String? = nil, jail : String? = nil) : String
-      if target.starts_with?('/')
+      raw = if target.starts_with?('/')
         target
       elsif start
         File.join(start, target)
       else
         File.join(document.base_dir, target)
       end
+      # Normalize the path to resolve .. and . components
+      Path.new(raw).normalize.to_s
     end
 
     # Resolve and normalize a web path from the target and start paths.

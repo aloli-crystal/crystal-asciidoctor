@@ -982,8 +982,8 @@ describe "Substitutions" do
     it "should not substitute escaped attribute reference" do
       block = create_block(":author: John\n\nHello \\{author}")
       result = block.sub_attributes(block.source)
-      # Crystal implementation preserves the backslash before the substituted value
-      result.should eq("Hello \\John")
+      # Escaped attribute reference: backslash is removed and attribute is not substituted
+      result.should eq("Hello {author}")
     end
 
     it "should substitute built-in attribute via document" do

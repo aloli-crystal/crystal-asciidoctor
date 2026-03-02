@@ -53,6 +53,8 @@ module Asciidoctor
     "warning-caption"   => "Warning",
   }
 
+  USER_HOME = ENV["HOME"]? || "."
+
   DEFAULT_BACKEND = "html5"
 
   DEFAULT_DOCTYPE = "article"

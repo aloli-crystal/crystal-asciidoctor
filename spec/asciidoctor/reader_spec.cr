@@ -199,61 +199,61 @@ describe Asciidoctor::Reader do
     end
   end
   context "Include Directive" do
-    pending "should replace include directive with link macro in default safe mode" do
+    it "should replace include directive with link macro in default safe mode" do
       input = "include::include-file.adoc[]"
-      doc = Asciidoctor.load(input)
+      doc = Asciidoctor.load(input, {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.read_line.should eq("link:include-file.adoc[role=include]")
     end
 
-    pending "should not add role to link macro used to replace include directive in compat mode" do
+    it "should not add role to link macro used to replace include directive in compat mode" do
       input = "include::include-file.adoc[]"
-      doc = Asciidoctor.load(input, {"attributes" => "compat-mode"})
+      doc = Asciidoctor.load(input, {"parse" => "false", "attributes" => "compat-mode"})
       reader = doc.reader.not_nil!
       reader.read_line.should eq("link:include-file.adoc[]")
     end
 
-    pending "should escape spaces in target when generating link from include directive" do
+    it "should escape spaces in target when generating link from include directive" do
       input = "include::foo bar baz.adoc[]"
-      doc = Asciidoctor.load(input)
+      doc = Asciidoctor.load(input, {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.read_line.should eq("link:pass:c[foo bar baz.adoc][role=include]")
     end
 
-    pending "should preserve attrlist when replacing include directive with link macro" do
+    it "should preserve attrlist when replacing include directive with link macro" do
       input = "include::include-file.adoc[leveloffset=+1]"
-      doc = Asciidoctor.load(input)
+      doc = Asciidoctor.load(input, {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.read_line.should eq("link:include-file.adoc[role=include,leveloffset=+1]")
     end
 
-    pending "unresolved target referenced by include directive is skipped when optional option is set" do
+    it "unresolved target referenced by include directive is skipped when optional option is set" do
       input = "include::fixtures/{no-such-file}[opts=optional]"
       doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
       doc.blocks.size.should eq(0)
     end
 
-    pending "should skip include directive that references missing file if optional option is set" do
+    it "should skip include directive that references missing file if optional option is set" do
       input = "include::fixtures/no-such-file.adoc[opts=optional]"
       doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
       doc.blocks.size.should eq(0)
     end
 
-    pending "should replace include directive that references missing file with message" do
+    it "should replace include directive that references missing file with message" do
       input = "include::fixtures/no-such-file.adoc[]"
       doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
       doc.blocks.size.should eq(1)
       doc.blocks[0].as(Asciidoctor::Block).lines[0].should eq("Unresolved directive in <stdin> - include::fixtures/no-such-file.adoc[]")
     end
 
-    pending "attributes are substituted in target of include directive" do
+    it "attributes are substituted in target of include directive" do
       input = ":fixturesdir: fixtures\n:ext: adoc\n\ninclude::{fixturesdir}/include-file.{ext}[]"
       doc = TestHelpers.document_from_string(input, {"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
       output = doc.convert
       output.should match(/included content/)
     end
 
-    pending "escaped include directive is left unprocessed" do
+    it "escaped include directive is left unprocessed" do
       input = "\\include::fixtures/include-file.adoc[]"
       doc = TestHelpers.empty_document({"safe" => "safe", "base_dir" => "#{__DIR__}/.."})
       reader = Asciidoctor::PreprocessorReader.new(doc, input, nil, {:normalize => true})
@@ -318,9 +318,9 @@ describe Asciidoctor::Reader do
       doc.catalog.includes["lines"].should be_truthy
     end
 
-    pending "push_include method should not fail if data is nil" do
+    it "push_include method should not fail if data is nil" do
       lines = ["a", "b", "c"]
-      doc = Asciidoctor.load(lines.join("\n"))
+      doc = Asciidoctor.load(lines.join("\n"), {"parse" => "false"})
       reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
       reader.push_include([] of String, "", "<stdin>")
       reader.include_stack.size.should eq(1)

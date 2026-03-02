@@ -138,7 +138,7 @@ module Asciidoctor
     @header_attributes : Hash(String, String)?
 
     # The maximum attribute value size.
-    @max_attribute_value_size : Int32?
+    property max_attribute_value_size : Int32?
 
     # The Reader associated with this document.
     property reader : Reader?
@@ -166,7 +166,8 @@ module Asciidoctor
       @attribute_overrides = {} of String => String?
       @attributes_modified = Set(String).new
       @header_attributes = nil
-      @max_attribute_value_size = nil
+      # In SECURE mode, default to 4096 bytes for attribute value size limit
+      @max_attribute_value_size = @safe >= SafeMode::SECURE ? 4096 : nil
       @reader = nil
       @source_location_doc = nil
     end
@@ -283,6 +284,54 @@ module Asciidoctor
       output.is_a?(String) ? output : output.try(&.to_s)
     end
 
+    # Increment a string like Ruby's String#next/succ
+    # Increments the last alphanumeric character, carrying over as needed
+    # For strings with no alphanumeric chars, increments the last character directly
+    private def string_next(s : String) : String
+      return "a" if s.empty?
+      chars = s.chars
+      i = chars.size - 1
+      # Find last alphanumeric character
+      while i >= 0 && !chars[i].alphanumeric?
+        i -= 1
+      end
+      if i < 0
+        # No alphanumeric chars: increment the last character directly
+        chars[-1] = (chars[-1].ord + 1).chr
+        return chars.join
+      end
+      # Increment from last alphanumeric char
+      while i >= 0
+        c = chars[i]
+        if c.alphanumeric?
+          if c == 'z'
+            chars[i] = 'a'
+            i -= 1
+          elsif c == 'Z'
+            chars[i] = 'A'
+            i -= 1
+          elsif c == '9'
+            chars[i] = '0'
+            i -= 1
+          else
+            chars[i] = (c.ord + 1).chr
+            return chars.join
+          end
+        else
+          i -= 1
+        end
+      end
+      # All alphanumeric chars wrapped around, prepend first char type
+      first = chars.find(&.alphanumeric?) || 'a'
+      if first.uppercase?
+        "A" + chars.join
+      elsif first.lowercase?
+        "a" + chars.join
+      else
+        "1" + chars.join
+      end
+    end
+
     # Get the named counter and take the next number in the sequence.
     def counter(name : String, seed : String | Int32 | Nil = nil) : String | Int32
       return @parent_document.not_nil!.counter(name, seed) if @parent_document
@@ -296,7 +345,7 @@ module Asciidoctor
           if actual_val == actual_val.to_i?.try(&.to_s)
             next_val = actual_val.to_i + 1
           else
-            next_val = (actual_val[0].ord + 1).chr.to_s
+            next_val = string_next(actual_val)
           end
         else
           next_val = 1
@@ -548,7 +597,7 @@ module Asciidoctor
 
     # Initialize the syntax highlighter based on the source-highlighter attribute.
     def init_syntax_highlighter : SyntaxHighlighterBase?
-      if basebackend?("html") && @safe < SafeMode::SERVER
+      if basebackend?("html") && @safe <= SafeMode::SECURE
         if (source_hl_name = @attributes["source-highlighter"]?)
           @syntax_highlighter = SyntaxHighlighter::DefaultRegistry.create(source_hl_name, @backend)
         end
@@ -739,6 +788,23 @@ module Asciidoctor
 
       @compat_mode = attrs.has_key?("compat-mode")
 
+      # In compat-mode, alias 'language' to 'source-language'
+      if @compat_mode && (lang_val = attrs["language"]?)
+        attrs["source-language"] ||= lang_val
+      end
+
+      # Initialize max_attribute_value_size
+      # In SECURE mode, default to 4096 bytes; can be overridden by max-attribute-value-size attribute
+      if (max_size_str = attrs["max-attribute-value-size"]?)
+        if max_size_str.empty?
+          @max_attribute_value_size = nil  # disabled
+        elsif (max_size = max_size_str.to_i?)
+          @max_attribute_value_size = max_size
+        end
+      elsif @safe >= SafeMode::SECURE
+        @max_attribute_value_size = 4096
+      end
+
       unless @parent_document
         @outfilesuffix = attrs["outfilesuffix"]? || @outfilesuffix
 
@@ -767,8 +833,25 @@ module Asciidoctor
     def set_attribute(name : String, value : String = "") : String?
       return nil if attribute_locked?(name)
       actual_value = value.empty? ? value : apply_attribute_value_subs(value)
+      # Limit attribute value size if max_attribute_value_size is set
+      if !actual_value.empty? && (max_size = @max_attribute_value_size)
+        if actual_value.bytesize > max_size
+          # Truncate at byte boundary without mangling multibyte chars
+          byte_slice = actual_value.to_slice[0, max_size]
+          actual_value = String.new(byte_slice)
+          # Fix potential truncated multibyte char at end
+          while !actual_value.valid_encoding?
+            byte_slice = byte_slice[0, byte_slice.size - 1]
+            actual_value = String.new(byte_slice)
+          end
+        end
+      end
       if @header_attributes
         @attributes[name] = actual_value
+        # In compat-mode, alias 'language' to 'source-language'
+        if name == "language" && @compat_mode
+          @attributes["source-language"] = actual_value
+        end
       else
         case name
         when "backend"
@@ -777,6 +860,10 @@ module Asciidoctor
           update_doctype_attributes(actual_value)
         else
           @attributes[name] = actual_value
+          # In compat-mode, alias 'language' to 'source-language'
+          if name == "language" && @compat_mode
+            @attributes["source-language"] = actual_value
+          end
         end
         @attributes_modified << name
       end

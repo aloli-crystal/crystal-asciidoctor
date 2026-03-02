@@ -379,14 +379,14 @@ describe Asciidoctor::Table do
       output.should_not contain("<thead")
     end
 
-    pending "spans, alignments and styles" do
+    it "spans, alignments and styles" do
       input = "[cols=\"e,m,^,>s\",width=\"25%\"]\n|===\n|1 >s|2 |3 |4\n^|5 2.2+^.^|6 .3+<.>m|7\n^|8\nd|9 2+>|10\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("colspan")
       output.should contain("rowspan")
     end
 
-    pending "supports repeating cells with 3*" do
+    it "supports repeating cells with 3*" do
       input = "|===\n3*|A\n|1 3*|2\n|b |c\n|==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -813,25 +813,25 @@ describe Asciidoctor::Table do
       table.columns.size.should eq(3)
     end
 
-    pending "should handle table with colspan" do
+    it "should handle table with colspan" do
       input = "|===\n2+|Spanning |Normal\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("colspan")
     end
 
-    pending "should handle table with rowspan" do
+    it "should handle table with rowspan" do
       input = "|===\n.2+|Spanning |B\n|C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("rowspan")
     end
 
-    pending "should handle table with literal cell style" do
+    it "should handle table with literal cell style" do
       input = "[cols=\"1l,1\"]\n|===\n|literal |normal\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<pre>")
     end
 
-    pending "should handle table with AsciiDoc cell style" do
+    it "should handle table with AsciiDoc cell style" do
       input = "|===\na|AsciiDoc cell\n|normal cell\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("content")

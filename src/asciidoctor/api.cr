@@ -42,14 +42,22 @@ module Asciidoctor
     end
 
     # Known option keys
-    known_options = Set{"attributes", "backend", "doctype", "header_footer", "standalone", "safe", "sourcemap", "to_file", "parse"}
+    known_options = Set{"attributes", "backend", "doctype", "header_footer", "standalone", "safe", "sourcemap", "to_file", "parse", "base_dir"}
     # Treat unknown keys as document attributes
     options.each do |key, value|
       next if known_options.includes?(key)
       attributes[key] = value
     end
 
+    # Track if backend/doctype were explicitly set via options (to lock them)
+    # Only lock if the value doesn't end with '@' (soft-set)
+    raw_backend_option = options.fetch("backend", "")
+    backend_from_options = options.has_key?("backend") && !raw_backend_option.ends_with?('@')
+    raw_doctype_option = options.fetch("doctype", "")
+    doctype_from_options = options.has_key?("doctype") && !raw_doctype_option.ends_with?('@')
     raw_backend = attributes.delete("backend") || options.fetch("backend", "html5")
+    # Strip soft modifier @ from backend name
+    raw_backend = raw_backend.chomp('@')
     # Normalize backend name
     backend = case raw_backend
               when "docbook" then "docbook5"
@@ -72,17 +80,26 @@ module Asciidoctor
     safe_mode_str = options.fetch("safe", "secure")
     safe_mode = SafeMode.value_for_name(safe_mode_str) || SafeMode::SECURE
     sourcemap = options.has_key?("sourcemap") && options["sourcemap"] != "false"
+    # Extract base_dir from options (may be passed as unknown key)
+    base_dir_opt = attributes.delete("base_dir") || options.fetch("base_dir", ".")
 
     doc = Document.new(
       backend: backend,
       doctype: doctype,
       safe: safe_mode,
-      sourcemap: sourcemap
+      sourcemap: sourcemap,
+      base_dir: base_dir_opt
     )
 
     # Initialize default attributes
     DEFAULT_ATTRIBUTES.each { |k, v| doc.attributes[k] = v }
     doc.attributes["standalone"] = "" if standalone
+    # Set built-in locked attributes (max-include-depth, etc.)
+    # These are locked by default and cannot be modified by the document
+    unless doc.attribute_locked?("max-include-depth")
+      doc.attributes["max-include-depth"] = "64"
+      doc.attribute_overrides["max-include-depth"] = "64"
+    end
 
     # Determine base backend and file type
     basebackend = case backend
@@ -105,6 +122,13 @@ module Asciidoctor
                     end
 
     # Set intrinsic attributes
+    # user-home: resolved to actual home dir if safe mode < SERVER, else "."
+    user_home = if safe_mode < SafeMode::SERVER
+      ENV["HOME"]? || "."
+    else
+      "."
+    end
+    doc.attributes["user-home"] = user_home
     doc.attributes["backend"] = backend
     doc.attributes["backend-#{backend}"] = ""
     doc.attributes["backend-#{backend}-doctype-#{doctype}"] = ""
@@ -116,6 +140,13 @@ module Asciidoctor
     doc.attributes["filetype"] = filetype
     doc.attributes["filetype-#{filetype}"] = ""
     doc.attributes["outfilesuffix"] = outfilesuffix
+    # Lock backend and doctype if they were explicitly set via options
+    if backend_from_options
+      doc.attribute_overrides["backend"] = backend
+    end
+    if doctype_from_options
+      doc.attribute_overrides["doctype"] = doctype
+    end
     safe_name = SafeMode.name_for_value(safe_mode) || "secure"
     doc.attributes["safe-mode-name"] = safe_name
     doc.attributes["safe-mode-level"] = safe_mode.to_s
@@ -168,16 +199,39 @@ module Asciidoctor
       end
     end
 
+    # Initialize max_attribute_value_size based on API attributes
+    if (max_size_str = doc.attributes["max-attribute-value-size"]?)
+      if max_size_str.empty?
+        doc.max_attribute_value_size = nil
+      elsif (max_size = max_size_str.to_i?)
+        doc.max_attribute_value_size = max_size
+      end
+    end
+
     # Assign converter based on backend
     doc.converter = create_converter(backend)
 
     # Parse the document using PreprocessorReader to handle conditional directives
     parse_now = !(options.has_key?("parse") && options["parse"] == "false")
-    # Create a cursor with the document file if available
-    reader_cursor = if (docfile = doc.attributes["docfile"]?)
-      Cursor.new(docfile, doc.attributes["docdir"]?, doc.attributes["docname"]?)
+    # Create a cursor with the document file if available (before safe mode filtering)
+    reader_cursor = if (docfile_raw = doc.attributes["docfile"]?)
+      Cursor.new(docfile_raw, doc.attributes["docdir"]?, doc.attributes["docname"]?)
+    elsif base_dir_opt != "."
+      # Use base_dir as the working directory for includes
+      Cursor.new(nil, base_dir_opt, "<stdin>")
     else
       nil
+    end
+
+    # Filter docdir and docfile according to safe mode
+    # In SERVER mode or greater, docdir is hidden and docfile shows only relative path
+    if safe_mode >= SafeMode::SERVER
+      if doc.attributes.has_key?("docdir")
+        doc.attributes["docdir"] = ""
+      end
+      if (df = doc.attributes["docfile"]?)
+        doc.attributes["docfile"] = File.basename(df)
+      end
     end
     reader = PreprocessorReader.new(doc, source, reader_cursor)
     doc.reader = reader
@@ -203,6 +257,40 @@ module Asciidoctor
     doc = load(source, options)
     converter = doc.converter || create_converter(doc.backend)
     converter.convert(doc)
+  end
+
+  # Public: Parse the AsciiDoc source input with nullable attributes.
+  #
+  # source  - the AsciiDoc source as a String
+  # options - a Hash of options with nullable values
+  #
+  # Returns the Document
+  def self.load(source : String, options : Hash(String, String?)) : Document
+    # Convert nil values to empty strings
+    normalized = {} of String => String
+    options.each do |k, v|
+      normalized[k] = v || ""
+    end
+    load(source, normalized)
+  end
+
+  # Public: Parse the AsciiDoc source input from an IO object into a Document.
+  #
+  # io      - an IO object containing AsciiDoc source
+  # options - a Hash of options to control processing (default: {})
+  #
+  # Returns the Document
+  def self.load(io : IO, options : Hash(String, String) = {} of String => String) : Document
+    # If the IO is a File, extract file metadata
+    if io.is_a?(File)
+      path = io.path
+      options["docfile"] = File.expand_path(path)
+      options["docdir"] = File.dirname(File.expand_path(path))
+      options["docname"] = File.basename(path, File.extname(path))
+      options["docfilesuffix"] = File.extname(path)
+    end
+    source = io.gets_to_end
+    load(source, options)
   end
 
   # Public: Parse the contents of the AsciiDoc source file into a Document.
