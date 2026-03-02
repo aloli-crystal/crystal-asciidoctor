@@ -913,7 +913,7 @@ describe Asciidoctor::Document do
       output.to_s.should contain("<h1>Title</h1>")
     end
 
-    pending "should apply max-width to each top-level container" do
+    it "should apply max-width to each top-level container" do
       input = ":max-width: 50em\n\n= Title\n\ncontent"
       output = Asciidoctor.convert(input)
       output.to_s.should contain("max-width: 50em")
@@ -970,7 +970,7 @@ describe Asciidoctor::Document do
       doc.attr?("doctype-article").should be_truthy
     end
 
-    pending "should have author info when author line present" do
+    it "should have author info when author line present" do
       input = "= Title\nJohn Doe <john@example.com>\n\ncontent"
       doc = Asciidoctor.load(input)
       doc.attr("author").should eq("John Doe")

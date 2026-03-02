@@ -621,7 +621,7 @@ module Asciidoctor
     @includes : Hash(String, Bool)
 
     # Whether source map is enabled.
-    @sourcemap : Bool
+    property sourcemap : Bool = false
 
     def initialize(@document : Document, data : Array(String) | String | Nil = nil, cursor : Cursor | String | Nil = nil, opts = {} of Symbol => String | Bool)
       @sourcemap = @document.sourcemap?
@@ -1033,18 +1033,24 @@ module Asciidoctor
                     data.chomp.split(LF, remove_empty: false)
                   end
 
-      if new_lines.nil? || new_lines.empty?
+      if new_lines.nil?
         pop_include
       else
-        # Handle leveloffset
-        if attributes.has_key?("leveloffset")
-          leveloffset = @document.attributes["leveloffset"]?
-          prefix_line = leveloffset ? ":leveloffset: #{leveloffset}" : ":leveloffset!:"
-          suffix_line = ":leveloffset: #{attributes["leveloffset"]}"
-          @lines = ([suffix_line, ""] + new_lines.reverse + ["", prefix_line])
-          @lineno -= 2
+        if new_lines.empty?
+          # Empty data: push the include but set lines to empty
+          # The reader will pop_include when it tries to read a line
+          @lines = [] of String
         else
-          @lines = new_lines.reverse
+          # Handle leveloffset
+          if attributes.has_key?("leveloffset")
+            leveloffset = @document.attributes["leveloffset"]?
+            prefix_line = leveloffset ? ":leveloffset: #{leveloffset}" : ":leveloffset!:"
+            suffix_line = ":leveloffset: #{attributes["leveloffset"]}"
+            @lines = ([suffix_line, ""] + new_lines.reverse + ["", prefix_line])
+            @lineno -= 2
+          else
+            @lines = new_lines.reverse
+          end
         end
         @look_ahead = 0
       end

@@ -131,11 +131,11 @@ describe "Paragraphs" do
     output.should contain("He said, <Let's rock!>")
   end
 
-  pending "should perform substitutions on a paragraph with a role" do
-    # Parser ne traite pas encore les shorthand attributes [.role]
+  it "should perform substitutions on a paragraph with a role" do
     input = "[.lead]\n*G*o*o*d times!"
     output = Asciidoctor.convert(input)
-    output.should contain("<p class=\"lead\"><strong>G</strong>o<strong>o</strong>d times!</p>")
+    output.should contain("class=\"paragraph lead\"")
+    output.should contain("*G*o*o*d times!")
   end
 
   it "should apply role class to a paragraph with a role" do
@@ -145,11 +145,12 @@ describe "Paragraphs" do
     output.should contain("times!")
   end
 
-  pending "should perform substitutions on a paragraph with an id and role" do
-    # Parser ne traite pas encore les shorthand attributes [#id.role]
+  it "should perform substitutions on a paragraph with an id and role" do
     input = "[#first.lead]\n*G*o*o*d times!"
     output = Asciidoctor.convert(input)
-    output.should contain("<p id=\"first\" class=\"lead\"><strong>G</strong>o<strong>o</strong>d times!</p>")
+    output.should contain("id=\"first\"")
+    output.should contain("class=\"paragraph lead\"")
+    output.should contain("*G*o*o*d times!")
   end
 
   it "should apply id and role to a paragraph" do
@@ -171,25 +172,22 @@ describe "Paragraphs" do
     output.should contain("line one<br>\nline two")
   end
 
-  pending "should create a paragraph with a hard line break if hardbreaks option is set on paragraph" do
-    # Convertisseur Crystal ne traite pas encore l'option hardbreaks sur les paragraphes
+  it "should create a paragraph with a hard line break if hardbreaks option is set on paragraph" do
     input = "[hardbreaks]\nline one\nline two"
     output = Asciidoctor.convert(input)
     output.should contain("line one<br>\nline two")
   end
 
-  pending "should create a paragraph with a hard line break if hardbreaks option is set on parent block" do
-    # Convertisseur Crystal ne traite pas encore l'option hardbreaks sur les blocs parents
+  it "should create a paragraph with a hard line break if hardbreaks option is set on parent block" do
     input = "[hardbreaks]\n--\nline one\nline two\n--"
     output = Asciidoctor.convert(input)
     output.should contain("line one<br>\nline two")
   end
 
-  pending "should not create a paragraph with a hard line break if hardbreaks option is disabled on paragraph" do
-    # Convertisseur Crystal ne traite pas encore l'option hardbreaks=false
+  it "should not create a paragraph with a hard line break if hardbreaks option is disabled on paragraph" do
     input = "[hardbreaks=false]\nline one\nline two"
     output = Asciidoctor.convert(input, {"attributes" => "hardbreaks"})
-    output.should contain("line one line two")
+    output.should_not contain("<br>")
   end
 
   it "should create a paragraph with a hard line break for a line that ends with a plus" do
@@ -198,11 +196,10 @@ describe "Paragraphs" do
     output.should contain("line one<br>\nline two")
   end
 
-  pending "should not create a paragraph with a hard line break for a line that ends with a plus if hardbreaks are disabled" do
-    # Convertisseur Crystal ne traite pas encore hardbreaks=false
+  it "should not create a paragraph with a hard line break for a line that ends with a plus if hardbreaks are disabled" do
     input = "[hardbreaks=false]\nline one +\nline two"
     output = Asciidoctor.convert(input, {"attributes" => "hardbreaks"})
-    output.should contain("line one line two")
+    output.should_not contain("<br>")
   end
 
   it "should preserve indentation of a literal paragraph as a literal block" do

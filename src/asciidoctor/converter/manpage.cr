@@ -15,6 +15,10 @@ module Asciidoctor
       EmDashCharRefRx     = /&#8212;(?:&#8203;)?/
       EllipsisCharRefRx   = /&#8230;(?:&#8203;)?/
       WrappedIndentRx     = /\h*\n\h*/
+      MockMacroRx         = /<\/?(#{Regex.escape ESC_BS}[^>]+)>/
+      EscapedMacroRx      = /^(?:#{Regex.escape ESC_BS}c\n)?#{Regex.escape ESC_FS}((?:URL|MTO) ".*?" ".*?" )( |[^\s]*)(.*?)(?: *#{Regex.escape ESC_BS}c)?$/m
+      XMLMarkupRx         = /&#?[a-z\d]+;|</
+      PCDATAFilterRx      = /(&#?[a-z\d]+;|<#{Regex.escape ESC_BS}f\(CR.*?<\/#{Regex.escape ESC_BS}fP>|<[^>]+>)|([^&<]+)/
 
       def initialize(backend : String = "manpage")
         super(backend)
@@ -89,16 +93,20 @@ module Asciidoctor
         unless node.noheader
           if node.attr?("manpurpose")
             manname_title = (node.attr("manname-title") || "NAME").to_s.upcase
-            result << %(.SH "#{manname_title}"\n#{manify(manname.to_s)} \\- #{manify(node.attr("manpurpose").to_s, whitespace: :normalize)})
+            mannames = node.attr?("mannames") ? node.attr("mannames").to_s.split(", ") : [manname.to_s]
+            mannames_str = mannames.map { |n| manify(n).gsub("\\-", "-") }.join(", ")
+            result << %(.SH "#{manname_title}"\n#{mannames_str} \\- #{manify(node.attr("manpurpose").to_s, whitespace: :normalize)})
           end
         end
 
-        result << node.content.to_s
+         result << node.content.to_s
+        append_footnotes(result, node)
         result.join("\n")
       end
-
       def convert_embedded(node : Document) : String
-        node.content.to_s
+        result = [node.content.to_s]
+        append_footnotes(result, node)
+        result.join("\n")
       end
 
       def convert_example(node : AbstractBlock) : String
@@ -461,6 +469,17 @@ module Asciidoctor
         str = str
           .gsub(EllipsisCharRefRx, ".|.|.")
           .gsub(LeadingPeriodRx, "\\\\&.")
+          .gsub(EscapedMacroRx) { |_, md|  # unescape troff macro, quote adjacent char, isolate macro line
+            macro_part = md[1]? || ""
+            adj_char = md[2]? || ""
+            rest = (md[3]? || "").lstrip
+            dq = '"'
+            if rest.empty?
+              ".#{macro_part}#{dq}#{adj_char}#{dq}"
+            else
+              ".#{macro_part}#{dq}#{adj_char.rstrip}#{dq}\n#{rest}"
+            end
+          }
           .gsub("-", "\\-")
           .gsub("&lt;", "<")
           .gsub("&gt;", ">")
@@ -484,14 +503,35 @@ module Asciidoctor
           .gsub("&#8203;", "\\:")
           .gsub("&amp;", "&")
           .gsub("'", "\\*(Aq")
-          .gsub(ESC_BS, "\\\\")
+          .gsub(MockMacroRx) { |_, md| md[1]? || "" }  # remove mock boundary markers
+          .gsub(ESC_BS, "\\")
           .gsub(ESC_FS, ".")
           .rstrip
         str
       end
 
+      private def append_footnotes(result : Array(String), node : Document) : Nil
+        return unless node.footnotes? && !node.attr?("nofootnotes")
+        result << ".SH \"NOTES\""
+        node.footnotes.each do |fn|
+          result << ".IP [#{fn.index}]"
+          text = fn.text || ""
+          result << manify(text, whitespace: :normalize)
+        end
+      end
+
       private def uppercase_pcdata(string : String) : String
-        string.upcase
+        if XMLMarkupRx =~ string
+          string.gsub(PCDATAFilterRx) do |_, md|
+            if (plain = md[2]?)
+              plain.upcase
+            else
+              md[1]? || ""
+            end
+          end
+        else
+          string.upcase
+        end
       end
     end
   end

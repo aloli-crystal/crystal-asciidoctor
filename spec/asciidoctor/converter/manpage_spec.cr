@@ -45,10 +45,9 @@ describe Asciidoctor::Converter::ManPageConverter do
 
     it "should parse sections from manpage document" do
       doc = manpage_load(SAMPLE_MANPAGE_HEADER)
-      doc.sections.size.should eq(3)
-      doc.sections[0].title.should eq("NAME")
-      doc.sections[1].title.should eq("SYNOPSIS")
-      doc.sections[2].title.should eq("DESCRIPTION")
+      doc.sections.size.should eq(2)
+      doc.sections[0].title.should eq("SYNOPSIS")
+      doc.sections[1].title.should eq("DESCRIPTION")
     end
 
     it "should parse doctitle from manpage document" do
@@ -91,7 +90,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("LINKSTYLE cyan B \\[fo] \\[fc]")
     end
 
-    pending "should not escape hyphen when printing manname in NAME section" do
+    it "should not escape hyphen when printing manname in NAME section" do
       input = SAMPLE_MANPAGE_HEADER.gsub("command - ", "git-describe - ")
       output = manpage_convert(input, {"standalone" => "true"})
       output.should contain(".SH \"NAME\"\ngit-describe \\- does stuff\n")
@@ -151,7 +150,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("command \\- does stuff")
     end
 
-    pending "should not escape spaces for empty manual or source fields" do
+    it "should not escape spaces for empty manual or source fields" do
       input_lines = SAMPLE_MANPAGE_HEADER.lines.reject { |l| l.starts_with?(":man ") }
       output = manpage_convert(input_lines.join("\n"), {"standalone" => "true"})
       output.should contain("Manual: \\ \\&")
@@ -359,7 +358,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       result.should contain("\\(cq")
     end
 
-    pending "should preserve backslashes in escape sequences" do
+    it "should preserve backslashes in escape sequences" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n\"`hello`\" '`goodbye`' *strong* _weak_ `even`"
       output = manpage_convert(input)
       output.should contain("\\(lqhello\\(rq")
@@ -413,27 +412,27 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Manify (text escaping and formatting)
   # ==========================================================================
   describe "Manify" do
-    pending "should unescape literal ampersand" do
+    it "should unescape literal ampersand" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n(C) & (R) are translated to character references, but not the &."
       output = manpage_convert(input)
       last_line = output.lines.last.chomp
       last_line.should eq("\\(co & \\(rg are translated to character references, but not the &.")
     end
 
-    pending "should replace numeric character reference for plus" do
+    it "should replace numeric character reference for plus" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nA {plus} B"
       output = manpage_convert(input)
       output.lines.last.chomp.should eq("A + B")
     end
 
-    pending "should replace em dashes" do
+    it "should replace em dashes" do
       input = SAMPLE_MANPAGE_HEADER + "\n\ngo -- to\n\ngo--to"
       output = manpage_convert(input)
       output.should contain("go \\(em to")
       output.should contain("go\\(emto")
     end
 
-    pending "should replace quotes" do
+    it "should replace quotes" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n'command'"
       output = manpage_convert(input)
       output.should contain("\\*(Aqcommand\\*(Aq")
@@ -457,13 +456,13 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("Oh, here it goes again\nI should have known,\nshould have known,\nshould have known again")
     end
 
-    pending "should uppercase section titles without mangling formatting macros" do
+    it "should uppercase section titles without mangling formatting macros" do
       input = SAMPLE_MANPAGE_HEADER + "\n\ndoes stuff\n\n== \"`Main`\" _<Options>_"
       output = manpage_convert(input)
       output.should contain(".SH \"\\(lqMAIN\\(rq \\fI<OPTIONS>\\fP\"")
     end
 
-    pending "should not uppercase monospace span in section titles" do
+    it "should not uppercase monospace span in section titles" do
       input = SAMPLE_MANPAGE_HEADER + "\n\ndoes stuff\n\n== `show` option"
       output = manpage_convert(input)
       output.should contain(".SH \"\\f(CRshow\\fP OPTION\"")
@@ -486,7 +485,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("\\(rsfB makes text bold")
     end
 
-    pending "should preserve inline breaks" do
+    it "should preserve inline breaks" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nBefore break. +\nAfter break."
       output = manpage_convert(input)
       output.should contain("Before break.\n.br\nAfter break.")
@@ -497,20 +496,20 @@ describe Asciidoctor::Converter::ManPageConverter do
   # URL macro
   # ==========================================================================
   describe "URL macro" do
-    pending "should not leave blank line before URL macro" do
+    it "should not leave blank line before URL macro" do
       input = SAMPLE_MANPAGE_HEADER + "\nFirst paragraph.\n\nhttp://asciidoc.org[AsciiDoc]"
       output = manpage_convert(input)
       output.should contain(".URL \"http://asciidoc.org\" \"AsciiDoc\" \"\"")
     end
 
-    pending "should not swallow content following URL" do
+    it "should not swallow content following URL" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nhttp://asciidoc.org[AsciiDoc] can be used to create man pages."
       output = manpage_convert(input)
       output.should contain(".URL \"http://asciidoc.org\" \"AsciiDoc\" \"\"")
       output.should contain("can be used to create man pages.")
     end
 
-    pending "should pass adjacent character as final argument of URL macro" do
+    it "should pass adjacent character as final argument of URL macro" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nThis is http://asciidoc.org[AsciiDoc]."
       output = manpage_convert(input)
       output.should contain(".URL \"http://asciidoc.org\" \"AsciiDoc\" \".\"")
@@ -521,13 +520,13 @@ describe Asciidoctor::Converter::ManPageConverter do
   # MTO macro (email)
   # ==========================================================================
   describe "MTO macro" do
-    pending "should convert inline email macro into MTO macro" do
+    it "should convert inline email macro into MTO macro" do
       input = SAMPLE_MANPAGE_HEADER + "\nFirst paragraph.\n\nmailto:doc@example.org[Contact the doc]"
       output = manpage_convert(input)
       output.should contain(".MTO \"doc\\(atexample.org\" \"Contact the doc\" \"\"")
     end
 
-    pending "should set text of MTO macro to blank for implicit email" do
+    it "should set text of MTO macro to blank for implicit email" do
       input = SAMPLE_MANPAGE_HEADER + "\nBugs fixed daily by doc@example.org."
       output = manpage_convert(input)
       output.should contain(".MTO \"doc\\(atexample.org\" \"\" \".\"")
@@ -538,14 +537,14 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Table
   # ==========================================================================
   describe "Table" do
-    pending "should create header, body, and footer rows in correct order" do
+    it "should create header, body, and footer rows in correct order" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n[%header%footer]\n|===\n|Header\n|Body 1\n|Body 2\n|Footer\n|==="
       output = manpage_convert(input)
       output.should contain(".TS")
       output.should contain(".TE")
     end
 
-    pending "should manify table title" do
+    it "should manify table title" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n.Table of options\n|===\n| Name | Description | Default\n\n| dim\n| dimension of the object\n| 3\n|==="
       output = manpage_convert(input)
       output.should contain("Table of options")
@@ -556,13 +555,13 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Images
   # ==========================================================================
   describe "Images" do
-    pending "should replace block image with alt text enclosed in square brackets" do
+    it "should replace block image with alt text enclosed in square brackets" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nBehold the wisdom of the Magic 8 Ball!\n\nimage::signs-point-to-yes.jpg[]"
       output = manpage_convert(input)
       output.should contain("[signs point to yes]")
     end
 
-    pending "should replace inline image with alt text enclosed in square brackets" do
+    it "should replace inline image with alt text enclosed in square brackets" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nThe Magic 8 Ball says image:signs-point-to-yes.jpg[]."
       output = manpage_convert(input)
       output.should contain("[signs point to yes]")
@@ -616,7 +615,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("Oh, here it goes again\nI should have known,\nshould have known,\nshould have known again")
     end
 
-    pending "should honor start attribute on ordered list" do
+    it "should honor start attribute on ordered list" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n[start=5]\n. five\n. six"
       output = manpage_convert(input)
       output.should contain("5.")
@@ -641,19 +640,19 @@ describe Asciidoctor::Converter::ManPageConverter do
   # UI macros
   # ==========================================================================
   describe "UI macros" do
-    pending "should enclose button in square brackets and format as bold" do
+    it "should enclose button in square brackets and format as bold" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n== UI Macros\n\nbtn:[Save]"
       output = manpage_convert(input, {"attributes" => "experimental"})
       output.should contain("\\fB[\\0Save\\0]\\fP")
     end
 
-    pending "should format single key in monospaced text" do
+    it "should format single key in monospaced text" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n== UI Macros\n\nkbd:[Enter]"
       output = manpage_convert(input, {"attributes" => "experimental"})
       output.should contain("\\f(CREnter\\fP")
     end
 
-    pending "should format menu sequence in italic separated by carets" do
+    it "should format menu sequence in italic separated by carets" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n== UI Macros\n\nmenu:File[New Tab]"
       output = manpage_convert(input, {"attributes" => "experimental"})
       output.should contain("\\fIFile\\0\\(fc\\0New Tab\\fP")
@@ -664,7 +663,7 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Xrefs
   # ==========================================================================
   describe "Xrefs" do
-    pending "should populate automatic link text for internal xref" do
+    it "should populate automatic link text for internal xref" do
       input = SAMPLE_MANPAGE_HEADER + "\n\nYou can access this information using the options listed under <<_generic_program_information>>.\n\n== Options\n\n=== Generic Program Information\n\n--help:: Output a usage message and exit."
       output = manpage_convert(input)
       output.should contain("Generic Program Information")
@@ -675,7 +674,7 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Footnotes
   # ==========================================================================
   describe "Footnotes" do
-    pending "should generate list of footnotes using numbered list with numbers enclosed in brackets" do
+    it "should generate list of footnotes using numbered list with numbers enclosed in brackets" do
       input = SAMPLE_MANPAGE_HEADER + "\n\ntext.footnote:[first footnote]\n\nmore text.footnote:[second footnote]"
       output = manpage_convert(input)
       output.should contain("text.[1]")
@@ -692,7 +691,7 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Verse Block
   # ==========================================================================
   describe "Verse Block" do
-    pending "should preserve hard line breaks in verse block" do
+    it "should preserve hard line breaks in verse block" do
       input = SAMPLE_MANPAGE_HEADER.gsub("*command* [_OPTION_]... _FILE_...", "[verse]\n_command_ [_OPTION_]... _FILE_...") + "\n\ndescription"
       output = manpage_convert(input)
       output.should contain(".nf")
@@ -704,7 +703,7 @@ describe Asciidoctor::Converter::ManPageConverter do
   # Callout List
   # ==========================================================================
   describe "Callout List" do
-    pending "should generate callout list using proper formatting commands" do
+    it "should generate callout list using proper formatting commands" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n----\n$ gem install asciidoctor # <1>\n----\n<1> Installs the asciidoctor gem from RubyGems.org"
       output = manpage_convert(input)
       output.should contain(".TS")

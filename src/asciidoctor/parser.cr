@@ -342,6 +342,21 @@ module Asciidoctor
       attrs = attributes ? attributes.dup : {} of String => String
       while (block = next_block(reader, parent, attrs)) || reader.has_more_lines?
         if block
+          # Merge adjacent lists of the same type (ulist, olist, dlist, colist)
+          # when they are separated only by blank lines and have no attributes
+          # Do NOT merge if a comment was seen between them
+          comment_seen = attrs.has_key?("__comment_seen__")
+          if !comment_seen && (NESTABLE_LIST_CONTEXTS + [:colist]).includes?(block.context) && !parent.blocks.empty?
+            prev = parent.blocks.last
+            if prev.is_a?(List) && prev.context == block.context &&
+               prev.style == block.as(List).style &&
+               prev.attributes.keys.none? { |k| k != "style" } &&
+               block.as(List).attributes.keys.none? { |k| k != "style" }
+              block.as(List).items.each { |item| prev.items << item }
+              attrs = {} of String => String unless attributes
+              next
+            end
+          end
           parent.blocks << block
         end
         attrs = {} of String => String unless attributes
@@ -514,6 +529,7 @@ module Asciidoctor
         doc_attrs["authorcount"] = "0"
       end
 
+      parse_manpage_header(reader, document, block_attrs, header_only) if document.doctype == "manpage"
       document.finalize_header(block_attrs)
     end
 
@@ -541,7 +557,7 @@ module Asciidoctor
           sect_reftext = am[3]?
         end
       elsif COMPLIANCE_UNDERLINE_STYLE_SECTION_TITLES && (line2 = reader.peek_line(direct: true)) &&
-            (line2_ch0 = line2[0]?) && (sect_level = SETEXT_SECTION_LEVELS[line2_ch0.to_s]?) &&
+            (line2_ch0 = line2[0]?) && (sect_level = SETEXT_SECTION_LEVELS[line2_ch0]?) &&
             uniform?(line2, line2_ch0.to_s, line2.size) &&
             (m = SetextSectionTitleRx.match(line1)) && (line1.size - line2.size).abs < 2
         sect_title = m[1]
@@ -610,11 +626,14 @@ module Asciidoctor
         end
       elsif next_line.starts_with?("//")
         if next_line == "//"
+          attributes["__comment_seen__"] = ""
           return true
         elsif !next_line.starts_with?("///") && next_line.starts_with?("//")
+          attributes["__comment_seen__"] = ""
           return true
         elsif uniform?(next_line, "/", next_line.size) && next_line.size > 3
           reader.read_lines_until(terminator: next_line, skip_first_line: true, preserve_last_line: true, skip_processing: true, context: :comment)
+          attributes["__comment_seen__"] = ""
           return true
         end
       elsif !text_only && next_line.starts_with?(':') && (m = AttributeEntryRx.match(next_line))
@@ -626,34 +645,23 @@ module Asciidoctor
     end
 
     # Parse a block attribute list into a Hash.
-    def parse_block_attribute_list(raw : String, attributes : Hash(String, String)) : Hash(String, String)
-      # Simple parsing: split by comma for positional, handle key=value
+     def parse_block_attribute_list(raw : String, attributes : Hash(String, String)) : Hash(String, String)
       return attributes if raw.empty?
-
-      if raw.includes?(',') || raw.includes?('=')
-        idx = 0
-        raw.split(',').each do |part|
-          part = part.strip
-          if part.includes?('=')
-            key, _, value = part.partition('=')
-            key = key.strip
-            value = value.strip
-            value = value[1..-2] if (value.starts_with?('"') && value.ends_with?('"')) || (value.starts_with?("'") && value.ends_with?("'"))
-            attributes[key] = value
-          else
-            idx += 1
-            attributes[idx.to_s] = part
-          end
+      # Use AttributeList for proper parsing (handles quoted values with commas, etc.)
+      al = AttributeList.new(raw)
+      parsed = al.parse
+      parsed.each do |key, value|
+        case key
+        when Int32
+          attributes[key.to_s] = value
+        when String
+          attributes[key] = value
         end
-      else
-        attributes["1"] = raw
       end
-
       # Parse style attribute (shorthand: style#id.role%option)
       if (raw_style = attributes["1"]?) && !raw_style.includes?(' ')
         parse_style_attribute(attributes)
       end
-
       attributes
     end
 
@@ -699,9 +707,20 @@ module Asciidoctor
           parsed_style, parsed_id, parsed_roles, parsed_options = ps, pi, pr, po
         end
 
-        attributes["style"] = parsed_style if parsed_style
+        # Always remove the positional attribute ("1") after parsing shorthand
+        attributes.delete("1")
+        if parsed_style
+          attributes["style"] = parsed_style
+        end
         attributes["id"] = parsed_id if parsed_id
-        attributes["role"] = parsed_roles.join(' ') unless parsed_roles.empty?
+        unless parsed_roles.empty?
+          if (existing_role = attributes["role"]?)
+            # Roles are additive: append new roles to existing ones
+            attributes["role"] = "#{existing_role} #{parsed_roles.join(' ')}"
+          else
+            attributes["role"] = parsed_roles.join(' ')
+          end
+        end
         parsed_options.each { |opt| attributes["#{opt}-option"] = "" }
         parsed_style
       else
@@ -744,17 +763,29 @@ module Asciidoctor
 
         if reader.has_more_lines? && !reader.next_line_empty?
           rev_line = reader.read_line.not_nil!
-          if (match = RevisionInfoLineRx.match(rev_line))
-            doc_attrs["revnumber"] = match[1].rstrip if match[1]?
+          # Don't consume section titles (== NAME, etc.) as revision info
+          if is_section_title?(rev_line)
+            reader.unshift_line(rev_line)
+          elsif (match = RevisionInfoLineRx.match(rev_line))
+            rev_metadata_empty = true
+            if match[1]?
+              doc_attrs["revnumber"] = match[1].rstrip
+              rev_metadata_empty = false
+            end
             component = match[2]?.try(&.strip) || ""
             unless component.empty?
+              rev_metadata_empty = false
               if !match[1]? && component.starts_with?('v')
                 doc_attrs["revnumber"] = component[1..]
               else
                 doc_attrs["revdate"] = component
               end
             end
-            doc_attrs["revremark"] = match[3].rstrip if match[3]?
+            if match[3]?
+              doc_attrs["revremark"] = match[3].rstrip
+              rev_metadata_empty = false
+            end
+            reader.unshift_line(rev_line) if rev_metadata_empty
           else
             reader.unshift_line(rev_line)
           end
@@ -839,7 +870,22 @@ module Asciidoctor
         else
           block_cursor = reader.cursor
           if (new_block = next_block(reader, intro || section, attributes))
-            (intro || section).blocks << new_block
+            target = intro || section
+            # Merge adjacent lists of the same type when separated only by blank lines
+            # Do NOT merge if a comment or block attribute was seen between them
+            comment_seen = attributes.has_key?("__comment_seen__")
+            if !comment_seen && (NESTABLE_LIST_CONTEXTS + [:colist]).includes?(new_block.context) && !target.blocks.empty?
+              prev_b = target.blocks.last
+              if prev_b.is_a?(List) && prev_b.context == new_block.context &&
+                 prev_b.style == new_block.as(List).style &&
+                 prev_b.attributes.keys.none? { |k| k != "style" } &&
+                 new_block.as(List).attributes.keys.none? { |k| k != "style" }
+                new_block.as(List).items.each { |item| prev_b.items << item }
+                attributes.clear
+                next
+              end
+            end
+            target.blocks << new_block
             attributes.clear
           end
         end
@@ -849,7 +895,13 @@ module Asciidoctor
 
       if preamble
         if preamble.blocks?
-          # keep preamble
+          # Only keep preamble if there are sections in the document
+          has_sections = parent.as(AbstractBlock).blocks.any? { |b| b.is_a?(Section) }
+          unless has_sections
+            # No sections - move preamble content directly to parent
+            preamble.blocks.each { |b| parent.as(AbstractBlock).blocks << b }
+            parent.as(AbstractBlock).blocks.delete(preamble)
+          end
         else
           parent.as(AbstractBlock).blocks.delete(preamble)
         end
@@ -877,7 +929,7 @@ module Asciidoctor
       return nil unless this_line
 
       doc_attrs = document.attributes
-      style = attributes["1"]?
+      style = attributes["1"]? || attributes["style"]?
       block : AbstractBlock? = nil
       block_context : Symbol? = nil
       cloaked_context : Symbol? = nil
@@ -887,14 +939,26 @@ module Asciidoctor
         block_context = cloaked_context = delimited_block.context
         terminator = delimited_block.terminator
         if style
-          unless style == block_context.to_s
-            if delimited_block.masq.includes?(style)
-              block_context = string_to_block_context(style) || block_context
-            elsif delimited_block.masq.includes?("admonition") && ADMONITION_STYLES.includes?(style)
-              block_context = :admonition
-            else
-              style = block_context.to_s
+          # Convert hardbreaks to an option before style processing
+          if style == "hardbreaks"
+            attributes["hardbreaks-option"] = ""
+            attributes.delete("1")
+            attributes.delete("style")
+            style = nil
+          end
+          if style
+            unless style == block_context.to_s
+              if delimited_block.masq.includes?(style)
+                block_context = string_to_block_context(style) || block_context
+              elsif delimited_block.masq.includes?("admonition") && ADMONITION_STYLES.includes?(style)
+                block_context = :admonition
+              else
+                style = block_context.to_s
+              end
             end
+          else
+            style = block_context.to_s
+            attributes["style"] = style
           end
         else
           style = block_context.to_s
@@ -906,6 +970,23 @@ module Asciidoctor
       unless delimited_block
         indented = this_line.starts_with?(' ') || this_line.starts_with?(TAB)
         ch0 = this_line[0]?
+
+        # Check for indented list markers before treating as literal paragraph
+        if indented && style != "normal"
+          if (m = UnorderedListRx.match(this_line))
+            reader.unshift_line(this_line)
+            block = parse_list(reader, :ulist, parent, attributes)
+            return finalize_block(block, document, reader, attributes, style)
+          elsif (m = OrderedListRx.match(this_line))
+            reader.unshift_line(this_line)
+            block = parse_list(reader, :olist, parent, attributes)
+            return finalize_block(block, document, reader, attributes, style)
+          elsif (this_line.includes?("::") || this_line.includes?(";;" )) && (m = DescriptionListRx.match(this_line))
+            reader.unshift_line(this_line)
+            block = parse_description_list(reader, parent, attributes)
+            return finalize_block(block, document, reader, attributes, style)
+          end
+        end
 
         unless indented
           # Check for layout breaks
@@ -986,7 +1067,7 @@ module Asciidoctor
               # Map positional attributes for image/video/audio
               if blk_ctx == :image
                 if !attributes.has_key?("alt")
-                  attributes["alt"] = attributes.delete("1") || File.basename(target, File.extname(target))
+                  attributes["alt"] = (attributes.delete("1") || File.basename(target, File.extname(target))).tr("-_", " ")
                 else
                   attributes.delete("1")
                 end
@@ -1180,6 +1261,17 @@ module Asciidoctor
         block = build_block(:listing, ContentModel::Verbatim, term, parent, reader, attributes)
       when :table
         block_cursor = reader.cursor
+        # Determine format from delimiter if not explicitly set
+        if !attributes.has_key?("format") && terminator
+          case terminator[0]?
+          when ','
+            attributes["format"] = "csv"
+          when ':'
+            attributes["format"] = "dsv"
+          when '!'
+            attributes["format"] = "psv"
+          end
+        end
         table_lines = reader.read_lines_until(terminator: terminator, skip_line_comments: true, context: :table)
         block_reader = Reader.new(table_lines, block_cursor)
         block = parse_table(block_reader, parent, attributes)
@@ -1231,7 +1323,15 @@ module Asciidoctor
           block.assign_caption(attributes.delete("caption"))
         end
       end
-      block.style = style || attributes["style"]? || block.style
+      effective_style = style || attributes["style"]? || block.style
+      # Convert hardbreaks style to hardbreaks-option (Ruby AsciiDoctor behavior)
+      if effective_style == "hardbreaks"
+        attributes["hardbreaks-option"] = ""
+        effective_style = nil
+        attributes.delete("style")
+        attributes.delete("1")
+      end
+      block.style = effective_style
       if (block_id = attributes["id"]?)
         block.id = block_id
       end
@@ -1340,6 +1440,7 @@ module Asciidoctor
     # Initialize a new Section from the reader.
     def initialize_section(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String) : Section
       document = parent.document
+      reader.mark if document.sourcemap?
       book = document.doctype == "book"
       sect_style = attributes["1"]?
       sect_id, sect_reftext, sect_title, sect_level, _sect_atx = parse_section_title(reader, document, attributes["id"]?)
@@ -1399,11 +1500,10 @@ module Asciidoctor
       end
 
       section.update_attributes(attributes) unless attributes.empty?
+      section.source_location = reader.cursor_at_mark.to_source_location if document.sourcemap?
       reader.skip_blank_lines
-
       section
     end
-
     # Parse a list (unordered, ordered, or callout).
     def parse_list(reader : Reader, list_type : Symbol, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String, start : String? = nil) : List
       list = List.new(parent, list_type)
@@ -1560,7 +1660,7 @@ module Asciidoctor
         if (name_section_level = is_next_line_section?(reader, {} of String => String))
           if name_section_level == 1
             name_section = initialize_section(reader, document, {} of String => String)
-            name_section_buffer = reader.read_lines_until(break_on_blank_lines: true, skip_line_comments: true).map(&.lstrip).join(' ')
+            name_section_buffer = reader.read_lines_until(break_on_blank_lines: true, skip_line_comments: true, preserve_last_line: true) { |line| !is_section_title?(line).nil? }.map(&.lstrip).join(' ')
             if (npm = ManpageNamePurposeRx.match(name_section_buffer))
               manname = npm[1]
               manname = document.sub_attributes(manname) if manname.includes?(ATTR_REF_HEAD)
@@ -1575,7 +1675,7 @@ module Asciidoctor
               doc_attrs["manname-title"] ||= name_section.title || "Name"
               doc_attrs["manname-id"] = name_section.id.to_s if name_section.id
               doc_attrs["manname"] = manname
-              doc_attrs["mannames"] = mannames.join(",")
+              doc_attrs["mannames"] = mannames.join(", ")
               doc_attrs["manpurpose"] = manpurpose
               if document.attributes["backend"]? == "manpage"
                 doc_attrs["docname"] = manname
@@ -1620,10 +1720,12 @@ module Asciidoctor
           desc_text = m[3]?
 
           term = ListItem.new(list, term_text)
+          term.marker = "::"
           desc : ListItem? = nil
 
           if desc_text && !desc_text.empty?
             desc = ListItem.new(list, desc_text)
+            desc.marker = "desc"
           else
             # Read continuation for description
             reader.skip_blank_lines
@@ -1632,6 +1734,7 @@ module Asciidoctor
               if next_line && !next_line.empty? && !DescriptionListRx.matches?(next_line) && !is_delimited_block?(next_line)
                 reader.advance
                 desc = ListItem.new(list, next_line)
+                desc.marker = "desc"
               end
             end
           end
@@ -1657,41 +1760,185 @@ module Asciidoctor
       end
 
       format = attributes["format"]? || "psv"
+      # TSV is an alias for CSV with tab separator
+      format = "csv" if format == "tsv"
       separator = case format
-                  when "csv" then ","
+                  when "csv"
+                    # Custom separator overrides default comma
+                    if (sep = attributes["separator"]?) && !sep.empty?
+                      sep
+                    else
+                      ","
+                    end
                   when "dsv" then ":"
-                  else            "|"
+                  else
+                    # Custom separator for PSV
+                    if (sep = attributes["separator"]?) && !sep.empty?
+                      sep
+                    else
+                      "|"
+                    end
                   end
+      # Handle TSV tab separator
+      separator = "\t" if attributes["format"]? == "tsv"
 
-      has_header = attributes.has_key?("header-option")
+          has_header = attributes.has_key?("header-option")
+      has_footer = attributes.has_key?("footer-option")
       row_index = 0
-
-      while (line = table_reader.read_line)
-        next if line.empty?
-
-        cells = line.split(separator)
-        cells.shift if cells.first?.try(&.empty?) && format == "psv"
-
-        row = [] of Table::Cell
-        cells.each_with_index do |cell_text, col_idx|
-          # Ensure column exists
-          while table.columns.size <= col_idx
-            col = Table::Column.new(table, table.columns.size)
-            table.columns << col
+      implicit_header_checked = false
+      implicit_header = false
+      all_lines = table_reader.read_lines
+      # Check for implicit header: first row followed immediately by blank line
+      # The blank line must be at index 1 (right after the first non-blank line)
+      unless has_header
+        first_non_blank_idx = all_lines.index { |l| !l.empty? }
+        if first_non_blank_idx
+          next_idx = first_non_blank_idx + 1
+          if next_idx < all_lines.size && all_lines[next_idx].empty?
+            # Blank line immediately after first non-blank line - check there's more content
+            post_blank = all_lines[(next_idx + 1)..].any? { |l| !l.empty? }
+            implicit_header = post_blank
+            has_header = implicit_header
           end
-          cell = Table::Cell.new(table.columns[col_idx], cell_text.strip)
-          row << cell
         end
-
-        if has_header && row_index == 0
-          table.rows.head << row
+      end
+      # Collect all cells from all lines
+      all_cells = [] of String
+      all_lines.each do |line|
+        next if line.empty?
+        cells = if format == "csv"
+          parse_csv_cells(line, separator)
         else
-          table.rows.body << row
+          # PSV/DSV: handle escaped separators (\| in PSV)
+          escaped_sep = "\\#{separator}"
+          placeholder = "\x00ESCAPED_SEP\x00"
+          safe_line = line.gsub(escaped_sep, placeholder)
+          c = safe_line.split(separator)
+          c.shift if c.first?.try(&.empty?) && format == "psv"
+          c.map { |cell| cell.gsub(placeholder, separator) }
         end
-        row_index += 1
+        all_cells.concat(cells)
+      end
+
+      # Determine number of columns
+      num_cols = table.columns.size
+      if num_cols == 0
+        # Auto-detect: use first row to determine column count
+        # For PSV, the first line determines the column count
+        first_line = all_lines.find { |l| !l.empty? }
+        if first_line
+          first_cells = if format == "csv"
+            parse_csv_cells(first_line, separator)
+          else
+            escaped_sep = "\\#{separator}"
+            placeholder = "\x00ESCAPED_SEP\x00"
+            safe_line = first_line.gsub(escaped_sep, placeholder)
+            c = safe_line.split(separator)
+            c.shift if c.first?.try(&.empty?) && format == "psv"
+            c.map { |cell| cell.gsub(placeholder, separator) }
+          end
+          num_cols = first_cells.size
+        end
+        num_cols = 1 if num_cols == 0
+        # Create columns
+        num_cols.times do |i|
+          col = Table::Column.new(table, i)
+          table.columns << col
+        end
+      end
+
+      # Distribute cells into rows based on column count
+      all_cells.each_with_index do |cell_text, idx|
+        col_idx = idx % num_cols
+        row_num = idx // num_cols
+        # Ensure column exists
+        while table.columns.size <= col_idx
+          col = Table::Column.new(table, table.columns.size)
+          table.columns << col
+        end
+        cell = Table::Cell.new(table.columns[col_idx], cell_text.strip)
+        # Add to appropriate row
+        if has_header && row_num == 0
+          table.rows.head << [] of Table::Cell if table.rows.head.size <= row_num
+          table.rows.head[row_num] << cell
+        else
+          body_row = has_header ? row_num - 1 : row_num
+          table.rows.body << [] of Table::Cell if table.rows.body.size <= body_row
+          table.rows.body[body_row] << cell
+        end
+      end
+
+      # Move last body row to footer if footer option is set
+      if has_footer && table.rows.body.size > 0
+        table.rows.foot << table.rows.body.pop
+      end
+
+      # Assign column widths based on colspecs or distribute evenly
+      if !table.columns.empty?
+        # Calculate width_base from colspecs if available
+        if attributes.has_key?("cols")
+          colspecs = parse_colspecs(attributes["cols"])
+          unless colspecs.empty?
+            width_base = colspecs.sum { |cs| (cs["width"]?.try(&.to_s.to_f?) || 1.0) }
+            table.assign_column_widths(width_base)
+          end
+        end
+        # If no colpcwidth assigned yet, distribute evenly
+        if table.columns.any? { |col| col.attr("colpcwidth").nil? }
+          precision = 4
+          col_pcwidth = (100.0 / table.columns.size).round(precision)
+          table.columns.each_with_index do |col, idx|
+            if idx == table.columns.size - 1
+              # Last column gets the remainder
+              assigned = table.columns[0...-1].sum { |c| c.attr("colpcwidth").try(&.to_f) || 0.0 }
+              col.attributes["colpcwidth"] = (100.0 - assigned).round(precision).to_s
+            else
+              col.attributes["colpcwidth"] = col_pcwidth.to_s
+            end
+          end
+        end
       end
 
       table
+    end
+
+    # Parse a CSV line into cells, handling quoted values with commas and escaped quotes.
+    def parse_csv_cells(line : String, sep : String = ",") : Array(String)
+      cells = [] of String
+      current = IO::Memory.new
+      in_quotes = false
+      i = 0
+      while i < line.size
+        c = line[i]
+        if in_quotes
+          if c == '"'
+            if i + 1 < line.size && line[i + 1] == '"'
+              # Escaped quote
+              current << '"'
+              i += 2
+              next
+            else
+              in_quotes = false
+            end
+          else
+            current << c
+          end
+        else
+          if c == '"'
+            in_quotes = true
+          elsif line[i...(i + sep.size)] == sep
+            cells << current.to_s.strip
+            current = IO::Memory.new
+            i += sep.size
+            next
+          else
+            current << c
+          end
+        end
+        i += 1
+      end
+      cells << current.to_s.strip
+      cells
     end
 
     # Parse column specs for a table.
@@ -1711,18 +1958,30 @@ module Asciidoctor
         elsif (m = ColumnSpecRx.match(record))
           spec = {} of String => String | Int32
           if (align = m[2]?)
-            colspec, rowspec = align.split('.')
+            parts = align.split('.')
+            colspec = parts[0]? || ""
+            rowspec = parts[1]? || ""
             if !colspec.empty? && colspec.size == 1 && TableCellHorzAlignments.has_key?(colspec[0])
               spec["halign"] = TableCellHorzAlignments[colspec[0]]
             end
-            if rowspec && !rowspec.empty? && rowspec.size == 1 && TableCellVertAlignments.has_key?(rowspec[0])
+            if !rowspec.empty? && rowspec.size == 1 && TableCellVertAlignments.has_key?(rowspec[0])
               spec["valign"] = TableCellVertAlignments[rowspec[0]]
             end
           end
           if (width = m[3]?)
-            spec["width"] = width == "~" ? -1 : width.to_i
+            if width == "~"
+              spec["width"] = -1
+            elsif width.ends_with?("%")
+              spec["width"] = width.rchop.to_i
+              spec["width_type"] = "%"
+            else
+              spec["width"] = width.to_i
+            end
           else
             spec["width"] = 1
+          end
+          if (style_char = m[4]?) && !style_char.empty? && TableCellStyles.has_key?(style_char[0])
+            spec["style"] = style_char
           end
           if (repeat = m[1]?)
             repeat.to_i.times { specs << spec.dup }
@@ -1788,9 +2047,9 @@ module Asciidoctor
     # Read paragraph lines until a break condition is met.
     def read_paragraph_lines(reader : Reader, break_on_list : Bool = false) : Array(String)
       if break_on_list
-        reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true, skip_line_comments: true) { |line| AnyListRx.matches?(line) || !!is_delimited_block?(line) }
+        reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true, skip_line_comments: true) { |line| AnyListRx.matches?(line) || !!is_delimited_block?(line) || (line.starts_with?(':') && AttributeEntryRx.matches?(line)) }
       else
-        reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true, skip_line_comments: true) { |line| !!is_delimited_block?(line) }
+        reader.read_lines_until(break_on_blank_lines: true, break_on_list_continuation: true, preserve_last_line: true, skip_line_comments: true) { |line| !!is_delimited_block?(line) || (line.starts_with?(':') && AttributeEntryRx.matches?(line)) }
       end
     end
 
@@ -2084,22 +2343,26 @@ module Asciidoctor
             offset = actual_value.to_i
             actual_value = (current + offset).to_s
           end
-          # Apply attribute substitution: resolve {attr} references
-          if actual_value.includes?('{')
-            actual_value = actual_value.gsub(/\{(\w[\w-]*)\}/) do |match_str, md|
-              attr_name = md[1]
-              doc.attributes[attr_name]? || match_str
-            end
+          # set_attribute applies apply_attribute_value_subs (specialcharacters + attributes subs)
+          resolved_value = doc.set_attribute(name, actual_value) || actual_value
+          if attrs
+            # Store attribute entry for playback during conversion.
+            # Do NOT copy the attribute directly into block_attributes (attrs[name] = ...)
+            # because that would propagate document attributes into block attributes.
+            # Ruby original only stores in :attribute_entries, not directly in attrs.
+            existing = attrs["__attr_entries__"]?
+            entry_str = "#{name}\u0000#{actual_value}"
+            attrs["__attr_entries__"] = existing ? "#{existing}\u0001#{entry_str}" : entry_str
           end
-          # Apply special character substitution
-          if actual_value.includes?('<') || actual_value.includes?('>') || actual_value.includes?('&')
-            actual_value = actual_value.gsub('&', "&amp;").gsub('<', "&lt;").gsub('>', "&gt;")
-          end
-          doc.attributes[name] = actual_value
-          attrs[name] = actual_value if attrs
         else
           doc.attributes.delete(name)
-          attrs.try(&.delete(name))
+          if attrs
+            # Store attribute entry (negate) for playback during conversion.
+            # Do NOT delete from block_attributes directly.
+            existing = attrs["__attr_entries__"]?
+            entry_str = "#{name}\u0000\u0002" # \u0002 signals negate
+            attrs["__attr_entries__"] = existing ? "#{existing}\u0001#{entry_str}" : entry_str
+          end
         end
       elsif attrs
         if actual_value
@@ -2191,7 +2454,16 @@ module Asciidoctor
         author_idx += 1
 
         key_suffix = author_idx == 1 ? "" : "_#{author_idx}"
-        segments = author_entry.strip.split(/\s+/, 3)
+        # Extract email if present (e.g. "John Doe <john@example.com>")
+        author_entry_clean = author_entry.strip
+        email = nil
+        if (email_match = author_entry_clean.match(/<([^>]+)>/))
+          email = email_match[1]
+          author_entry_clean = author_entry_clean.sub(/<[^>]+>/, "").strip
+          author_metadata["email#{key_suffix}"] = email unless names_only
+        end
+
+        segments = author_entry_clean.split(/\s+/, 3)
 
         if segments.size >= 1
           fname = segments[0].tr("_", " ")

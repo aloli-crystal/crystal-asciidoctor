@@ -528,26 +528,26 @@ describe Asciidoctor::Section do
       output.should contain("_section_two")
     end
 
-    pending "should not display a table of contents if document has no sections" do
+    it "should not display a table of contents if document has no sections" do
       input = "= Document Title\n:toc:\n\nThis document has no sections.\n\nIt only has content."
       output = convert_string(input)
-      output.should_not contain("toctitle")
+      output.should_not contain("id=\"toctitle\"")
     end
 
-    pending "should use document attributes toc-title to create toc" do
+    it "should use document attributes toc-title to create toc" do
       input = "= Article\n:toc:\n:toc-title: Contents\n:sectids:\n\n== Section 1\n\n== Section 2\n\nFin."
       output = convert_string(input)
       output.should contain("Contents")
     end
 
-    pending "should set toc placement to preamble if toc attribute is set to preamble" do
+    it "should set toc placement to preamble if toc attribute is set to preamble" do
       input = "= Article\n:toc: preamble\n:sectids:\n\nYada yada\n\n== Section One\n\ntext\n\n== Section Two\n\ntext"
       output = convert_string(input)
       output.should contain("preamble")
       output.should contain("toc")
     end
 
-    pending "should not output table of contents if toc-placement attribute is unset" do
+    it "should not output table of contents if toc-placement attribute is unset" do
       input = "= Article\n:toc:\n:toc-placement!:\n:sectids:\n\n== Section One\n\ntext"
       output = convert_string(input)
       output.should_not contain("id=\"toc\"")
@@ -596,7 +596,7 @@ describe Asciidoctor::Section do
       end
     end
 
-    pending "should number chapters sequentially even when divided into parts" do
+    it "should number chapters sequentially even when divided into parts" do
       input = "= Document Title\n:doctype: book\n:numbered:\n:sectids:\n\n== Chapter 1\n\ncontent\n\n= Part 1\n\n== Chapter 2\n\ncontent\n\n= Part 2\n\n== Chapter 3\n\ncontent\n\n== Chapter 4\n\ncontent"
       output = convert_string(input)
       output.should contain("1. Chapter 1")
@@ -654,7 +654,7 @@ describe Asciidoctor::Section do
   # Setext-style headings
   # ==========================================================================
   describe "Setext-style headings" do
-    pending "should handle setext-style section titles" do
+    it "should handle setext-style section titles" do
       input = ":sectids:\n\nSection Title\n-------------\n\ncontent"
       output = convert_string_to_embedded(input)
       output.should contain("Section Title")
@@ -988,8 +988,8 @@ describe Asciidoctor::Section do
       input = "= Document Title\n\nJust a paragraph."
       doc = document_from_string(input)
       doc.blocks.size.should eq(1)
-      # With header, parser creates a preamble block wrapping the paragraph
-      doc.blocks[0].context.should eq(:preamble)
+      # Without sections, no preamble is created - content is directly in the document
+      doc.blocks[0].context.should eq(:paragraph)
     end
 
     it "should parse section with attribute references in title" do

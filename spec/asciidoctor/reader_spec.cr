@@ -278,14 +278,14 @@ describe Asciidoctor::Reader do
   end
 
   context "Include Stack" do
-    pending "push_include method should return reader" do
+    it "push_include method should return reader" do
       reader = TestHelpers.empty_document.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
       append_lines = ["one", "two", "three"]
       result = reader.push_include(append_lines, "<stdin>", "<stdin>")
       result.should eq(reader)
     end
 
-    pending "push_include method should put lines on top of stack" do
+    it "push_include method should put lines on top of stack" do
       lines = ["a", "b", "c"]
       doc = Asciidoctor.load(lines.join("\n"))
       reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
@@ -295,7 +295,7 @@ describe Asciidoctor::Reader do
       reader.read_line.not_nil!.rstrip.should eq("one")
     end
 
-    pending "push_include method should gracefully handle file and path" do
+    it "push_include method should gracefully handle file and path" do
       lines = ["a", "b", "c"]
       doc = Asciidoctor.load(lines.join("\n"))
       reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
@@ -307,7 +307,7 @@ describe Asciidoctor::Reader do
       reader.path.should eq("<stdin>")
     end
 
-    pending "push_include method should set path from file automatically if not specified" do
+    it "push_include method should set path from file automatically if not specified" do
       lines = ["a", "b", "c"]
       doc = Asciidoctor.load(lines.join("\n"))
       reader = doc.reader.not_nil!.as(Asciidoctor::PreprocessorReader)
@@ -329,21 +329,21 @@ describe Asciidoctor::Reader do
   end
 
   context "Front Matter" do
-    pending "should not skip front matter if it is not enabled" do
+    it "should not skip front matter if it is not enabled" do
       input = "---\nlayout: post\n---\n= Document Title"
-      doc = Asciidoctor.load(input)
+      doc = Asciidoctor.load(input, {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.peek_line.should eq("---")
     end
 
-    pending "should skip front matter if specified by skip-front-matter attribute" do
+    it "should skip front matter if specified by skip-front-matter attribute" do
       front_matter = "layout: post\ntitle: Document Title"
       input = "---\n#{front_matter}\n---\n= Document Title"
-      doc = Asciidoctor.load(input, {"attributes" => "skip-front-matter"})
+      doc = Asciidoctor.load(input, {"parse" => "false", "attributes" => "skip-front-matter"})
       reader = doc.reader.not_nil!
       reader.peek_line.should eq("= Document Title")
       doc.attributes["front-matter"].should eq(front_matter)
-     end
+    end
   end
 
   context "Conditional Directives" do
@@ -354,51 +354,51 @@ describe Asciidoctor::Reader do
       reader.peek_line.should eq("ifdef::asciidoctor[]")
     end
 
-    pending "should include content if attribute is set" do
+    it "should include content if attribute is set" do
       input = ["ifdef::asciidoctor[]", "content", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "asciidoctor"})
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false", "attributes" => "asciidoctor"})
       reader = doc.reader.not_nil!
       reader.read_lines.should eq(["content"])
     end
 
-    pending "should not include content if attribute is not set" do
+    it "should not include content if attribute is not set" do
       input = ["ifdef::foobar[]", "content", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"))
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.read_lines.empty?.should be_truthy
     end
 
-    pending "should include content if attribute is not set" do
+    it "should include content if attribute is not set" do
       input = ["ifndef::foobar[]", "content", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"))
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.read_lines.should eq(["content"])
     end
 
-    pending "should not include content if attribute is set" do
+    it "should not include content if attribute is set" do
       input = ["ifndef::asciidoctor[]", "content", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "asciidoctor"})
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false", "attributes" => "asciidoctor"})
       reader = doc.reader.not_nil!
       reader.read_lines.empty?.should be_truthy
     end
 
-    pending "should handle multiple attributes" do
+    it "should handle multiple attributes" do
       input = ["ifdef::asciidoctor,foobar[]", "content", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "foobar"})
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false", "attributes" => "foobar"})
       reader = doc.reader.not_nil!
       reader.read_lines.should eq(["content"])
     end
 
-    pending "should handle nested conditional directives" do
-      input = ["ifdef::asciidoctor[]", "ifdef::foobar[]", "content", "endif::[]", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"), {"attributes" => "asciidoctor foobar"})
+    it "should handle nested conditional directives" do
+      input = ["ifdef::asciidoctor[]", "ifdef::foobar[]", "content", "endif::[]"]
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false", "attributes" => "asciidoctor foobar"})
       reader = doc.reader.not_nil!
       reader.read_lines.should eq(["content"])
     end
 
-    pending "should evaluate expression" do
+    it "should evaluate expression" do
       input = ["ifeval::[\"a\" == \"a\"]", "content", "endif::[]"]
-      doc = Asciidoctor.load(input.join("\n"))
+      doc = Asciidoctor.load(input.join("\n"), {"parse" => "false"})
       reader = doc.reader.not_nil!
       reader.read_lines.should eq(["content"])
     end

@@ -919,8 +919,8 @@ describe Asciidoctor::Extensions do
   # Integration: Postprocessor modifies output
   # ---------------------------------------------------------------------------
   describe "Postprocessor integration" do
-    pending "should invoke postprocessors after converting document" do
-      # Porting note: Converter does not yet invoke postprocessors from extensions registry
+    it "should invoke postprocessors after converting document" do
+      # Porting note: Converter now invokes postprocessors from extensions registry
       doc = Asciidoctor::Document.new
       registry = Asciidoctor::Extensions::Registry.new
       registry.activate(doc)
@@ -936,8 +936,8 @@ describe Asciidoctor::Extensions do
       output.should eq(output.upcase)
     end
 
-    pending "should invoke postprocessor that appends footer" do
-      # Porting note: Converter does not yet invoke postprocessors from extensions registry
+    it "should invoke postprocessor that appends footer" do
+      # Porting note: Converter now invokes postprocessors from extensions registry
       doc = Asciidoctor::Document.new
       registry = Asciidoctor::Extensions::Registry.new
       registry.activate(doc)
@@ -953,8 +953,8 @@ describe Asciidoctor::Extensions do
       output.should contain("<!-- footer -->")
     end
 
-    pending "should invoke strip attributes postprocessor" do
-      # Porting note: Converter does not yet invoke postprocessors from extensions registry
+    it "should invoke strip attributes postprocessor" do
+      # Porting note: Converter now invokes postprocessors from extensions registry
       doc = Asciidoctor::Document.new
       registry = Asciidoctor::Extensions::Registry.new
       registry.activate(doc)

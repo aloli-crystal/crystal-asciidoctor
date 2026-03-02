@@ -126,7 +126,7 @@ module Asciidoctor
     property syntax_highlighter : SyntaxHighlighterBase?
 
     # Whether the document has been parsed.
-    @parsed : Bool
+    property parsed : Bool = false
 
     # The attribute overrides (locked attributes).
     getter attribute_overrides : Hash(String, String?)
@@ -141,7 +141,7 @@ module Asciidoctor
     @max_attribute_value_size : Int32?
 
     # The Reader associated with this document.
-    getter reader : Reader?
+    property reader : Reader?
 
     # The source location of the document.
     @source_location_doc : SourceLocation?
@@ -584,16 +584,19 @@ module Asciidoctor
     # Parse the AsciiDoc source stored in the Reader into an abstract syntax tree.
     def parse(data : Array(String) | String | Nil = nil) : self
       return self if @parsed
-
       if data
         @reader = Reader.new(data, Cursor.new(@attributes["docfile"]?, @base_dir))
-        @source_location_doc = @reader.not_nil!.cursor.to_source_location if @sourcemap
       end
-
+      # Sync sourcemap setting to the reader (may have been changed after reader creation)
       if (reader = @reader)
+        if reader.is_a?(PreprocessorReader)
+          reader.sourcemap = @sourcemap
+        end
+        if @sourcemap
+          @source_location_doc = reader.cursor.to_source_location
+        end
         Parser.parse(reader, self)
       end
-
       restore_attributes
       @parsed = true
       self
@@ -605,9 +608,20 @@ module Asciidoctor
     end
 
     # Replay attribute assignments at the block level.
+    # Processes __attr_entries__ stored in block attributes during parsing.
     def playback_attributes(attrs : Hash(String, String)) : Nil
-      # Attribute playback is handled during conversion when attribute_entries
-      # are stored in block attributes. This is a simplified implementation.
+      return unless (entries_str = attrs["__attr_entries__"]?)
+      entries_str.split("\u0001").each do |entry|
+        parts = entry.split("\u0000", 2)
+        next if parts.size < 2
+        name = parts[0]
+        value = parts[1]
+        if value == "\u0002" # negate signal
+          @attributes.delete(name)
+        else
+          @attributes[name] = value
+        end
+      end
     end
 
     # Register a reference in the document catalog.

@@ -260,7 +260,7 @@ describe Asciidoctor do
   end
 
   describe "sourcemap" do
-    pending "should allow sourcemap option on document to be modified before document is parsed" do
+    it "should allow sourcemap option on document to be modified before document is parsed" do
       sample_input_path = "/tmp/api_test_sample8.adoc"
       File.write(sample_input_path, "== Section A")
       doc = Asciidoctor.load_file(sample_input_path, {"parse" => "false"})

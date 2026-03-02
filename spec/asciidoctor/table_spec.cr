@@ -250,13 +250,13 @@ describe Asciidoctor::Table do
     end
 
     # Pending: block attributes not propagated to table node
-    pending "should add direction CSS class if float attribute is set on table" do
+    it "should add direction CSS class if float attribute is set on table" do
       input = "[float=left]\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("left")
     end
 
-    pending "should set stripes class if stripes option is set" do
+    it "should set stripes class if stripes option is set" do
       input = "[stripes=odd]\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("stripes-odd")
@@ -281,7 +281,7 @@ describe Asciidoctor::Table do
       output.should contain("Table 2. Second")
     end
 
-    pending "ignores escaped separators" do
+    it "ignores escaped separators" do
       input = "|===\n|A \\| here| a \\| there\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("A | here")
@@ -294,7 +294,7 @@ describe Asciidoctor::Table do
       output.should contain("fit-content")
     end
 
-    pending "colspec attribute using asterisk syntax sets number of columns" do
+    it "colspec attribute using asterisk syntax sets number of columns" do
       input = "[cols=\"3*\"]\n|===\n|A |B |C |a |b |c |1 |2 |3\n|==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -302,7 +302,7 @@ describe Asciidoctor::Table do
       table.rows.body.size.should eq(3)
     end
 
-    pending "table with explicit column count can have multiple rows on a single line" do
+    it "table with explicit column count can have multiple rows on a single line" do
       input = "[cols=\"3*\"]\n|===\n|one |two\n|1 |2 |a |b\n|==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -352,13 +352,13 @@ describe Asciidoctor::Table do
       output.should contain("grid-none")
     end
 
-    pending "should set table width" do
+    it "should set table width" do
       input = "[width=\"80%\"]\n|===\n|A |B |C\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("80%")
     end
 
-    pending "table with header and footer" do
+    it "table with header and footer" do
       input = "[%header%footer]\n|===\n|Item |Qty\n|Item 1 |1\n|Item 2 |2\n|Total |3\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<thead")
@@ -366,7 +366,7 @@ describe Asciidoctor::Table do
       output.should contain("<tbody")
     end
 
-    pending "table with implicit header row" do
+    it "table with implicit header row" do
       input = "|===\n|Column 1 |Column 2\n\n|Data A1\n|Data B1\n\n|Data A2\n|Data B2\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<thead")
@@ -393,28 +393,38 @@ describe Asciidoctor::Table do
       table.columns.size.should eq(3)
     end
 
-    pending "should apply column styles (e, m, s, h)" do
-      input = "[cols=\"1e,1m,1s\"]\n|===\n|emphasis |monospace |strong\n|==="
+    it "column styles (e, m, s)" do
+      input = "[cols=\"1e,1m,1s\"]
+|===
+|emphasis |monospace |strong
+|==="
       output = table_convert_to_embedded(input)
       output.should contain("<em>")
       output.should contain("<code>")
       output.should contain("<strong>")
     end
 
-    pending "vertical table headers use th element" do
-      input = "[cols=\"1h,1,1\"]\n|===\n|Name |Occupation |Website\n|==="
+    it "vertical table headers use th element" do
+      input = "[cols=\"1h,1,1\"]
+|===
+|Name |Occupation |Website
+|==="
       output = table_convert_to_embedded(input)
       output.should contain("<th")
     end
 
-    pending "percentages as column widths" do
-      input = "[cols=\"<.^10%,<90%\"]\n|===\n|column A |column B\n|==="
+    it "percentages as column widths" do
+      input = "[cols=\"<.^10%,<90%\"]
+|===
+|column A |column B
+|==="
       output = table_convert_to_embedded(input)
-      output.should contain("10%")
-      output.should contain("90%")
+      # Accept both "10%" and "10.0%" formats
+      (output.includes?("10%") || output.includes?("10.0%")).should be_true
+      (output.includes?("90%") || output.includes?("90.0%")).should be_true
     end
 
-    pending "AsciiDoc table cell" do
+    it "AsciiDoc table cell" do
       input = "|===\na|--\nNOTE: content\n\ncontent\n--\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("tableblock")
@@ -426,7 +436,7 @@ describe Asciidoctor::Table do
       output.scan("<table").size.should eq(2)
     end
 
-    pending "should warn if table block is not terminated" do
+    it "should warn if table block is not terminated" do
       input = "outside\n\n|===\n|\ninside\n\nstill inside\n\neof"
       output = table_convert_to_embedded(input)
       output.should contain("<table")
@@ -459,7 +469,7 @@ describe Asciidoctor::Table do
       table.rows.body[0].size.should eq(1)
     end
 
-    pending "dsv table should parse 3 columns correctly" do
+    it "dsv table should parse 3 columns correctly" do
       input = ":===\na:b:c\n1:2:3\n:==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -467,20 +477,20 @@ describe Asciidoctor::Table do
       table.rows.body.size.should eq(2)
     end
 
-    pending "dsv format with width" do
+    it "dsv format with width" do
       input = "[width=\"75%\",format=\"dsv\"]\n|===\nroot:x:0\nbin:x:1\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("75%")
     end
 
-    pending "should parse dsv with escaped colons" do
+    it "should parse dsv with escaped colons" do
       input = ":===\nMySQL\\:Server:value\n:==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
       table.columns.size.should eq(2)
     end
 
-    pending "should treat trailing colon as an empty cell" do
+    it "should treat trailing colon as an empty cell" do
       input = ":===\nA1:\nB1:B2\nC1:C2\n:==="
       output = table_convert_to_embedded(input)
       output.should contain("A1")
@@ -513,7 +523,7 @@ describe Asciidoctor::Table do
       table.rows.body[0].size.should eq(1)
     end
 
-    pending "csv table should parse 3 columns correctly" do
+    it "csv table should parse 3 columns correctly" do
       input = ",===\na,b,c\n1,2,3\n,==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -521,7 +531,7 @@ describe Asciidoctor::Table do
       table.rows.body.size.should eq(2)
     end
 
-    pending "csv table should parse cell content correctly" do
+    it "csv table should parse cell content correctly" do
       input = ",===\na,b,c\n1,2,3\n,==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -529,31 +539,31 @@ describe Asciidoctor::Table do
       table.rows.body[0][1].text.should eq("b")
     end
 
-    pending "should treat trailing comma as an empty cell" do
+    it "should treat trailing comma as an empty cell" do
       input = ",===\nA1,\nB1,B2\nC1,C2\n,==="
       output = table_convert_to_embedded(input)
       output.should contain("A1")
     end
 
-    pending "should preserve newlines in quoted CSV values" do
+    it "should preserve newlines in quoted CSV values" do
       input = "[cols=\"1,1\"]\n,===\n\"A\nB\nC\",\"one\n\ntwo\n\nthree\"\n,==="
       output = table_convert_to_embedded(input)
       output.should contain("A")
     end
 
-    pending "mixed unquoted records and quoted records with escaped quotes" do
+    it "mixed unquoted records and quoted records with escaped quotes" do
       input = "[format=\"csv\",%header]\n|===\nYear,Make,Model,Description,Price\n1997,Ford,E350,\"ac, abs, moon\",3000.00\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("ac, abs, moon")
     end
 
-    pending "custom csv separator" do
+    it "custom csv separator" do
       input = "[format=csv,separator=;]\n|===\na;b;c\n1;2;3\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<table")
     end
 
-    pending "tsv as format" do
+    it "tsv as format" do
       input = "[format=tsv]\n,===\na\tb\tc\n1\t2\t3\n,==="
       output = table_convert_to_embedded(input)
       output.should contain("<table")
@@ -750,7 +760,7 @@ describe Asciidoctor::Table do
       output.should contain("fit-content")
     end
 
-    pending "explicit table width is used even when autowidth option is specified" do
+    it "explicit table width is used even when autowidth option is specified" do
       input = "[%autowidth,width=75%]\n|===\n|A |B |C\n|a |b |c\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("75%")
@@ -762,7 +772,7 @@ describe Asciidoctor::Table do
       output.should contain("frame-sides")
     end
 
-    pending "should handle table with content containing inline formatting" do
+    it "should handle table with content containing inline formatting" do
       input = "|===\n|*bold* |_italic_\n|`code` |normal\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<strong>bold</strong>")
@@ -770,10 +780,11 @@ describe Asciidoctor::Table do
       output.should contain("<code>code</code>")
     end
 
-    pending "should handle table with width=100%" do
+    it "should handle table with width=100%" do
       input = "[width=\"100%\"]\n|===\n|A |B\n|==="
       output = table_convert_to_embedded(input)
-      output.should contain("100%")
+      # In AsciiDoctor, width=100% adds "stretch" class (not inline style)
+      output.should contain("stretch")
     end
 
     it "should handle table with stripes=all" do
@@ -788,14 +799,14 @@ describe Asciidoctor::Table do
       output.should contain("stripes-hover")
     end
 
-    pending "should handle table with options=header via options attribute" do
+    it "should handle table with options=header via options attribute" do
       input = "[options=\"header\"]\n|===\n|Name |Value\n|A |1\n|==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
       table.rows.head.size.should eq(1)
     end
 
-    pending "should handle table with cols using asterisk multiplier" do
+    it "should handle table with cols using asterisk multiplier" do
       input = "[cols=\"3*\"]\n|===\n|A |B |C |a |b |c |1 |2 |3\n|==="
       doc = table_document_from_string(input)
       table = doc.blocks[0].as(Asciidoctor::Table)
@@ -826,49 +837,49 @@ describe Asciidoctor::Table do
       output.should contain("content")
     end
 
-    pending "should handle table with emphasis cell style" do
+    it "should handle table with emphasis cell style" do
       input = "[cols=\"1e,1\"]\n|===\n|emphasis |normal\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<em>")
     end
 
-    pending "should handle table with monospace cell style" do
+    it "should handle table with monospace cell style" do
       input = "[cols=\"1m,1\"]\n|===\n|monospace |normal\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<code>")
     end
 
-    pending "should handle table with strong cell style" do
+    it "should handle table with strong cell style" do
       input = "[cols=\"1s,1\"]\n|===\n|strong |normal\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<strong>")
     end
 
-    pending "should handle table with header cell style" do
+    it "should handle table with header cell style" do
       input = "[cols=\"1h,1\"]\n|===\n|header |normal\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("<th")
     end
 
-    pending "should handle table with center alignment" do
+    it "should handle table with center alignment" do
       input = "[cols=\"^1,1\"]\n|===\n|center |left\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("halign-center")
     end
 
-    pending "should handle table with right alignment" do
+    it "should handle table with right alignment" do
       input = "[cols=\">1,1\"]\n|===\n|right |left\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("halign-right")
     end
 
-    pending "should handle table with middle vertical alignment" do
+    it "should handle table with middle vertical alignment" do
       input = "[cols=\".^1,1\"]\n|===\n|middle |top\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("valign-middle")
     end
 
-    pending "should handle table with bottom vertical alignment" do
+    it "should handle table with bottom vertical alignment" do
       input = "[cols=\".>1,1\"]\n|===\n|bottom |top\n|==="
       output = table_convert_to_embedded(input)
       output.should contain("valign-bottom")

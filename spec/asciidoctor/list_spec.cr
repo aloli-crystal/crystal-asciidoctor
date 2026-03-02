@@ -25,16 +25,14 @@ describe "Lists" do
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "indented dash elements using spaces" do
-      # Parser Crystal ne supporte pas encore les éléments de liste indentés
+    it "indented dash elements using spaces" do
       input = " - Foo\n - Boo\n - Blech"
       output = convert_string_to_embedded(input)
       output.scan("<ul>").size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "indented dash elements using tabs" do
-      # Parser Crystal ne supporte pas encore les éléments de liste indentés
+    it "indented dash elements using tabs" do
       input = "\t-\tFoo\n\t-\tBoo\n\t-\tBlech"
       output = convert_string_to_embedded(input)
       output.scan("<ul>").size.should eq(1)
@@ -91,8 +89,7 @@ describe "Lists" do
       output.should_not contain("* Foo")
     end
 
-    pending "a literal paragraph offset by blank lines in list content is appended as a literal block" do
-      # Convertisseur Crystal génère 2 <ul> au lieu de 1 pour les blocs littéraux dans les listes
+    it "a literal paragraph offset by blank lines in list content is appended as a literal block" do
       input = "= List\n\n- Foo\n\n  literal\n\n- Boo\n- Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
@@ -109,16 +106,14 @@ describe "Lists" do
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "indented asterisk elements using spaces" do
-      # Parser Crystal ne supporte pas encore les éléments de liste indentés
+    it "indented asterisk elements using spaces" do
       input = " * Foo\n * Boo\n * Blech"
       output = convert_string_to_embedded(input)
       output.scan("<ul>").size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "indented asterisk elements using tabs" do
-      # Parser Crystal ne supporte pas encore les éléments de liste indentés
+    it "indented asterisk elements using tabs" do
       input = "\t*\tFoo\n\t*\tBoo\n\t*\tBlech"
       output = convert_string_to_embedded(input)
       output.scan("<ul>").size.should eq(1)
@@ -212,11 +207,10 @@ describe "Lists" do
       output.should contain(".third")
     end
 
-    pending "word ending sentence on continuing line not treated as a list item" do
-      # Parser Crystal ne gère pas encore les marqueurs de liste alphabétiques explicites (A. B.)
+    it "word ending sentence on continuing line not treated as a list item" do
       input = "A. This is the story about\n   AsciiDoc. It begins here.\nB. And it ends here."
       output = convert_string_to_embedded(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(2)
     end
   end
@@ -271,8 +265,7 @@ describe "Lists" do
       output.scan("<ul>").size.should eq(5)
     end
 
-    pending "nested arbitrary depth with asterisks" do
-      # Parser Crystal ne supporte pas encore la profondeur arbitraire (>5 niveaux)
+    it "nested arbitrary depth with asterisks" do
       lines = [] of String
       ('a'..'z').each_with_index do |ch, i|
         lines << "#{"*" * (i + 1)} #{ch}"
@@ -347,8 +340,7 @@ describe "Lists" do
       output.should contain("Title")
     end
 
-    pending "lines with alternating markers of bulleted and description list types separated by blank lines should be nested" do
-      # Convertisseur Crystal ne génère pas le bon nombre de <ul>/<dl> pour les listes imbriquées mixtes
+    it "lines with alternating markers of bulleted and description list types separated by blank lines should be nested" do
       input = "= List\n\n* Foo\n\nterm1:: def1\n\n* Blech"
       output = convert_string(input)
       output.scan("<ul>").size.should eq(1)
@@ -469,19 +461,17 @@ describe "Lists" do
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "indented dot elements using spaces" do
-      # Parser Crystal ne supporte pas encore les éléments de liste indentés
+    it "indented dot elements using spaces" do
       input = " . Foo\n . Boo\n . Blech"
       output = convert_string_to_embedded(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
 
-    pending "indented dot elements using tabs" do
-      # Parser Crystal ne supporte pas encore les éléments de liste indentés
+    it "indented dot elements using tabs" do
       input = "\t.\tFoo\n\t.\tBoo\n\t.\tBlech"
       output = convert_string_to_embedded(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
 
@@ -568,7 +558,7 @@ describe "Lists" do
       output.should contain("dry")
     end
 
-    pending "should escape special characters in all literal paragraphs attached to list item" do
+    it "should escape special characters in all literal paragraphs attached to list item" do
       # Convertisseur Crystal ne gère pas correctement l'échappement dans les blocs littéraux des listes
       input = ". first item\n\n  <code>text</code>\n\n  more <code>text</code>\n\n. second item"
       output = convert_string_to_embedded(input)
@@ -577,11 +567,11 @@ describe "Lists" do
       output.should contain("&lt;code&gt;")
     end
 
-    pending "dot elements with interspersed line comments should be skipped and not break list" do
+    it "dot elements with interspersed line comments should be skipped and not break list" do
       # Convertisseur Crystal ne gère pas correctement les commentaires dans les listes ordonnées
       input = "== List\n\n. Foo\n// line comment\n// another line comment\n. Boo\n// line comment\nmore text\n// another line comment\n. Blech"
       output = convert_string_to_embedded(input)
-      output.scan("<ol>").size.should eq(1)
+      output.scan(/<ol[\s>]/).size.should eq(1)
       output.scan("<li>").size.should eq(3)
     end
   end
@@ -596,8 +586,7 @@ describe "Lists" do
       output.scan("<dl>").size.should eq(0)
     end
 
-    pending "single-line adjacent elements" do
-      # Convertisseur Crystal génère 4 <dt> au lieu de 2 pour les description lists inline
+    it "single-line adjacent elements" do
       input = "term1:: def1\nterm2:: def2"
       output = convert_string_to_embedded(input)
       output.scan("<dl>").size.should eq(1)
@@ -609,16 +598,14 @@ describe "Lists" do
       output.should contain("def2")
     end
 
-    pending "single-line elements separated by blank line should create a single list" do
-      # Convertisseur Crystal génère des <dt> en double pour les description lists
+    it "single-line elements separated by blank line should create a single list" do
       input = "term1:: def1\n\nterm2:: def2"
       output = convert_string_to_embedded(input)
       output.scan("<dl>").size.should eq(1)
       output.scan("<dt>").size.should eq(2)
     end
 
-    pending "multi-line element with paragraph content" do
-      # Convertisseur Crystal génère des <dt> en double pour les description lists multi-lignes
+    it "multi-line element with paragraph content" do
       input = "term1::\ndef1"
       output = convert_string_to_embedded(input)
       output.scan("<dl>").size.should eq(1)
@@ -627,8 +614,7 @@ describe "Lists" do
       output.should contain("def1")
     end
 
-    pending "multi-line elements with blank line before paragraph content" do
-      # Convertisseur Crystal génère des <dt> en double pour les description lists multi-lignes
+    it "multi-line elements with blank line before paragraph content" do
       input = "term1::\n\ndef1\nterm2::\n\ndef2"
       output = convert_string_to_embedded(input)
       output.scan("<dl>").size.should eq(1)
@@ -637,8 +623,7 @@ describe "Lists" do
       output.should contain("def2")
     end
 
-    pending "mixed single and multi-line adjacent elements" do
-      # Convertisseur Crystal génère des <dt> en double pour les description lists mixtes
+    it "mixed single and multi-line adjacent elements" do
       input = "term1:: def1\nterm2::\ndef2"
       output = convert_string_to_embedded(input)
       output.scan("<dl>").size.should eq(1)
@@ -653,7 +638,7 @@ describe "Lists" do
       output.scan("<dl>").size.should eq(0)
     end
 
-    pending "literal block inside description list" do
+    it "literal block inside description list" do
       # Convertisseur Crystal ne gère pas correctement les blocs littéraux dans les description lists
       input = "term::\n+\n....\nliteral, line 1\n\nliteral, line 2\n....\nanotherterm:: def"
       output = convert_string_to_embedded(input)
@@ -679,7 +664,7 @@ describe "Lists" do
       output.should contain("more detail")
     end
 
-    pending "list inside a description list" do
+    it "list inside a description list" do
       # Convertisseur Crystal ne gère pas correctement les listes imbriquées dans les description lists
       input = "term1::\n* level 1\n** level 2\n* level 1\nterm2:: def"
       output = convert_string_to_embedded(input)
@@ -688,7 +673,7 @@ describe "Lists" do
       output.should contain("def")
     end
 
-    pending "list inside a description list offset by blank lines" do
+    it "list inside a description list offset by blank lines" do
       # Convertisseur Crystal ne gère pas correctement les listes imbriquées dans les description lists
       input = "term1::\n\n* level 1\n** level 2\n* level 1\n\nterm2:: def"
       output = convert_string_to_embedded(input)
@@ -731,8 +716,8 @@ describe "Lists" do
       output.should contain("glossary")
     end
 
-    pending "should convert horizontal list with proper markup" do
-      # Convertisseur Crystal ne génère pas encore les hdlist avec table
+      it "should convert horizontal list with proper markup" do
+      # Convertisseur Crystal ne gère pas encore les hdlist avec table
       input = "[horizontal]\nfirst term:: description\n+\nmore detail\n\nsecond term:: description"
       output = convert_string_to_embedded(input)
       output.should contain("hdlist")
@@ -741,8 +726,8 @@ describe "Lists" do
       output.should contain("second term")
     end
 
-    pending "should set col widths of item and label if specified" do
-      # Convertisseur Crystal ne génère pas encore les hdlist avec colgroup
+      it "should set col widths of item and label if specified" do
+      # Convertisseur Crystal ne gère pas encore les hdlist avec colgroup
       input = "[horizontal]\n[labelwidth=\"25\", itemwidth=\"75\"]\nterm:: def"
       output = convert_string_to_embedded(input)
       output.should contain("<table")
@@ -751,16 +736,15 @@ describe "Lists" do
       output.should contain("75%")
     end
 
-    pending "should add strong class to label if strong option is set" do
-      # Convertisseur Crystal ne génère pas encore les hdlist
+     it "should add strong class to label if strong option is set" do
+      # Convertisseur Crystal ne gère pas encore les hdlistt
       input = "[horizontal, options=\"strong\"]\nterm:: def"
       output = convert_string_to_embedded(input)
       output.should contain("hdlist")
       output.should contain("strong")
     end
 
-    pending "should convert qanda list in HTML with proper semantics" do
-      # Convertisseur Crystal ne génère pas encore les qanda lists
+    it "should convert qanda list in HTML with proper semantics" do
       input = "[qanda]\nQuestion 1::\n        Answer 1.\nQuestion 2::\n        Answer 2."
       output = convert_string_to_embedded(input)
       output.should contain("qlist")
@@ -865,8 +849,8 @@ describe "Lists" do
       list.items[0].as(Asciidoctor::ListItem).text.should eq("one")
     end
 
-    pending "should set lineno to line number in source where list starts" do
-      # TODO: sourcemap not yet fully implemented
+    it "should set lineno to line number in source where list starts" do
+      # sourcemap is now implemented
       input = "* bullet 1\n** bullet 1.1\n*** bullet 1.1.1\n* bullet 2"
       doc = Asciidoctor.load(input, {"sourcemap" => "true"})
       lists = doc.find_by(context: :ulist)

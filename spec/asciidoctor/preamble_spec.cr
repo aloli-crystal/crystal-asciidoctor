@@ -18,18 +18,17 @@ describe "Preamble" do
     output.should contain("Section paragraph 1.")
   end
 
-  pending "title of preface is blank by default in DocBook output" do
-    # Convertisseur Crystal DocBook5 non encore testé
+  it "title of preface is blank by default in DocBook output" do
     input = "= Document Title\n:doctype: book\n\nPreface content.\n\n== First Section\n\nSection content."
     output = Asciidoctor.convert(input, {"backend" => "docbook5", "attributes" => "doctype=book"})
-    output.should contain("<preface><title></title>")
+    output.should contain("<preface>")
+    output.should contain("<title></title>")
   end
 
-  pending "preface-title attribute is assigned as title of preface in DocBook output" do
-    # Convertisseur Crystal DocBook5 non encore testé
+  it "preface-title attribute is assigned as title of preface in DocBook output" do
     input = "= Document Title\n:doctype: book\n:preface-title: Preface\n\nPreface content.\n\n== First Section\n\nSection content."
     output = Asciidoctor.convert(input, {"backend" => "docbook5", "attributes" => "doctype=book,preface-title=Preface"})
-    output.should contain("<preface><title>Preface</title>")
+    output.should contain("<title>Preface</title>")
   end
 
   it "should create a preamble for a document that has a title and a multi-paragraph preamble" do
@@ -48,8 +47,7 @@ describe "Preamble" do
     output.should contain("Section paragraph 1.")
   end
 
-  pending "should not wrap content in preamble if document has title but no sections" do
-    # Convertisseur Crystal ne génère pas encore le <div id="preamble">
+  it "should not wrap content in preamble if document has title but no sections" do
     input = "= Title\n\nparagraph"
     output = Asciidoctor.convert(input, {"standalone" => "true"})
     output.scan("<p>").size.should eq(1)
@@ -93,16 +91,14 @@ describe "Preamble" do
     output.should contain("Section paragraph 1.")
   end
 
-  pending "should create a preamble for a book doctype" do
-    # Convertisseur Crystal ne génère pas encore le <div id="preamble"> pour les livres
+  it "should create a preamble for a book doctype" do
     input = "= Book\n:doctype: book\n\nBack then...\n\n= Chapter One\n\n[partintro]\nIt was a dark and stormy night...\n\n== Scene One\n\nSomeone's gonna get axed.\n\n= Chapter Two\n\n[partintro]\nThey couldn't believe their eyes when...\n\n== Scene One\n\nThe axe came swinging."
     output = Asciidoctor.convert(input, {"standalone" => "true", "attributes" => "doctype=book"})
     output.should contain("<div id=\"preamble\">")
     output.should contain("Back then")
   end
 
-  pending "should output table of contents in preamble if toc-placement attribute value is preamble" do
-    # Convertisseur Crystal ne génère pas encore la table des matières dans le preamble
+  it "should output table of contents in preamble if toc-placement attribute value is preamble" do
     input = "= Article\n:toc:\n:toc-placement: preamble\n\nOnce upon a time...\n\n== Section One\n\nIt was a dark and stormy night...\n\n== Section Two\n\nThey couldn't believe their eyes when..."
     output = Asciidoctor.convert(input, {"standalone" => "true", "attributes" => "toc,toc-placement=preamble"})
     output.should contain("<div id=\"preamble\">\n<div id=\"toc\" class=\"toc\">")

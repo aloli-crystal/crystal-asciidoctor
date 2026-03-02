@@ -11,9 +11,33 @@ module Asciidoctor
     attrs = options.fetch("attributes", "")
     attributes = {} of String => String
     if attrs.is_a?(String) && !attrs.empty?
-      attrs.split(",").each do |entry|
-        key, _, val = entry.partition("=")
+      # Support both comma-separated and space-separated attributes
+      # e.g. "toc,icons=font" or "asciidoctor foobar" or "toc sectnums"
+      # But if it contains '=', treat as a single attribute (value may contain spaces)
+      # e.g. "man-linkstyle=cyan B \[fo] \[fc]" -> man-linkstyle=cyan B \[fo] \[fc]
+      if attrs.includes?(",")
+        # Comma-separated: split by comma
+        attrs.split(",").each do |entry|
+          entry = entry.strip
+          next if entry.empty?
+          if entry.includes?("=")
+            key, _, val = entry.partition("=")
+            attributes[key.strip] = val.strip
+          else
+            attributes[entry] = ""
+          end
+        end
+      elsif attrs.includes?("=")
+        # Single attribute with value (may contain spaces)
+        key, _, val = attrs.partition("=")
         attributes[key.strip] = val.strip
+      else
+        # Space-separated attribute names (no values)
+        attrs.split(" ").each do |entry|
+          entry = entry.strip
+          next if entry.empty?
+          attributes[entry] = ""
+        end
       end
     end
 
@@ -35,12 +59,15 @@ module Asciidoctor
               end
     doctype = attributes.delete("doctype") || options.fetch("doctype", "article")
     # header_footer=false is equivalent to standalone=false (embedded mode)
+    # By default, standalone=true (full HTML document) to match Ruby AsciiDoctor behavior
     standalone = if options.has_key?("header_footer")
                    options["header_footer"] != "false"
                  elsif options.has_key?("standalone")
                    options["standalone"] != "false"
-                 else
+                 elsif options.has_key?("embedded") && options["embedded"] == "true"
                    false
+                 else
+                   true
                  end
     safe_mode_str = options.fetch("safe", "secure")
     safe_mode = SafeMode.value_for_name(safe_mode_str) || SafeMode::SECURE
@@ -144,9 +171,20 @@ module Asciidoctor
     # Assign converter based on backend
     doc.converter = create_converter(backend)
 
-    # Parse the document
-    reader = Reader.new(source)
-    Parser.parse(reader, doc)
+    # Parse the document using PreprocessorReader to handle conditional directives
+    parse_now = !(options.has_key?("parse") && options["parse"] == "false")
+    # Create a cursor with the document file if available
+    reader_cursor = if (docfile = doc.attributes["docfile"]?)
+      Cursor.new(docfile, doc.attributes["docdir"]?, doc.attributes["docname"]?)
+    else
+      nil
+    end
+    reader = PreprocessorReader.new(doc, source, reader_cursor)
+    doc.reader = reader
+    if parse_now
+      Parser.parse(reader, doc)
+      doc.parsed = true
+    end
 
     # Initialize syntax highlighter based on document attributes
     doc.init_syntax_highlighter

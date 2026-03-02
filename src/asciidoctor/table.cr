@@ -54,7 +54,8 @@ module Asciidoctor
       # Resolve table width.
       pcwidth = attributes["width"]?
       pcwidth_intval = if pcwidth
-                         v = pcwidth.to_i? || 100
+                         # Strip % if present (e.g., "75%" -> 75)
+                         v = pcwidth.gsub("%", "").to_i? || 100
                          (v > 100 || v < 1) ? 100 : v
                        else
                          100
@@ -217,7 +218,25 @@ module Asciidoctor
                    style : Symbol? = nil)
       super(:table_cell, attributes)
       @document = @column.document
-      @cell_style = style || ((@column.style && !@column.style.try(&.empty?)) ? nil : nil)
+      # Use cell style if provided, otherwise inherit from column
+      col_style = @column.style
+      # Map column style string to symbol
+      col_sym = if col_style && !col_style.empty?
+        case col_style
+        when "e" then :emphasis
+        when "m" then :monospaced
+        when "s" then :strong
+        when "h" then :header
+        when "l" then :literal
+        when "v" then :verse
+        when "a" then :asciidoc
+        when "d" then :default
+        else nil
+        end
+      else
+        nil
+      end
+      @cell_style = style || col_sym
       @colspan = colspan
       @content_model = ContentModel::Simple
       @inner_document = nil
@@ -225,6 +244,9 @@ module Asciidoctor
       @rowspan = rowspan
       @subs = NORMAL_SUBS
       @text = cell_text
+      # Inherit halign/valign from column if not already set in cell attributes
+      @attributes["halign"] ||= @column.attributes["halign"]? || "left"
+      @attributes["valign"] ||= @column.attributes["valign"]? || "top"
     end
 
     # Handles the body data (tbody, tfoot), applying styles and partitioning into paragraphs.
@@ -232,9 +254,11 @@ module Asciidoctor
       if @cell_style == :asciidoc && (inner = @inner_document)
         inner.to_s
       elsif @text.includes?("\n\n")
-        @text.split(/\n{2,}/)
+        subs_to_apply = [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol
+        @text.split(/\n{2,}/).map { |para| apply_subs(para, subs_to_apply) }
       else
-        [@text]
+        subs_to_apply = [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol
+        [apply_subs(@text, subs_to_apply)]
       end
     end
 
@@ -262,8 +286,8 @@ module Asciidoctor
 
     # Get the String text of this cell with substitutions applied.
     def text : String
-      # TODO: apply_subs(@text, @subs)
-      @text
+      subs_to_apply = [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements] of Symbol
+      apply_subs(@text, subs_to_apply)
     end
 
     # Set the String text for this cell.

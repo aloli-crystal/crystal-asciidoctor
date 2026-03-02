@@ -425,7 +425,9 @@ module Asciidoctor
 
       def convert_preamble(node : AbstractBlock) : String
         if node.document.doctype == "book"
-          %(<preface#{common_attributes(node.id, node.role, node.reftext)}>\n#{title_tag(node, false)}#{node.content}\n</preface>)
+          # Use preface-title attribute if set, otherwise use node title (may be empty)
+          preface_title = node.document.attributes["preface-title"]? || node.title || ""
+          %(<preface#{common_attributes(node.id, node.role, node.reftext)}>\n<title>#{preface_title}</title>\n#{node.content}\n</preface>)
         else
           node.content.to_s
         end

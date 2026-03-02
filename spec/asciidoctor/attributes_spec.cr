@@ -277,7 +277,7 @@ describe "Attributes" do
       end
     end
 
-    pending "attribute is treated as defined until it is unset" do
+    it "attribute is treated as defined until it is unset" do
       input = <<-EOS
       :holygrail:
       ifdef::holygrail[]
@@ -660,7 +660,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("(//p)[1][text()=\"Yo, Tanglefoot!\"]", output).should eq(1)
     end
 
-    pending "ignores lines with bad attributes if attribute-missing is drop-line" do
+    it "ignores lines with bad attributes if attribute-missing is drop-line" do
       # input = <<-EOS
       # :attribute-missing: drop-line
 
@@ -674,14 +674,14 @@ describe "Attributes" do
       # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: foobarbaz"
     end
 
-    pending "attribute value gets interpreted when converting" do
+    it "attribute value gets interpreted when converting" do
       doc = TestHelpers.document_from_string(":google: http://google.com[Google]\n\n{google}")
       doc.attributes["google"].should eq("http://google.com[Google]")
       output = doc.convert.to_s
       TestHelpers.xpath_count("//a[@href=\"http://google.com\"][text() = \"Google\"]", output).should eq(1)
     end
 
-    pending "should drop line with reference to missing attribute if attribute-missing attribute is drop-line" do
+    it "should drop line with reference to missing attribute if attribute-missing attribute is drop-line" do
       # input = <<-EOS
       # :attribute-missing: drop-line
 
@@ -707,7 +707,7 @@ describe "Attributes" do
       output.should match(/\{bogus-attribute\}/)
     end
 
-    pending "should drop line with attribute unassignment by default" do
+    it "should drop line with attribute unassignment by default" do
       input = <<-EOS
       :a:
 
@@ -720,7 +720,7 @@ describe "Attributes" do
       output.should_not match(/Line 2/)
     end
 
-    pending "should not drop line with attribute unassignment if attribute-undefined is drop" do
+    it "should not drop line with attribute unassignment if attribute-undefined is drop" do
       input = <<-EOS
       :attribute-undefined: drop
       :a:
@@ -735,7 +735,7 @@ describe "Attributes" do
       output.should_not match(/\{set:a!\}/)
     end
 
-    pending "should drop line that only contains attribute assignment" do
+    it "should drop line that only contains attribute assignment" do
       input = <<-EOS
       Line 1
       {set:a}
@@ -746,7 +746,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"Line 1\nLine 2\"]", output).should eq(1)
     end
 
-    pending "should drop line that only contains unresolved attribute when attribute-missing is drop" do
+    it "should drop line that only contains unresolved attribute when attribute-missing is drop" do
       input = <<-EOS
       Line 1
       {unresolved}
@@ -866,7 +866,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//*[@class=\"title\"]/code[text()=\"asciidoctor\"]", output).should eq(1)
     end
 
-    pending "sets attribute until it is deleted" do
+    it "sets attribute until it is deleted" do
       input = <<-EOS
       :foo: bar
 
@@ -975,14 +975,14 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"bar\"]", output).should eq(1)
     end
 
-    pending "assigns attribute defined in attribute reference with set prefix and no value" do
+    it "assigns attribute defined in attribute reference with set prefix and no value" do
       input = "{set:foo}\n{foo}yes"
       output = TestHelpers.convert_string_to_embedded(input)
       TestHelpers.xpath_count("//p", output).should eq(1)
       TestHelpers.xpath_count("//p[normalize-space(text())=\"yes\"]", output).should eq(1)
     end
 
-    pending "assigns attribute defined in attribute reference with set prefix and empty value" do
+    it "assigns attribute defined in attribute reference with set prefix and empty value" do
       input = "{set:foo:}\n{foo}yes"
       output = TestHelpers.convert_string_to_embedded(input)
       TestHelpers.xpath_count("//p", output).should eq(1)
@@ -1036,7 +1036,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"1\"]", output).should eq(1)
     end
 
-    pending "creates counter silently" do
+    it "creates counter silently" do
       input = "{counter2:mycounter}"
 
       doc = TestHelpers.document_from_string(input)
@@ -1045,7 +1045,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"1\"]", output).should eq(0)
     end
 
-    pending "creates counter with numeric seed value" do
+    it "creates counter with numeric seed value" do
       input = "{counter2:mycounter:10}"
 
       doc = TestHelpers.document_from_string(input)
@@ -1053,7 +1053,7 @@ describe "Attributes" do
       doc.attributes["mycounter"].should eq("10")
     end
 
-    pending "creates counter with character seed value" do
+    it "creates counter with character seed value" do
       input = "{counter2:mycounter:A}"
 
       doc = TestHelpers.document_from_string(input)
@@ -1061,7 +1061,7 @@ describe "Attributes" do
       doc.attributes["mycounter"].should eq("A")
     end
 
-    pending "can seed counter to start at 1" do
+    it "can seed counter to start at 1" do
       input = <<-EOS
       :mycounter: 0
 
@@ -1072,7 +1072,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"1\"]", output).should eq(1)
     end
 
-    pending "can seed counter to start at A" do
+    it "can seed counter to start at A" do
       input = <<-EOS
       :mycounter: @
 
@@ -1083,7 +1083,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"A\"]", output).should eq(1)
     end
 
-    pending "increments counter with positive numeric value" do
+    it "increments counter with positive numeric value" do
       input = <<-EOS
       [subs=attributes]
       ++++
@@ -1117,7 +1117,7 @@ describe "Attributes" do
       output.split("\n").map(&.strip).should eq(["-2", "-1", "0", "0"])
     end
 
-    pending "increments counter with ASCII character value" do
+    it "increments counter with ASCII character value" do
       input = <<-EOS
       [subs=attributes]
       ++++
@@ -1177,7 +1177,7 @@ describe "Attributes" do
       output.split("\n").map(&.strip).should eq(["1x", "1y", "1z", "1z"])
     end
 
-    pending "counter uses 0 as seed value if seed attribute is nil" do
+    it "counter uses 0 as seed value if seed attribute is nil" do
       input = <<-EOS
       :mycounter:
 
@@ -1192,7 +1192,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"1\"]", output).should eq(2)
     end
 
-    pending "counter value can be reset by attribute entry" do
+    it "counter value can be reset by attribute entry" do
       input = <<-EOS
       :mycounter:
 
@@ -1260,7 +1260,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[text()=\"bas is not bar\"]", output).should eq(1)
     end
 
-    pending "should not allow counter2 to modify locked attribute" do
+    it "should not allow counter2 to modify locked attribute" do
       input = <<-EOS
       {counter2:foo:ignored}{foo}
       EOS
@@ -1306,7 +1306,7 @@ describe "Attributes" do
       block.attr("foo-foo").should eq("bar-bar")
     end
 
-    pending "does not parse named attribute if name is invalid" do
+    it "does not parse named attribute if name is invalid" do
       input = <<-EOS
       [normal,foo.foo="bar.bar",-foo-foo="-bar-bar"]
       content
@@ -1399,7 +1399,7 @@ describe "Attributes" do
       qb.attributes["citetitle"].should eq("source")
     end
 
-    pending "first attribute in list may be double quoted" do
+    it "first attribute in list may be double quoted" do
       input = <<-EOS
       ["quote", "author", "source", role="famous"]
       ____
@@ -1415,7 +1415,7 @@ describe "Attributes" do
       qb.attributes["role"].should eq("famous")
     end
 
-    pending "first attribute in list may be single quoted" do
+    it "first attribute in list may be single quoted" do
       input = <<-EOS
       ['quote', 'author', 'source', role='famous']
       ____
@@ -1431,7 +1431,7 @@ describe "Attributes" do
       qb.attributes["role"].should eq("famous")
     end
 
-    pending "attribute with value None without quotes is ignored" do
+    it "attribute with value None without quotes is ignored" do
       input = <<-EOS
       [id=None]
       paragraph
@@ -1453,7 +1453,7 @@ describe "Attributes" do
       p.role?.should be_truthy
     end
 
-    pending "role? does not return true if role attribute is set on document" do
+    it "role? does not return true if role attribute is set on document" do
       input = <<-EOS
       :role: lead
 
@@ -1490,7 +1490,7 @@ describe "Attributes" do
       p.has_role?("lead").should be_truthy
     end
 
-    pending "has_role? does not look for role defined as document attribute" do
+    it "has_role? does not look for role defined as document attribute" do
       input = <<-EOS
       :role: lead abstract
 
@@ -1523,7 +1523,7 @@ describe "Attributes" do
       p.roles.empty?.should be_truthy
     end
 
-    pending "roles does not return value of roles document attribute" do
+    it "roles does not return value of roles document attribute" do
       input = <<-EOS
       :role: story lead
 
@@ -1561,7 +1561,7 @@ describe "Attributes" do
       para.attributes["role"].should eq("lead")
     end
 
-    pending "id, role and options attributes can be specified on block style using shorthand syntax" do
+    it "id, role and options attributes can be specified on block style using shorthand syntax" do
       input = <<-EOS
       [literal#first.lead%step]
       A literal paragraph.
@@ -1575,7 +1575,7 @@ describe "Attributes" do
       para.attributes.has_key?("options").should be_falsey
     end
 
-    pending "id, role and options attributes can be specified using shorthand syntax on block style using multiple block attribute lines" do
+    it "id, role and options attributes can be specified using shorthand syntax on block style using multiple block attribute lines" do
       input = <<-EOS
       [literal]
       [#first]
@@ -1620,7 +1620,7 @@ describe "Attributes" do
       para.attributes.has_key?("options").should be_falsey
     end
 
-    pending "roles specified using shorthand syntax on block style across multiple lines should be additive" do
+    it "roles specified using shorthand syntax on block style across multiple lines should be additive" do
       input = <<-EOS
       [.role1]
       [.role2.role3]
@@ -1632,7 +1632,7 @@ describe "Attributes" do
       para.attributes["role"].should eq("role1 role2 role3")
     end
 
-    pending "setting a role using the role attribute replaces any existing roles" do
+    it "setting a role using the role attribute replaces any existing roles" do
       input = <<-EOS
       [.role1]
       [role=role2]

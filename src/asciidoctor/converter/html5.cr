@@ -56,7 +56,18 @@ module Asciidoctor
         if transform == "document" && node.is_a?(Document) && !node.attr?("standalone")
           transform = "embedded"
         end
-        dispatch(node, transform)
+        output = dispatch(node, transform)
+        # Invoke postprocessors if this is a document conversion
+        if (transform == "document" || transform == "embedded") && node.is_a?(Document)
+          if (ext = node.extensions) && ext.postprocessors?
+            ext.postprocessors.each do |processor_ext|
+              if (processor = processor_ext.instance) && processor.is_a?(Extensions::Postprocessor)
+                output = processor.process(node, output)
+              end
+            end
+          end
+        end
+        output
       end
 
       def dispatch(node : AbstractNode, transform : String) : String
@@ -214,21 +225,106 @@ Your browser does not support the audio tag.
         result << %(<div#{id_attr}#{class_attr}>)
         result << %(<div class="title">#{node.title}</div>) if node.is_a?(AbstractBlock) && node.title?
 
-        # Simplified dlist rendering - full implementation would handle qanda, horizontal, etc.
-        result << "<dl>"
-        if node.is_a?(List)
-          node.items.each do |item|
-            if item.is_a?(ListItem)
-              result << %(<dt>#{item.text || ""}</dt>)
-              if item.blocks?
-                result << "<dd>"
-                result << (item.content || "")
-                result << "</dd>"
+        if style == "qanda"
+          result << "<ol>"
+          if node.is_a?(List)
+            items = node.items
+            i = 0
+            while i < items.size
+              item = items[i]
+              if item.is_a?(ListItem) && (item.marker == "::" || item.marker.nil?)
+                result << "<li>"
+                result << %(<p><em>#{item.text || ""}</em></p>)
+                if i + 1 < items.size && items[i + 1].is_a?(ListItem) && items[i + 1].as(ListItem).marker == "desc"
+                  desc_item = items[i + 1].as(ListItem)
+                  result << "<p>#{desc_item.text.try(&.strip) || ""}</p>" unless (desc_item.text || "").strip.empty?
+                  i += 2
+                else
+                  i += 1
+                end
+                result << "</li>"
+                next
               end
+              i += 1
             end
           end
+          result << "</ol>"
+        elsif style == "horizontal"
+          # Horizontal dlist uses a table layout
+          label_width = node.is_a?(AbstractBlock) ? node.attr("labelwidth") : nil
+          item_width = node.is_a?(AbstractBlock) ? node.attr("itemwidth") : nil
+          strong_option = node.is_a?(AbstractBlock) ? node.option?("strong") : false
+          result << "<table>"
+          if label_width || item_width
+            result << "<colgroup>"
+            lw = label_width ? "#{label_width}%" : "15%"
+            iw = item_width ? "#{item_width}%" : "85%"
+            result << %(<col style="width: #{lw};">) 
+            result << %(<col style="width: #{iw};">)
+            result << "</colgroup>"
+          end
+          result << "<tbody>"
+          if node.is_a?(List)
+            items = node.items
+            i = 0
+            while i < items.size
+              item = items[i]
+              if item.is_a?(ListItem) && (item.marker == "::" || item.marker.nil?)
+                result << "<tr>"
+                term_text = item.text || ""
+                term_text = "<strong>#{term_text}</strong>" if strong_option
+                result << %(<td class="hdlist1">#{term_text}</td>)
+                result << %(<td class="hdlist2">)
+                if i + 1 < items.size && items[i + 1].is_a?(ListItem) && items[i + 1].as(ListItem).marker == "desc"
+                  desc_item = items[i + 1].as(ListItem)
+                  result << "<p>#{desc_item.text || ""}</p>" unless (desc_item.text || "").empty?
+                  result << (desc_item.content || "") if desc_item.blocks?
+                  i += 2
+                else
+                  i += 1
+                end
+                result << "</td>"
+                result << "</tr>"
+                next
+              end
+              i += 1
+            end
+          end
+          result << "</tbody>"
+          result << "</table>"
+        else
+          result << "<dl>"
+          if node.is_a?(List)
+            items = node.items
+            i = 0
+            while i < items.size
+              item = items[i]
+              if item.is_a?(ListItem)
+                marker = item.marker
+                if marker == "::" || marker.nil?
+                  # Term (dt)
+                  result << %(<dt>#{item.text || ""}</dt>)
+                  # Check if next item is a description (dd)
+                  if i + 1 < items.size && items[i + 1].is_a?(ListItem) && items[i + 1].as(ListItem).marker == "desc"
+                    desc_item = items[i + 1].as(ListItem)
+                    result << "<dd>"
+                    if desc_item.blocks?
+                      result << "<p>#{desc_item.text || ""}</p>" unless (desc_item.text || "").empty?
+                      result << (desc_item.content || "")
+                    else
+                      result << "<p>#{desc_item.text || ""}</p>" unless (desc_item.text || "").empty?
+                    end
+                    result << "</dd>"
+                    i += 2
+                    next
+                  end
+                end
+              end
+              i += 1
+            end
+          end
+          result << "</dl>"
         end
-        result << "</dl>"
         result << "</div>"
         result.join("\n")
       end
@@ -294,15 +390,28 @@ Your browser does not support the audio tag.
         noheader = node.is_a?(Document) ? node.noheader : node.attr?("noheader")
         unless noheader
           result << %(<div id="header">)
-          if node.is_a?(Document) && node.header?
-            result << %(<h1>#{node.header.not_nil!.title}</h1>) unless node.notitle
+          if node.is_a?(Document)
+            if node.header?
+              result << %(<h1>#{node.header.not_nil!.title}</h1>) unless node.notitle
+            end
+            # Generate TOC in header if toc-placement is auto (default)
+            if node.sections? && node.attr?("toc") && node.attr?("toc-placement", "auto")
+              toc_class = node.attr("toc-class", "toc")
+              toc_title = node.attr("toc-title") || "Table of Contents"
+              result << %(<div id="toc" class="#{toc_class}">\n<div id="toctitle">#{toc_title}</div>\n#{convert_outline(node) || ""}\n</div>)
+            end
           end
           result << "</div>"
         end
 
         # Content
         content = node.is_a?(AbstractBlock) ? (node.content || "") : ""
-        result << %(<div id="content">\n#{content}\n</div>)
+        max_width_style = if node.is_a?(Document) && (mw = node.attr("max-width"))
+          %( style="max-width: #{mw};")
+        else
+          ""
+        end
+        result << %(<div id="content"#{max_width_style}>\n#{content}\n</div>)
 
         # Footer
         nofooter = node.is_a?(Document) ? node.nofooter : node.attr?("nofooter")
@@ -706,10 +815,10 @@ Your browser does not support the audio tag.
         if node.is_a?(AbstractBlock)
           doc = node.document
           if doc.attr?("toc-placement", "preamble") && doc.sections? && doc.attr?("toc")
-            toc = %(\n<div id="toc" class="#{doc.attr("toc-class", "toc")}">\n<div id="toctitle">#{doc.attr("toc-title") || "Table of Contents"}</div>\n#{convert_outline(doc) || ""}\n</div>)
+            toc = %(<div id="toc" class="#{doc.attr("toc-class", "toc")}">\n<div id="toctitle">#{doc.attr("toc-title") || "Table of Contents"}</div>\n#{convert_outline(doc) || ""}\n</div>\n)
           end
         end
-        %(<div id="preamble">\n<div class="sectionbody">\n#{content}\n</div>#{toc}\n</div>)
+        %(<div id="preamble">\n#{toc}<div class="sectionbody">\n#{content}\n</div>\n</div>)
       end
 
       def convert_quote(node : AbstractNode) : String
@@ -813,7 +922,13 @@ Your browser does not support the audio tag.
         classes << node.attr("float").not_nil! if node.attr?("float")
         classes << node.role.not_nil! if node.role
         class_attr = %( class="#{classes.join(" ")}")
-        width_attr = ""
+        # Add width style if width is not 100%
+        tablepcwidth = node.attr("tablepcwidth")
+        width_attr = if tablepcwidth && tablepcwidth != "100"
+                       %( style="width: #{tablepcwidth}%;")
+                     else
+                       ""
+                     end
 
         result << %(<table#{id_attr}#{class_attr}#{width_attr}>)
         result << %(<caption class="title">#{node.captioned_title}</caption>) if node.title?
@@ -849,10 +964,23 @@ Your browser does not support the audio tag.
                 else
                   raw_content = cell.content
                   cell_content_parts = raw_content.is_a?(Array) ? raw_content : [raw_content]
-                  cell_content = cell_content_parts.empty? ? "" : %(<p class="tableblock">#{cell_content_parts.join("</p>\n<p class=\"tableblock\">")}</p>)
+                  base_content = cell_content_parts.empty? ? "" : %(<p class="tableblock">#{cell_content_parts.join("</p>\n<p class=\"tableblock\">")}</p>)
+                  # Apply cell style wrapping
+                  cell_content = case cell.cell_style
+                  when :emphasis, :e
+                    %(<p class="tableblock"><em>#{cell_content_parts.join}</em></p>)
+                  when :monospaced, :m
+                    %(<p class="tableblock"><code>#{cell_content_parts.join}</code></p>)
+                  when :strong, :s
+                    %(<p class="tableblock"><strong>#{cell_content_parts.join}</strong></p>)
+                  when :verse
+                    %(<div class="verse">#{cell.text || ""}</div>)
+                  else
+                    base_content
+                  end
                 end
               end
-              cell_tag = (tsec == "head" || cell.style == :header) ? "th" : "td"
+              cell_tag = (tsec == "head" || cell.cell_style == :header) ? "th" : "td"
               halign = cell.attr("halign") || "left"
               valign = cell.attr("valign") || "top"
               cell_class = %( class="tableblock halign-#{halign} valign-#{valign}")

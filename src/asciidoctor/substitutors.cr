@@ -348,15 +348,144 @@ module Asciidoctor
             else
               return text
             end
-      text.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
+      attribute_missing = doc.attr("attribute-missing", "skip")
+      # For drop-line mode, process line by line
+      if attribute_missing == "drop-line" && text.includes?('\n')
+        lines = text.split('\n')
+        processed_lines = lines.compact_map do |line|
+          next line unless line.includes?(ATTR_REF_HEAD)
+          processed = line.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
+            attr_name = md[1].downcase
+            if (val = doc.attributes[attr_name]?)
+              val
+            elsif (val = INTRINSIC_ATTRIBUTES[attr_name]?)
+              val
+            else
+              "\x00DROP_LINE\x00"
+            end
+          end
+          processed.includes?("\x00DROP_LINE\x00") ? nil : processed
+        end
+        return processed_lines.join('\n')
+      end
+      # Handle {counter:name}, {counter:name:seed}, {counter2:name}, {counter2:name:seed} macros
+      if text.includes?("{counter")
+        text = text.gsub(/\{(counter2?):(\p{L}[\p{L}\d_-]*)(?::([^}]*))?\}/) do |match_str, md|
+          macro_name = md[1]
+          counter_name = md[2]
+          seed = md[3]?
+          val = doc.counter(counter_name, seed)
+          if macro_name == "counter2"
+            "" # silent counter
+          else
+            val.to_s
+          end
+        end
+        return text if text.empty?
+      end
+      # Handle {set:name:value} and {set:name!} macros first
+      attribute_undefined = doc.attr("attribute-undefined", "drop-line")
+      if text.includes?("{set:")
+        if text.includes?('\n')
+          # Multi-line: process line by line
+          lines = text.split('\n')
+          processed_lines = lines.compact_map do |line|
+            next line unless line.includes?("{set:")
+            has_unset = false
+            processed = line.gsub(/\{set:([\p{L}\d_][\p{L}\d_-]*)(!|:[^}]*)?\}/) do |match_str, md|
+              attr_name = md[1].downcase
+              modifier = md[2]?
+              if modifier == "!"
+                doc.attributes.delete(attr_name)
+                has_unset = true
+                ""
+              elsif modifier.nil?
+                # {set:foo} with no value assigns empty string
+                doc.attributes[attr_name] = ""
+                ""
+              elsif modifier.starts_with?(":")
+                doc.attributes[attr_name] = modifier[1..]
+                ""
+              else
+                ""
+              end
+            end
+            # Drop line if it contained an unset macro and attribute-undefined is drop-line
+            if has_unset && attribute_undefined == "drop-line"
+              nil
+            else
+              processed.strip.empty? ? nil : processed
+            end
+          end
+          text = processed_lines.join('\n')
+        else
+          has_unset = false
+          text = text.gsub(/\{set:([\p{L}\d_][\p{L}\d_-]*)(!|:[^}]*)?\}/) do |match_str, md|
+            attr_name = md[1].downcase
+            modifier = md[2]?
+            if modifier == "!"
+              doc.attributes.delete(attr_name)
+              has_unset = true
+              ""
+            elsif modifier.nil?
+              # {set:foo} with no value assigns empty string
+              doc.attributes[attr_name] = ""
+              ""
+            elsif modifier && modifier.starts_with?(":")
+              doc.attributes[attr_name] = modifier[1..]
+              ""
+            else
+              ""
+            end
+          end
+          # If the entire line was just a set macro, mark for drop
+          if (has_unset && attribute_undefined == "drop-line") || text.strip.empty?
+            return ""
+          end
+        end
+      end
+      # For drop mode with multi-line text, process line by line
+      if attribute_missing == "drop" && text.includes?('\n')
+        lines = text.split('\n')
+        processed_lines = lines.compact_map do |line|
+          next line unless line.includes?(ATTR_REF_HEAD)
+          processed = line.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
+            attr_name = md[1].downcase
+            if (val = doc.attributes[attr_name]?)
+              val
+            elsif (val = INTRINSIC_ATTRIBUTES[attr_name]?)
+              val
+            else
+              ""
+            end
+          end
+          processed.strip.empty? ? nil : processed
+        end
+        return processed_lines.join('\n')
+      end
+      result = text.gsub(/\{([\p{L}\d_][\p{L}\d_-]*)\}/) do |match_str, md|
         attr_name = md[1].downcase
         if (val = doc.attributes[attr_name]?)
           val
         elsif (val = INTRINSIC_ATTRIBUTES[attr_name]?)
           val
         else
-          match_str
+          case attribute_missing
+          when "drop"
+            ""
+          when "drop-line"
+            # Single-line drop: return empty string for the whole text
+            "\x00DROP_LINE\x00"
+          else
+            match_str
+          end
         end
+      end
+      # Handle drop-line: if any part of the result contains the drop marker, return empty string
+      if result.includes?("\x00DROP_LINE\x00")
+        ""
+      else
+        result
       end
     end
 
@@ -392,7 +521,7 @@ module Asciidoctor
             attrlist = md[2]? || ""
             attrs = parse_inline_attributes(attrlist, ["alt", "width", "height"])
             attrs["target"] = target
-            attrs["alt"] ||= File.basename(target, File.extname(target))
+            attrs["alt"] ||= File.basename(target, File.extname(target)).tr("-_", " ")
             Inline.new(self.as(AbstractBlock), :image, nil,
               type: :image,
               target: target,
@@ -443,6 +572,27 @@ module Asciidoctor
         end
       end
 
+      # Inline link macros: mailto:addr[text] and link:url[text]
+      if result.includes?("mailto:") || (result.includes?("link:") && !result.includes?("://"))
+        result = result.gsub(InlineLinkMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            is_mailto = !md[1]?.nil?
+            if is_mailto
+              mailto_text = md[2]? || ""
+              target = "mailto:" + mailto_text
+            else
+              target = md[2]? || ""
+            end
+            link_text = md[3]? || ""
+            link_text = is_mailto ? mailto_text : target if link_text.empty?
+            Inline.new(self.as(AbstractBlock), :anchor, link_text,
+              type: :link, target: target).convert
+          end
+        end
+      end
+
       # Inline link macros and auto-detected URLs
       if result.includes?("://") || result.includes?("link:")
         result = result.gsub(InlineLinkRx) do |match_str, md|
@@ -450,11 +600,86 @@ module Asciidoctor
             match_str[1..]
           else
             prefix = md[1]? || ""
-            target = md[3]? || ""
-            link_text = md[5]? || md[6]? || md[7]? || target
+            scheme = md[3]? || ""
+            url_part = md[4]? || ""
+            target = scheme + url_part
+            link_text = md[5]? || md[7]? || md[8]? || target
             prefix = "" if prefix == "link:"
             Inline.new(self.as(AbstractBlock), :anchor, link_text,
               type: :link, target: target).convert
+          end
+        end
+      end
+
+      # Auto-detected email addresses (bare email without mailto: prefix)
+      if result.includes?("@")
+        result = result.gsub(InlineEmailRx) do |match_str, md|
+          if md[1]?  # preceded by \, >, :, / - leave as-is
+            match_str
+          else
+            address = match_str
+            target = "mailto:" + address
+            Inline.new(self.as(AbstractBlock), :anchor, address,
+              type: :link, target: target).convert
+          end
+        end
+      end
+
+      # Inline footnote macros: footnote:[text] and footnoteref:[id,text]
+      if result.includes?("footnote")
+        result = result.gsub(InlineFootnoteMacroRx) do |match_str, md|
+          if match_str.starts_with?(RS)
+            match_str[1..]
+          else
+            is_footnoteref = !md[1]?.nil?
+            id = md[2]? || ""
+            content = md[3]? || ""
+            if is_footnoteref
+              # deprecated footnoteref macro
+              if !content.empty?
+                parts = content.split(',', 2)
+                id = parts[0].strip
+                content = parts.size > 1 ? parts[1].strip : ""
+              end
+            end
+            doc = self.responds_to?(:document) ? self.document : nil
+            if doc
+              index : Int32 = 0
+              type : Symbol? = nil
+              target : String? = nil
+              fn_id : String? = id.empty? ? nil : id
+              if !id.empty?
+                # reference to existing footnote or new named footnote
+                existing = doc.footnotes.find { |fn| fn.id == id }
+                if existing
+                  index = existing.index
+                  content = existing.text || ""
+                  type = :xref
+                  target = id
+                  fn_id = nil
+                elsif !content.empty?
+                  index = doc.counter("footnote-number").to_i
+                  doc.footnotes << Document::Footnote.new(index, id, content)
+                  type = :ref
+                  target = nil
+                else
+                  type = :xref
+                  target = id
+                  fn_id = nil
+                end
+              elsif !content.empty?
+                index = doc.counter("footnote-number").to_i
+                doc.footnotes << Document::Footnote.new(index, nil, content)
+                type = nil
+                target = nil
+              else
+                next match_str
+              end
+              Inline.new(self.as(AbstractBlock), :footnote, content,
+                attributes: {"index" => index.to_s}, id: fn_id, target: target, type: type).convert
+            else
+              match_str
+            end
           end
         end
       end
@@ -503,8 +728,29 @@ module Asciidoctor
 
     # Substitute post replacements (hard line breaks).
     def sub_post_replacements(text : String) : String
-      if (self.responds_to?(:attributes) && (self.attributes["hardbreaks-option"]? || self.attributes["hardbreaks"]?)) ||
-         (self.responds_to?(:document) && (self.document.attributes["hardbreaks-option"]? || self.document.attributes["hardbreaks"]?))
+      # Check hardbreaks on self, parent chain, or document
+      # First check if hardbreaks is explicitly disabled on this block
+      hardbreaks_disabled = self.responds_to?(:attributes) &&
+        (self.attributes["hardbreaks"]? == "false" || self.attributes["hardbreaks-option"]? == "false")
+      has_hardbreaks = false
+      unless hardbreaks_disabled
+        has_hardbreaks = (self.responds_to?(:attributes) && (self.attributes["hardbreaks-option"]? == "" || self.attributes["hardbreaks"]? == "")) ||
+           (self.responds_to?(:document) && (self.document.attributes["hardbreaks-option"]? == "" || self.document.attributes["hardbreaks"]? == ""))
+        unless has_hardbreaks
+          # Check parent chain for hardbreaks-option
+          if self.responds_to?(:parent)
+            p = self.parent
+            while p
+              if p.responds_to?(:attributes) && (p.attributes["hardbreaks-option"]? == "" || p.attributes["hardbreaks"]? == "")
+                has_hardbreaks = true
+                break
+              end
+              p = p.responds_to?(:parent) ? p.parent : nil
+            end
+          end
+        end
+      end
+      if has_hardbreaks
         lines = text.split("\n", remove_empty: false)
         return text if lines.size < 2
         last = lines.pop
@@ -517,7 +763,7 @@ module Asciidoctor
         end
         result << last
         result.join("\n")
-      elsif text.includes?(PLUS_CHAR) && text.includes?(HARD_LINE_BREAK)
+      elsif !hardbreaks_disabled && text.includes?(PLUS_CHAR) && text.includes?(HARD_LINE_BREAK)
         text.gsub(HardLineBreakRx) do |match_str, md|
           Inline.new(self.as(AbstractBlock), :break, md[1], type: :line).convert
         end

@@ -97,7 +97,11 @@ module Asciidoctor
             section.caption = "#{appendix_caption} #{section.numeral}: "
           end
         elsif sectname == "chapter"
-          section.numeral = (section.index + 1).to_s
+          # NOTE chapters in a book doctype are sequential even for multi-part books (see #979)
+          doc = section.document
+          STDERR.puts "chapter #{section.title}: doc.object_id=#{doc.object_id} chapter-number attr=#{doc.attributes["chapter-number"]?.inspect}"
+          section.numeral = doc.counter("chapter-number", 1).to_s
+          STDERR.puts "  -> numeral=#{section.numeral}"
         else
           section.numeral = @next_section_ordinal.to_s
           @next_section_ordinal += 1
@@ -157,6 +161,7 @@ module Asciidoctor
 
     # Delegate to the converter to convert this block.
     def convert : String
+      document.playback_attributes(@attributes)
       if c = document.converter
         c.convert(self)
       else
