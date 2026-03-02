@@ -1,0 +1,381 @@
+= Rapport des 132 tests en attente — AsciiDoctor Crystal
+:doctype: article
+:toc: left
+:toc-title: Table des matières
+:sectnums:
+:icons: font
+
+== Résumé exécutif
+
+La suite de tests du projet AsciiDoctor Crystal compte actuellement **2224 exemples**, dont **132 restent en attente** (`pending`). Ces tests documentent des fonctionnalités de l'implémentation Ruby originale qui ne sont pas encore portées en Crystal. Ils sont répartis en **13 catégories** selon la fonctionnalité manquante ou la raison de l'attente.
+
+[cols="3,1,2", options="header"]
+|===
+|Catégorie | Tests | Difficulté estimée
+
+|Intégration des syntax highlighters (CodeRay, Rouge, Prettify, HTML-Pipeline)
+|33
+|Élevée — dépendances externes
+
+|Moteurs de templates (Haml, Slim, ERB)
+|16
+|Élevée — architecture de plugins
+
+|Directives `include::` et `safe mode`
+|15
+|Moyenne — parseur et sécurité
+
+|Substitutions d'attributs avancées
+|10
+|Moyenne — macros `pass`, guillemets simples
+
+|Fonctionnalités avancées des tables
+|8
+|Moyenne — colspan, rowspan, cellules AsciiDoc
+
+|Compteurs avancés
+|6
+|Faible à moyenne — Unicode et multi-caractères
+
+|API Asciidoctor
+|4
+|Faible — surcharges de méthodes
+
+|Backend DocBook (abstracts)
+|4
+|Faible — convertisseur DocBook5
+
+|Backend Manpage (échappement)
+|4
+|Faible — `manify` et backslashes
+
+|Comportement du parseur (paragraphes)
+|5
+|Faible — choix de conception documentés
+
+|Listes imbriquées
+|2
+|Moyenne — parseur de listes
+
+|Directives conditionnelles
+|11
+|Moyenne — préprocesseur
+
+|Divers (attributs, API, TOC)
+|14
+|Variable
+|===
+
+== Intégration des Syntax Highlighters (33 tests)
+
+=== Contexte
+
+Ces 33 tests dans `spec/asciidoctor/syntax_highlighter_spec.cr` sont tous marqués `pending` avec la note `# Porting note: Depends on <gem> gem`. Ils testent l'intégration d'AsciiDoctor avec des bibliothèques de coloration syntaxique externes qui n'existent pas encore en Crystal.
+
+=== Tests Prettify (1 test)
+
+Le test `should add prettyprint class when source-highlighter is prettify` vérifie que les blocs de code reçoivent la classe CSS `prettyprint` et l'attribut `data-lang` lorsque `source-highlighter=prettify` est défini. Prettify est une bibliothèque JavaScript côté client, donc l'implémentation nécessite seulement de générer les attributs HTML corrects sans dépendance externe.
+
+=== Tests CodeRay (13 tests)
+
+CodeRay est un gem Ruby de coloration syntaxique. Les 13 tests couvrent la coloration de base, la numérotation de lignes, la mise en évidence de lignes spécifiques, les marqueurs de callout, les stylesheets CSS inline, et la préservation des placeholders de passthrough. L'implémentation nécessiterait un port Crystal de CodeRay ou l'utilisation d'une bibliothèque équivalente.
+
+=== Tests HTML Pipeline (1 test)
+
+Le test `should set lang attribute on pre when source-highlighter is html-pipeline` vérifie que l'attribut `lang` est ajouté à l'élément `<pre>`. HTML-Pipeline est un système de transformation de contenu HTML.
+
+=== Tests Rouge (18 tests)
+
+Rouge est le syntax highlighter le plus utilisé avec AsciiDoctor. Les 18 tests couvrent la coloration de base, les lexers mixtes (HTML+JavaScript), les options PHP (`start_inline`), la numérotation de lignes, les modes inline et table, et la restauration des marqueurs de callout. Rouge est disponible en tant que gem Ruby uniquement.
+
+=== Fonctionnalité manquante
+
+L'architecture d'extension des syntax highlighters d'AsciiDoctor repose sur un système de registre (`SyntaxHighlighter.register`) et d'adaptateurs. En Crystal, il faudrait implémenter ce système de registre et créer des adaptateurs pour chaque highlighter, soit en portant les bibliothèques, soit en utilisant des outils système (comme `pygments` en ligne de commande).
+
+== Moteurs de Templates (16 tests)
+
+=== Contexte
+
+Les 16 tests dans `spec/asciidoctor/converter_spec.cr` testent la capacité d'AsciiDoctor à utiliser des templates Haml, Slim, et ERB pour remplacer les convertisseurs intégrés. Cette fonctionnalité permet une personnalisation complète de la sortie sans modifier le code source.
+
+=== Tests Haml (2 tests)
+
+Les tests vérifient que le format Haml est correctement configuré pour les backends `html5` (format `html5`) et `docbook` (format `xhtml`).
+
+=== Tests Slim (7 tests)
+
+Les tests couvrent la résolution des includes dans les répertoires de templates, la coercition de `template_dirs` en tableau, la configuration du format (`html` pour html5, `nil` pour docbook), la synchronisation du `safe mode`, et les options personnalisées du moteur.
+
+=== Tests ERB (2 tests)
+
+Les tests vérifient le chargement des templates ERB via `ERBTemplate` (par défaut) et `ErubiTemplate` (quand `eruby=erubi`).
+
+=== Tests d'intégration générale (5 tests)
+
+Les tests `should load Haml templates for default backend`, `should load Slim templates for default backend`, `should load Slim templates for docbook5 backend`, `should use Slim templates in place of built-in templates`, et `should be able to override the outline using a custom template` vérifient le chargement et l'utilisation effectifs des templates.
+
+=== Fonctionnalité manquante
+
+L'implémentation nécessite un système de chargement de templates (`TemplateConverter`) qui peut charger des fichiers `.haml`, `.slim`, ou `.erb` depuis un répertoire, les compiler, et les utiliser à la place des méthodes `convert_*` intégrées. En Crystal, il n'existe pas d'équivalent direct à ces moteurs de templates Ruby.
+
+== Directives `include::` et Safe Mode (15 tests)
+
+=== Directives `include::` (10 tests dans `reader_spec.cr`)
+
+Ces tests vérifient le comportement des directives `include::` dans différents contextes de sécurité.
+
+[cols="2,3", options="header"]
+|===
+|Test | Raison de l'attente
+
+|`should replace include directive with link macro in default safe mode`
+|En mode `safe`, les includes doivent être remplacés par des liens `link::`
+
+|`should not add role to link macro used to replace include directive in compat mode`
+|Comportement spécifique au mode de compatibilité
+
+|`should escape spaces in target when generating link from include directive`
+|Encodage des espaces dans les URLs générées
+
+|`should preserve attrlist when replacing include directive with link macro`
+|Préservation des attributs lors de la transformation
+
+|`unresolved target referenced by include directive is skipped when optional option is set`
+|Option `optional` sur les directives include
+
+|`should skip include directive that references missing file if optional option is set`
+|Même fonctionnalité
+
+|`should replace include directive that references missing file with message`
+|Message d'erreur pour les fichiers manquants
+
+|`attributes are substituted in target of include directive`
+|Résolution des attributs dans le chemin de la directive
+
+|`escaped include directive is left unprocessed`
+|Échappement avec `\include::`
+
+|`push_include method should not fail if data is nil`
+|Robustesse de l'API `push_include`
+|===
+
+=== Safe Mode et attributs de taille (5 tests dans `attributes_spec.cr`)
+
+Ces tests vérifient que la taille des valeurs d'attributs est limitée en mode `SECURE` (`max-attribute-value-size=4096`) et que l'attribut `user-home` est résolu ou masqué selon le niveau de sécurité. Ces fonctionnalités nécessitent l'implémentation complète des niveaux de sécurité (`UNSAFE`, `SAFE`, `SERVER`, `SECURE`).
+
+== Substitutions d'Attributs Avancées (10 tests)
+
+=== Valeurs multi-lignes avec sauts de ligne (2 tests)
+
+Les tests `honors line break characters in multi-line values` et `should allow pass macro to surround a multi-line value` vérifient que les valeurs d'attributs sur plusieurs lignes avec `+\` préservent les sauts de ligne (`+\n`) dans la valeur finale. L'implémentation actuelle fusionne les lignes en supprimant les sauts de ligne.
+
+=== Macro `pass:` dans les valeurs d'attributs (2 tests)
+
+Les tests `resolves attributes and pass macro inside attribute value outside header` et `should allow pass macro to surround a multi-line value` vérifient que la macro `pass:a,q[...]` est correctement traitée dans les valeurs d'attributs définis en dehors du header. Cela nécessite l'intégration du traitement des macros passthrough dans `apply_attribute_value_subs`.
+
+=== Substitution dans les listes d'attributs de bloc (1 test)
+
+Le test `Attribute substitutions are performed on attribute list before parsing attributes` vérifie que `[{lead}]` est résolu en `[role="lead"]` avant le parsing de la liste d'attributs. Cela nécessite une passe de substitution d'attributs sur la ligne d'attributs de bloc avant son parsing.
+
+=== Attributs avec guillemets simples (3 tests)
+
+Les tests `normal substitutions are performed on single-quoted positional attribute`, `normal substitutions are performed on single-quoted named attribute`, et `normal substitutions are performed once on single-quoted named title attribute` vérifient que les valeurs entre guillemets simples dans les listes d'attributs de bloc subissent des substitutions normales (macros inline, formatage). Cela nécessite la détection des guillemets simples dans `parse_block_attribute_list` et l'application des substitutions appropriées.
+
+=== Échappement avec backslash et passthrough (2 tests)
+
+Les tests `does not disturb attribute-looking things escaped with backslash` et `does not disturb attribute-looking things escaped with literals` vérifient que `\{foo}` et `+++{foo}+++` ne sont pas substitués. Le premier test échoue à cause du XPath (le texte `{foo}` est bien généré mais le XPath ne le trouve pas dans le contexte standalone). Le second échoue car la macro `+++...+++` ne protège pas correctement les références d'attributs.
+
+== Fonctionnalités Avancées des Tables (8 tests)
+
+=== Colspan et rowspan (3 tests)
+
+Les tests `spans, alignments and styles`, `should handle table with colspan`, et `should handle table with rowspan` vérifient que les spécificateurs de span (`2+|`, `.2+|`) génèrent les attributs HTML `colspan` et `rowspan` corrects. Le parseur de cellules de table ne gère pas encore ces spécificateurs.
+
+=== Cellules répétées (1 test)
+
+Le test `supports repeating cells with 3*` vérifie que `3*|A` génère trois cellules identiques. Le parseur de cellules ne gère pas encore le spécificateur de répétition `N*`.
+
+=== Tables imbriquées (1 test)
+
+Le test `nested table` vérifie qu'une cellule avec le style `a` (AsciiDoc) contenant une table délimitée par `!===` génère deux éléments `<table>`. Cela nécessite le traitement récursif des cellules AsciiDoc.
+
+=== Style de cellule AsciiDoc (2 tests)
+
+Les tests `AsciiDoc table cell` (dans la section PSV) et `cell formatted with AsciiDoc style in CSV` vérifient que les cellules avec le style `a|` ou `[cols="1a"]` sont traitées comme du contenu AsciiDoc complet. Bien que le test `AsciiDoc table cell` ait été activé dans la session précédente, le test CSV reste en attente car il nécessite la combinaison du style `a` avec le format CSV.
+
+=== Style de cellule littérale (1 test)
+
+Le test `should handle table with literal cell style` vérifie que les cellules avec le style `l` (literal) génèrent un élément `<pre>`. Le convertisseur de cellules de table ne gère pas encore ce style.
+
+== Compteurs Avancés (6 tests)
+
+=== Compteurs avec valeurs Unicode et multi-caractères (4 tests)
+
+Les tests `increments counter with negative numeric value`, `increments counter with non-ASCII character value`, `increments counter with emoji character value`, et `increments counter with multi-character value` vérifient l'incrémentation de compteurs avec des valeurs non-ASCII. La méthode `counter` dans `document.cr` gère déjà les caractères ASCII simples, mais pas les caractères Unicode multi-octets ni les séquences multi-caractères.
+
+=== Compteur avancé par entrée d'attribut (1 test)
+
+Le test `counter value can be advanced by attribute entry` vérifie que `:mycounter: 10` dans le document avance le compteur à 10 (sans le réinitialiser). L'implémentation actuelle réinitialise le compteur lors d'une entrée d'attribut.
+
+=== Compteur dans les documents imbriqués (1 test)
+
+Le test `nested document should use counter from parent document` vérifie que les cellules de table avec le style `a` (documents AsciiDoc imbriqués) partagent les compteurs du document parent pour la numérotation des figures. Cela nécessite la propagation du contexte de compteur aux documents imbriqués.
+
+== API Asciidoctor (4 tests)
+
+=== Chargement depuis `File` et `IO` (2 tests)
+
+Les tests `should load input file` et `should load input IO` vérifient que `Asciidoctor.load` accepte un objet `File` ou `IO::Memory` comme source. L'API actuelle n'accepte que des `String` ou des `Array(String)`. Il faudrait ajouter des surcharges de méthode pour ces types.
+
+=== Attributs `nil` (1 test)
+
+Le test `should accept attributes as nil` vérifie que `Asciidoctor.load("text", {"attributes" => nil})` ne lève pas d'erreur. En Crystal, `Hash(String, String)` ne peut pas contenir de valeur `nil`, ce qui rend ce test fondamentalement incompatible avec le système de types de Crystal. Une solution serait d'utiliser `Hash(String, String?)` ou de traiter `nil` comme une chaîne vide.
+
+=== Attributs TOC normalisés (1 test)
+
+Le test `loads a document with attributes` vérifie que `{"toc" => "left,icons=font"}` est correctement normalisé en `toc-position=content`, `toc-placement=macro`, et `icons=font`. La logique de normalisation des attributs TOC dans `save_attributes` n'est pas encore complète.
+
+== Backend DocBook (Abstracts) (4 tests)
+
+=== Abstracts dans les documents DocBook (3 tests dans `preamble_spec.cr`)
+
+Les tests `should move abstract in implicit preface to info tag when converting to DocBook`, `should move abstract as first section to info tag when converting to DocBook`, et `should move abstract in preface section to info tag when converting to DocBook` vérifient que les blocs `[abstract]` sont déplacés dans la balise `<info>` du document DocBook5. Le convertisseur DocBook5 ne gère pas encore ce déplacement.
+
+=== Section spéciale avec shorthand (1 test dans `attributes_spec.cr`)
+
+Le test `id attribute specified using shorthand syntax should not create a special section` vérifie que `[#idname]` sur une section ne crée pas une section spéciale dans le backend DocBook. Ce test nécessite la vérification XPath avec le namespace XML DocBook.
+
+== Backend Manpage (Échappement) (4 tests)
+
+=== Échappement des macros brutes (1 test)
+
+Le test `should escape raw macro` vérifie que les lignes commençant par `.` (macros troff) sont échappées avec `\&` pour éviter leur interprétation par troff. La méthode `manify` ne gère pas encore cet échappement.
+
+=== Backslashes littéraux (2 tests)
+
+Les tests `should preserve literal backslashes in content` et `should escape literal escape sequence` vérifient que les backslashes dans le contenu sont correctement transformés en `\(rs` (séquence d'échappement troff pour le backslash) et que les séquences d'échappement troff accidentelles (comme `\fB`) sont préfixées par `\(rs`.
+
+=== Normalisation des espaces dans les items de liste (1 test)
+
+Le test `should normalize whitespace in a list item` vérifie que les espaces en début de ligne dans les lignes de continuation d'un item de liste sont supprimés. Le problème est que les lignes de continuation indentées sont parsées comme un bloc `literal` séparé au lieu d'être jointes au texte de l'item de liste.
+
+== Comportement du Parseur (Paragraphes) (5 tests)
+
+Ces 5 tests dans `paragraphs_spec.cr` documentent des différences de comportement **intentionnelles** entre l'implémentation Crystal et le Ruby original. Ils sont maintenus en `pending` comme documentation de ces divergences.
+
+[cols="2,3", options="header"]
+|===
+|Test | Différence documentée
+
+|`should not drop leading space on first line of a paragraph`
+|Crystal traite les paragraphes indentés comme des `literalblock`, contrairement à Ruby
+
+|`should treat a paragraph that begins with a space as a normal paragraph`
+|Même différence — comportement intentionnel en Crystal
+
+|`should treat a paragraph that begins with a right angle bracket as a normal paragraph`
+|Crystal n'échappe pas `>` en `&gt;` dans les paragraphes
+
+|`should not recognize a lone right angle bracket as a blockquote`
+|Même différence d'échappement HTML
+
+|`should not create a paragraph that contains only a hard line break`
+|Crystal génère 2 `<p>` au lieu de 1 pour `+\n\nparagraph`
+|===
+
+== Listes Imbriquées (2 tests)
+
+=== Listes de description imbriquées avec délimiteurs différents (1 test)
+
+Le test `nested description list using different delimiters` dans `list_spec.cr` vérifie que `term1::` et `term1a:::` créent deux niveaux de `<dl>` imbriqués. Le parseur de listes ne distingue pas correctement les niveaux de délimiteurs différents (`::` vs `:::`).
+
+=== Normalisation des espaces dans les items de liste manpage (1 test)
+
+Voir la section Backend Manpage ci-dessus.
+
+== Directives Conditionnelles (11 tests)
+
+=== Désactivation du traitement des directives (1 test)
+
+Le test `should not process conditional directives if disabled` dans `reader_spec.cr` vérifie que `Asciidoctor.load(input, {"parse" => "false"})` ne traite pas les directives `ifdef::`. Le comportement actuel traite les directives même quand `parse=false`.
+
+=== Autres tests conditionnels (10 tests)
+
+Les 10 autres tests couvrent des cas avancés de directives conditionnelles : `ifdef::` avec plusieurs attributs, `ifeval::` avec des comparaisons, `ifndef::`, et les directives imbriquées. Ces tests sont en attente car le préprocesseur ne gère pas encore tous ces cas.
+
+== Divers (14 tests)
+
+=== Attributs du document (5 tests dans `attributes_spec.cr`)
+
+[cols="2,3", options="header"]
+|===
+|Test | Raison
+
+|`can only access a positional attribute from the attributes hash`
+|`attr("1")` retourne la valeur au lieu de `nil` pour les attributs positionnels
+
+|`set_attr should set header attribute in loaded document`
+|Test commenté — nécessite `Asciidoctor.load` puis `set_attr` puis `convert`
+
+|`set_attribute should update backend attributes`
+|`set_attribute("backend", "docbook5")` ne met pas à jour `backend-html5` et `backend-docbook5`
+
+|`verify toc attribute matrix`
+|Logique de normalisation des attributs TOC (`toc-position`, `toc-placement`, `toc-class`) incomplète
+
+|`should allow compat-mode to be set and unset in middle of document`
+|Le mode de compatibilité n'est pas encore implémenté
+|===
+
+=== Attributs de backend (2 tests dans `attributes_spec.cr`)
+
+Les tests `backend attributes defined in document options overrides backend attribute in document` et `set_attribute should update backend attributes` vérifient que les attributs dérivés du backend (`backend-html5`, `basebackend`, `basebackend-html`) sont correctement mis à jour lors du changement de backend.
+
+=== Substitution `{set:foo:bar}` avec valeur (1 test)
+
+Le test `assigns attribute defined in attribute reference with set prefix and value` vérifie que `{set:foo:bar}` assigne `bar` à `foo` et que `{foo}` est remplacé par `bar` dans le même paragraphe. L'implémentation actuelle de `{set:foo:bar}` assigne correctement la valeur, mais le paragraphe résultant contient une ligne vide au lieu du texte `bar`.
+
+=== Désassignation `{set:foo!}` (1 test)
+
+Le test `unassigns attribute defined in attribute reference with set prefix` vérifie que `{set:foo!}` désassigne l'attribut `foo`. Ce test est commenté dans le fichier spec.
+
+=== Attributs `docdir` et `docfile` selon le safe mode (2 tests)
+
+Les tests `does not show docdir and shows relative docfile if safe mode is SERVER or greater` et `shows absolute docdir and docfile paths if safe mode is less than SERVER` vérifient que les attributs `docdir` et `docfile` sont filtrés selon le niveau de sécurité.
+
+=== Compteur et attributs verrouillés (3 tests)
+
+Les tests `should not allow counter to modify locked attribute`, `should not allow counter to modify built-in locked attribute`, et `should not allow counter2 to modify built-in locked attribute` vérifient que les compteurs ne peuvent pas modifier les attributs verrouillés (définis via l'API). L'implémentation actuelle ne vérifie pas si l'attribut est verrouillé avant d'incrémenter le compteur.
+
+== Priorités de développement recommandées
+
+Sur la base de la difficulté estimée et de l'impact sur la compatibilité avec le Ruby original, voici les priorités recommandées pour les prochaines sessions de développement.
+
+[cols="1,3,2", options="header"]
+|===
+|Priorité | Fonctionnalité | Tests activables
+
+|1 (Faible effort)
+|Corriger `attr("1")` pour les attributs positionnels, `set_attribute` pour les attributs de backend, compteurs et attributs verrouillés
+|~6 tests
+
+|2 (Effort moyen)
+|Substitution dans les listes d'attributs de bloc, guillemets simples, `{set:foo:bar}` avec valeur
+|~5 tests
+
+|3 (Effort moyen)
+|Colspan/rowspan dans les tables, cellules répétées `3*`, style de cellule `l`
+|~4 tests
+
+|4 (Effort moyen)
+|Directives `include::` (résolution d'attributs, fichiers optionnels, échappement)
+|~4 tests
+
+|5 (Effort élevé)
+|Moteurs de templates (Haml, Slim, ERB)
+|16 tests
+
+|6 (Effort élevé)
+|Intégration des syntax highlighters
+|33 tests
+|===
