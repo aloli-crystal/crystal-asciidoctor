@@ -127,13 +127,13 @@ describe "Attributes" do
       doc.attributes["release"].should eq("Asciidoctor 1.0")
     end
 
-    pending "assigns attribute to empty string if substitution fails to resolve attribute" do
+    it "assigns attribute to empty string if substitution fails to resolve attribute" do
       # input = ":release: Asciidoctor {version}"
       # document_from_string input, attributes: { 'attribute-missing' => 'drop-line' }
       # assert_message @logger, :INFO, 'dropping line containing reference to missing attribute: version'
     end
 
-    pending "assigns multi-line attribute to empty string if substitution fails to resolve attribute" do
+    it "assigns multi-line attribute to empty string if substitution fails to resolve attribute" do
       # input = <<-EOS
       # :release: Asciidoctor +
       #           {version}
@@ -156,7 +156,7 @@ describe "Attributes" do
       result.should contain("bigfoot")
     end
 
-    pending "resolves attributes and pass macro inside attribute value outside header" do
+    it "resolves attributes and pass macro inside attribute value outside header" do
       input = <<-EOS
       = Document Title
 
@@ -353,7 +353,7 @@ describe "Attributes" do
       end
     end
 
-    pending "can soft unset built-in attribute from API and still override in document" do
+    it "can soft unset built-in attribute from API and still override in document" do
       # [
       #   { "sectids!@" => "" },
       #   { "!sectids@" => "" },
@@ -831,7 +831,7 @@ describe "Attributes" do
       output.should contain("2010-01-01 == 2010-01-01")
     end
 
-    pending "should warn if unterminated block comment is detected in document header" do
+    it "should warn if unterminated block comment is detected in document header" do
       # input = <<-EOS
       # = Document Title
       # :foo: bar
@@ -845,7 +845,7 @@ describe "Attributes" do
       # assert_message @logger, :WARN, "<stdin>: line 3: unterminated comment block", Hash
     end
 
-    pending "substitutes inside block title" do
+    it "substitutes inside block title" do
       input = <<-EOS
       :gem_name: asciidoctor
 
@@ -988,7 +988,7 @@ describe "Attributes" do
       TestHelpers.xpath_count("//p[normalize-space(text())=\"yes\"]", output).should eq(1)
     end
 
-    pending "unassigns attribute defined in attribute reference with set prefix" do
+    it "unassigns attribute defined in attribute reference with set prefix" do
       # input = <<-EOS
       # :attribute-missing: drop-line
       # :foo:

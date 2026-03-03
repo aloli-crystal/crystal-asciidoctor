@@ -84,7 +84,9 @@ module Asciidoctor
       @lines = @source_lines.reverse
       @mark = nil
       @look_ahead = 0
-      @process_lines = true
+      # Allow disabling line processing via opts[:process_lines]
+      process_lines_opt = opts[:process_lines]?
+      @process_lines = process_lines_opt.nil? ? true : (process_lines_opt == true)
       @unescape_next_line = false
       @unterminated = nil
       @saved = nil

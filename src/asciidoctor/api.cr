@@ -44,9 +44,30 @@ module Asciidoctor
     # Known option keys
     known_options = Set{"attributes", "backend", "doctype", "header_footer", "standalone", "safe", "sourcemap", "to_file", "parse", "base_dir"}
     # Treat unknown keys as document attributes
+    # Support values with embedded extra attributes: e.g. {"toc" => "left,icons=font"}
+    # parses as toc="left" and icons="font"
     options.each do |key, value|
       next if known_options.includes?(key)
-      attributes[key] = value
+      if value.includes?(",")
+        # Parse value as comma-separated attribute list
+        parts = value.split(",")
+        # First part is the value for the key itself
+        first_val = parts[0].strip
+        attributes[key] = first_val
+        # Remaining parts are additional attributes
+        parts[1..].each do |part|
+          part = part.strip
+          next if part.empty?
+          if part.includes?("=")
+            extra_key, _, extra_val = part.partition("=")
+            attributes[extra_key.strip] = extra_val.strip
+          else
+            attributes[part] = ""
+          end
+        end
+      else
+        attributes[key] = value
+      end
     end
 
     # Track if backend/doctype were explicitly set via options (to lock them)

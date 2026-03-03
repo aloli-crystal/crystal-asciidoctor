@@ -35,8 +35,7 @@ describe "Paragraphs" do
     output.should contain("a paragraph")
   end
 
-  pending "should not recognize a lone right angle bracket as a blockquote" do
-    # Convertisseur Crystal ne fait pas l'échappement HTML
+  it "should not recognize a lone right angle bracket as a blockquote" do
     input = ">"
     output = Asciidoctor.convert(input)
     output.should contain("<p>&gt;</p>")
@@ -66,8 +65,7 @@ describe "Paragraphs" do
     output.scan("<p>").size.should eq(2)
   end
 
-  pending "should not create a paragraph that contains only a hard line break" do
-    # Convertisseur Crystal génère 2 <p> au lieu de 1 (le + est traité comme un paragraphe)
+  it "should not create a paragraph that contains only a hard line break" do
     input = "+\n\nparagraph"
     output = Asciidoctor.convert(input)
     output.should contain("<p>paragraph</p>")

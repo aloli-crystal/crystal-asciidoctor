@@ -783,7 +783,9 @@ module Asciidoctor
     # Substitute quoted text (bold, italic, monospace, etc.).
     def sub_quotes(text : String) : String
       result = text
-      quote_subs = quote_subs_for(false)
+      doc = self.is_a?(Document) ? self.as(Document) : (self.responds_to?(:document) ? self.document : nil)
+      compat = doc ? doc.compat_mode? : false
+      quote_subs = quote_subs_for(compat)
       quote_subs.each do |type, scope, pattern|
         result = result.gsub(pattern) do |match_str, md|
           convert_quoted_text(md, type, scope)
@@ -975,7 +977,7 @@ module Asciidoctor
     # Build the quote substitution patterns.
     private def quote_subs_for(compat_mode : Bool) : Array(Tuple(Symbol, Symbol, Regex))
       qa = QUOTE_ATTR_LIST_RXT
-      [
+      subs = [
         {:strong, :unconstrained, /\\?(?:#{qa})?\*\*(.+?)\*\*/m},
         {:strong, :constrained, /(^|[^\p{Xwd};:}])(?:#{qa})?\*(\S|\S.*?\S)\*(?![\p{Xwd}])/m},
         {:double, :constrained, /(^|[^\p{Xwd};:}])(?:#{qa})?"`(\S|\S.*?\S)`"(?![\p{Xwd}])/m},
@@ -988,7 +990,14 @@ module Asciidoctor
         {:mark, :constrained, /(^|[^\p{Xwd}&;:}])(?:#{qa})?#(\S|\S.*?\S)#(?![\p{Xwd}])/m},
         {:superscript, :unconstrained, /\\?(?:#{qa})?\^(\S+?)\^/},
         {:subscript, :unconstrained, /\\?(?:#{qa})?~(\S+?)~/},
-      ]
+      ] of Tuple(Symbol, Symbol, Regex)
+      if compat_mode
+        # In compat-mode: +text+ is monospaced, 'text' is emphasis
+        subs << {:monospaced, :unconstrained, /\\?(?:#{qa})?\+\+(.+?)\+\+/m}
+        subs << {:monospaced, :constrained, /(^|[^\p{Xwd};:"'`}])(?:#{qa})?\+(\S|\S.*?\S)\+(?![\p{Xwd}"'`])/m}
+        subs << {:emphasis, :constrained, /(^|[^\p{Xwd};:}])(?:#{qa})?'(\S|\S.*?\S)'(?![\p{Xwd}])/m}
+      end
+      subs
     end
 
     # Highlight the source code in the given text using the syntax highlighter

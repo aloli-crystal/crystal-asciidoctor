@@ -600,6 +600,11 @@ module Asciidoctor
     def parse_block_metadata_lines(reader : Reader, document : Document, attributes : Hash(String, String) = {} of String => String) : Hash(String, String)
       while parse_block_metadata_line(reader, document, attributes)
         reader.advance
+        # Continue without blank line if next line is also metadata
+        next_line = reader.peek_line
+        if next_line && (next_line.starts_with?(':') || next_line.starts_with?('[') || next_line.starts_with?('.') || next_line.starts_with?("//"))
+          next
+        end
         reader.skip_blank_lines || break
       end
       attributes
@@ -938,13 +943,26 @@ module Asciidoctor
       if parse_metadata
         while parse_block_metadata_line(reader, document, attributes, text_only)
           reader.advance
-          reader.skip_blank_lines || return nil
+          # Continue without blank line if next line is also metadata
+          next_line = reader.peek_line
+          if next_line && (next_line.starts_with?(':') || next_line.starts_with?('[') || next_line.starts_with?('.') || next_line.starts_with?("//"))
+            next
+          end
+          # If no blank line but content follows, continue to parse the block
+          skipped2 = reader.skip_blank_lines
+          return nil unless skipped2 || reader.has_more_lines?
+          break unless skipped2
         end
       end
 
       reader.mark
       this_line = reader.read_line
       return nil unless this_line
+
+      # Ignore a lone list continuation (+) outside of a list context
+      if this_line == LIST_CONTINUATION && !parent.is_a?(ListItem)
+        return nil
+      end
 
       doc_attrs = document.attributes
       style = attributes["1"]? || attributes["style"]?
@@ -1154,7 +1172,7 @@ module Asciidoctor
           attributes.clear
           return nil
         end
-        if indented && style != "normal"
+        if indented && style != "normal" && !text_only
           lines = read_paragraph_lines(reader, text_only)
           adjust_indentation!(lines)
           block = Block.new(parent, :literal, content_model: ContentModel::Verbatim, source: lines)
@@ -1724,6 +1742,12 @@ module Asciidoctor
 
     # Parse a description list.
     def parse_description_list(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String) : List
+      parse_description_list_at_level(reader, parent, attributes, "::")
+    end
+
+    # Parse a description list at a given delimiter level.
+    # Handles nesting: when a deeper delimiter is encountered, a nested dlist is created.
+    private def parse_description_list_at_level(reader : Reader, parent : AbstractBlock, attributes : Hash(String, String), current_delimiter : String) : List
       list = List.new(parent, :dlist)
       list.attributes.merge!(attributes)
 
@@ -1731,37 +1755,70 @@ module Asciidoctor
         line = reader.peek_line
         break unless line
 
-        if (m = DescriptionListRx.match(line))
-          reader.advance
-          term_text = m[1]
-          delimiter = m[2]
-          desc_text = m[3]?
+        unless (m = DescriptionListRx.match(line))
+          break
+        end
 
-          term = ListItem.new(list, term_text)
-          term.marker = "::"
-          desc : ListItem? = nil
+        delimiter = m[2]
 
-          if desc_text && !desc_text.empty?
-            desc = ListItem.new(list, desc_text)
-            desc.marker = "desc"
+        # If delimiter is shorter than current level, we're done with this list
+        if delimiter.size < current_delimiter.size
+          break
+        end
+
+        # If delimiter is deeper than current level, create a nested list
+        # (this shouldn't happen at the start, but handle gracefully)
+        if delimiter.size > current_delimiter.size
+          # Create a nested list and attach it to the last term's description
+          nested_list = parse_description_list_at_level(reader, list, {} of String => String, delimiter)
+          # Attach nested list to the last description item if possible
+          if !list.items.empty?
+            last_item = list.items.last
+            if last_item.is_a?(ListItem)
+              last_item.blocks << nested_list
+            end
           else
-            # Read continuation for description
-            reader.skip_blank_lines
-            if reader.has_more_lines?
-              next_line = reader.peek_line
-              if next_line && !next_line.empty? && !DescriptionListRx.matches?(next_line) && !is_delimited_block?(next_line)
+            # No parent item yet, just add the nested list directly
+            list.items << nested_list
+          end
+          next
+        end
+
+        # Same level: consume the line and create the term
+        reader.advance
+        term_text = m[1]
+        desc_text = m[3]?
+
+        term = ListItem.new(list, term_text)
+        term.marker = current_delimiter
+        desc : ListItem? = nil
+
+        if desc_text && !desc_text.empty?
+          desc = ListItem.new(list, desc_text)
+          desc.marker = "desc"
+        else
+          # Check if next line is a deeper delimiter (nested list)
+          reader.skip_blank_lines
+          if reader.has_more_lines?
+            next_line = reader.peek_line
+            if next_line
+              if (nm = DescriptionListRx.match(next_line)) && nm[2].size > current_delimiter.size
+                # Next item is a nested list - create it as the description
+                nested_list = parse_description_list_at_level(reader, list, {} of String => String, nm[2])
+                desc = ListItem.new(list, "")
+                desc.marker = "desc"
+                desc.blocks << nested_list
+              elsif !next_line.empty? && !DescriptionListRx.matches?(next_line) && !is_delimited_block?(next_line)
                 reader.advance
                 desc = ListItem.new(list, next_line)
                 desc.marker = "desc"
               end
             end
           end
-
-          list.items << term
-          list.items << desc if desc
-        else
-          break
         end
+
+        list.items << term
+        list.items << desc if desc
       end
 
       list
@@ -2619,11 +2676,9 @@ module Asciidoctor
           resolved_value = doc.set_attribute(name, actual_value) || actual_value
           if attrs
             # Store attribute entry for playback during conversion.
-            # Do NOT copy the attribute directly into block_attributes (attrs[name] = ...)
-            # because that would propagate document attributes into block attributes.
-            # Ruby original only stores in :attribute_entries, not directly in attrs.
+            # Store the resolved value (after substitutions) so playback uses the correct value.
             existing = attrs["__attr_entries__"]?
-            entry_str = "#{name}\u0000#{actual_value}"
+            entry_str = "#{name}\u0000#{resolved_value}"
             attrs["__attr_entries__"] = existing ? "#{existing}\u0001#{entry_str}" : entry_str
           end
         else

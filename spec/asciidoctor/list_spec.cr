@@ -686,7 +686,7 @@ describe "Lists" do
   # Description lists - Nested lists
   # =========================================================================
   describe "Description lists - Nested lists" do
-    pending "nested description list using different delimiters" do
+    it "nested description list using different delimiters" do
       # Convertisseur Crystal ne gère pas correctement les description lists imbriquées
       input = "term1::\ndef1\nterm1a:::\ndef1a\nterm1b:::\ndef1b\nterm2::\ndef2"
       output = convert_string_to_embedded(input)

@@ -27,16 +27,26 @@ module Asciidoctor
         init_backend_traits(basebackend: "manpage", filetype: "man", htmlsyntax: "", outfilesuffix: ".man")
       end
 
-      def convert(node : AbstractNode) : String
-        case node
-        when Document then node.attributes.has_key?("embedded") ? convert_embedded(node) : convert_document(node)
-        when Section  then node.style == "discrete" ? convert_floating_title(node) : convert_section(node)
-        when Block    then convert_block(node)
-        when List     then convert_list(node)
-        when Table    then convert_table(node)
-        when Inline   then convert_inline(node)
-        else ""
+      def convert(node : AbstractNode, transform : String? = nil) : String
+        if transform == "embedded" && node.is_a?(Document)
+          convert_embedded(node)
+        elsif transform == "document" && node.is_a?(Document)
+          convert_document(node)
+        else
+          case node
+          when Document then node.attributes.has_key?("embedded") ? convert_embedded(node) : convert_document(node)
+          when Section  then node.style == "discrete" ? convert_floating_title(node) : convert_section(node)
+          when Block    then convert_block(node)
+          when List     then convert_list(node)
+          when Table    then convert_table(node)
+          when Inline   then convert_inline(node)
+          else ""
+          end
         end
+      end
+
+      def dispatch(node : AbstractNode, transform : String) : String
+        convert(node, transform)
       end
 
       def convert_admonition(node : AbstractBlock) : String

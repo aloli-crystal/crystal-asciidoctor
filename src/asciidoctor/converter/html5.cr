@@ -301,7 +301,8 @@ Your browser does not support the audio tag.
               item = items[i]
               if item.is_a?(ListItem)
                 marker = item.marker
-                if marker == "::" || marker.nil?
+                # A term has any dlist delimiter (::, :::, ::::, ;;) or nil; a description has marker == "desc"
+                if marker != "desc"
                   # Term (dt)
                   result << %(<dt>#{item.text || ""}</dt>)
                   # Check if next item is a description (dd)

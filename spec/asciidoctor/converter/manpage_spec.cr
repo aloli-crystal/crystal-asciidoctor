@@ -609,7 +609,7 @@ describe Asciidoctor::Converter::ManPageConverter do
       output.should contain("definition2")
     end
 
-    pending "should normalize whitespace in a list item" do
+    it "should normalize whitespace in a list item" do
       input = SAMPLE_MANPAGE_HEADER + "\n\n* Oh, here it goes again\n    I should have known,\n  should have known,\nshould have known again"
       output = manpage_convert(input)
       output.should contain("Oh, here it goes again\nI should have known,\nshould have known,\nshould have known again")

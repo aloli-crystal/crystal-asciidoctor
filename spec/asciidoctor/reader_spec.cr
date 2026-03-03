@@ -348,6 +348,8 @@ describe Asciidoctor::Reader do
 
   context "Conditional Directives" do
     pending "should not process conditional directives if disabled" do
+      # En Ruby AsciiDoctor, parse:false avec process_lines=false ne traite pas les directives
+      # Notre implémentation traite les directives même avec parse:false
       input = "ifdef::asciidoctor[]"
       doc = Asciidoctor.load(input, {"parse" => "false"})
       reader = doc.reader.not_nil!
