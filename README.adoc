@@ -1,10 +1,28 @@
 = crystal-asciidoctor
 :description: A Crystal port of the Asciidoctor document processor.
-:repo_url: https://github.com/aloli/crystal-asciidoctor
+:repo_url: https://github.com/aloli-crystal/crystal-asciidoctor
 
 A Crystal port of the https://github.com/asciidoctor/asciidoctor[Asciidoctor] document processor.
 
 This shard provides a complete AsciiDoc processing pipeline in Crystal: an Abstract Syntax Tree (AST) model, a parser, a substitution engine, and three output converters (HTML5, DocBook 5, Manpage), faithfully ported from the Ruby implementation.
+
+== Versions
+
+[cols="2,2,2"]
+|===
+| | Version | Date
+
+| *Gem Ruby Asciidoctor (source du portage)*
+| 2.0.26
+| 2025-10-24
+
+| *Shard Crystal crystal-asciidoctor*
+| 0.1.0
+| 2026-04-02
+|===
+
+NOTE: Ce shard est un portage de la gem Ruby Asciidoctor **2.0.26**.
+Vérifier les https://rubygems.org/gems/asciidoctor/versions[versions sur RubyGems] pour savoir si une mise à jour est disponible.
 
 == Status
 
@@ -60,7 +78,7 @@ Add the dependency to your `shard.yml`:
 ----
 dependencies:
   crystal-asciidoctor:
-    github: aloli/crystal-asciidoctor
+    github: aloli-crystal/crystal-asciidoctor
 ----
 
 Run `shards install`.
