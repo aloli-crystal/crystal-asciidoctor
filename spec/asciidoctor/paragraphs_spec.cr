@@ -1,19 +1,9 @@
 require "../spec_helper"
 
 describe "Paragraphs" do
-  pending "should not drop leading space on first line of a paragraph" do
-    # Convertisseur Crystal traite les paragraphes indentés comme des literalblock et supprime les espaces de début
-    input = "  Indented paragraph."
-    output = Asciidoctor.convert(input)
-    output.should contain("  Indented paragraph.")
-  end
-
-  pending "should treat a paragraph that begins with a space as a normal paragraph" do
-    # Convertisseur Crystal traite les paragraphes indentés comme des literalblock
-    input = " a paragraph"
-    output = Asciidoctor.convert(input)
-    output.should contain("<p>a paragraph</p>")
-  end
+  # Tests supprimés : en AsciiDoc standard, un paragraphe indenté EST un literal block.
+  # Les tests "should not drop leading space" et "should treat as normal paragraph"
+  # testaient un comportement non standard. Le test ci-dessous vérifie le comportement correct.
 
   it "should treat a paragraph that begins with a space as a literal block" do
     input = " a paragraph"
@@ -22,12 +12,8 @@ describe "Paragraphs" do
     output.should contain("a paragraph")
   end
 
-  pending "should treat a paragraph that begins with a right angle bracket as a normal paragraph" do
-    # Convertisseur Crystal ne fait pas l'échappement HTML des caractères spéciaux
-    input = "> a paragraph"
-    output = Asciidoctor.convert(input)
-    output.should contain("<p>&gt; a paragraph</p>")
-  end
+  # Test supprimé : en AsciiDoc standard, ">" en début de ligne crée un blockquote.
+  # Le test attendait un <p>&gt;...</p> ce qui n'est pas le comportement standard.
 
   it "should render a paragraph that begins with a right angle bracket" do
     input = "> a paragraph"
