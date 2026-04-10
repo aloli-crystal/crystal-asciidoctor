@@ -43,7 +43,7 @@ class SecurityError < Exception
 end
 
 module Asciidoctor
-  VERSION = "0.1.0"
+  VERSION = "2.0.26"
 
   # Version de la gem Ruby Asciidoctor utilisée comme base du portage.
   UPSTREAM_VERSION = "2.0.26"
