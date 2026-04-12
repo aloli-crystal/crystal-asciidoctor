@@ -9,6 +9,11 @@ description: |
 authors:
   - Philippe Nénert pour ALOLI sas à Laguiole
 
+dependencies:
+  crystal-rouge:
+    github: aloli-crystal/crystal-rouge
+    version: "~> 0.1"
+
 crystal: ">= 1.19.0"
 
 license: MIT
