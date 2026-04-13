@@ -1,0 +1,41 @@
+= Crystal Asciidoctor
+
+Un portage Crystal du processeur de documents https://github.com/asciidoctor/asciidoctor[Asciidoctor].
+
+Ce shard fournit un pipeline complet de traitement AsciiDoc en Crystal : un modele d'arbre syntaxique abstrait (AST), un parseur, un moteur de substitution et trois convertisseurs de sortie (HTML5, DocBook 5, Manpage), fidelement portes depuis l'implementation Ruby.
+
+== Statut
+
+*Beta* -- Le pipeline principal (parse -> substitution -> conversion) est fonctionnel. L'API d'extensions et l'integration de la coloration syntaxique ne sont pas encore implementees.
+
+== Composants Implementes
+
+[cols="3,2"]
+|===
+| Composant | Module Crystal
+
+| Noeud abstrait (classe de base) | `Asciidoctor::AbstractNode`
+| Bloc abstrait | `Asciidoctor::AbstractBlock`
+| API (load / convert) | `Asciidoctor.load`, `Asciidoctor.convert`
+| Convertisseur HTML5 | `Asciidoctor::Converter::Html5Converter`
+| Convertisseur DocBook 5 | `Asciidoctor::Converter::DocBook5Converter`
+| Convertisseur Manpage | `Asciidoctor::Converter::ManPageConverter`
+| Document | `Asciidoctor::Document`
+| Parseur | `Asciidoctor::Parser`
+| Section | `Asciidoctor::Section`
+| Tableau | `Asciidoctor::Table`
+|===
+
+== Non Encore Implemente
+
+* API d'extensions
+* Integration de la coloration syntaxique
+* Convertisseur base sur des templates
+
+== Versions
+
+Porte depuis Ruby Asciidoctor *2.0.26* (24/10/2025).
+
+== Licence
+
+MIT

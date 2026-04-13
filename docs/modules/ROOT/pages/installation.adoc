@@ -1,0 +1,29 @@
+= Installation
+
+== Requirements
+
+* Crystal >= 1.19.0
+
+== Add the Dependency
+
+Add crystal-asciidoctor to your `shard.yml`:
+
+[source,yaml]
+----
+dependencies:
+  crystal-asciidoctor:
+    github: aloli-crystal/crystal-asciidoctor
+----
+
+Then run:
+
+[source,bash]
+----
+shards install
+----
+
+== Dependencies
+
+This shard depends on:
+
+* https://github.com/aloli-crystal/crystal-rouge[crystal-rouge] (~> 4.7) -- syntax highlighting

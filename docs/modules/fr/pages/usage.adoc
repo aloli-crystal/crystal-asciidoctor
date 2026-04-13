@@ -1,0 +1,84 @@
+= Utilisation
+
+== API de haut niveau
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
+# Convertir une chaine AsciiDoc en HTML5
+html = Asciidoctor.convert("= Bonjour\n\nUn paragraphe en *gras*.")
+puts html
+
+# Convertir en DocBook 5
+docbook = Asciidoctor.convert("= Bonjour\n\nUn paragraphe.", {"backend" => "docbook5"})
+puts docbook
+
+# Charger un document (parser sans convertir)
+doc = Asciidoctor.load("= Mon Document\n\n== Section Un\n\nParagraphe.")
+puts doc.doctitle  # => "Mon Document"
+----
+
+== Parsing de bas niveau
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
+source = <<-ASCIIDOC
+= Mon Document
+Nom Auteur
+
+== Introduction
+
+Ceci est un paragraphe.
+
+== Details
+
+Un autre paragraphe avec du texte en *gras*.
+ASCIIDOC
+
+doc = Asciidoctor::Document.new
+reader = Asciidoctor::Reader.new(source.lines)
+Asciidoctor::Parser.parse(reader, doc)
+
+puts doc.doctitle  # => "Mon Document"
+----
+
+== Construction manuelle de l'AST
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
+doc = Asciidoctor::Document.new
+converter = Asciidoctor::Converter::Html5Converter.new
+doc.converter = converter
+
+section = Asciidoctor::Section.new(document: doc, parent: doc, level: 1)
+section.title = "Introduction"
+section.id = "introduction"
+section.numeral = "1"
+doc << section
+
+para = Asciidoctor::Block.new(
+  parent_block: section,
+  context: :paragraph,
+  content_model: Asciidoctor::ContentModel::Simple,
+  source: "Bonjour, AsciiDoc !"
+)
+section << para
+
+puts converter.convert_section(section)
+----
+
+== Developpement
+
+[source,bash]
+----
+# Lancer tous les tests (468 exemples)
+crystal spec
+
+# Lancer uniquement les tests d'integration
+crystal spec spec/integration/
+----

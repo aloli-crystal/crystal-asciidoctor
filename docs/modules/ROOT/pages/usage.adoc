@@ -1,0 +1,104 @@
+= Usage
+
+== High-level API
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
+# Convert an AsciiDoc string to HTML5
+html = Asciidoctor.convert("= Hello\n\nA *bold* paragraph.")
+puts html
+
+# Convert to DocBook 5
+docbook = Asciidoctor.convert("= Hello\n\nA paragraph.", {"backend" => "docbook5"})
+puts docbook
+
+# Load a document (parse without converting)
+doc = Asciidoctor.load("= My Document\n\n== Section One\n\nParagraph.")
+puts doc.doctitle  # => "My Document"
+----
+
+== Low-level Parsing
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
+source = <<-ASCIIDOC
+= My Document
+Author Name
+
+== Introduction
+
+This is a paragraph.
+
+== Details
+
+Another paragraph with *bold* text.
+ASCIIDOC
+
+doc = Asciidoctor::Document.new
+reader = Asciidoctor::Reader.new(source.lines)
+Asciidoctor::Parser.parse(reader, doc)
+
+# Access the document title
+puts doc.doctitle  # => "My Document"
+
+# Traverse the tree
+doc.find_by(context: :paragraph).each do |block|
+  puts block.as(Asciidoctor::Block).source
+end
+
+# Access sections
+doc.blocks.each do |block|
+  if block.is_a?(Asciidoctor::Section)
+    puts "Section: #{block.title} (level #{block.level})"
+  end
+end
+----
+
+== Building the AST Manually
+
+[source,crystal]
+----
+require "crystal-asciidoctor"
+
+# Create a document with an HTML5 converter
+doc = Asciidoctor::Document.new
+converter = Asciidoctor::Converter::Html5Converter.new
+doc.converter = converter
+
+# Create a section
+section = Asciidoctor::Section.new(document: doc, parent: doc, level: 1)
+section.title = "Introduction"
+section.id = "introduction"
+section.numeral = "1"
+doc << section
+
+# Create a paragraph block
+para = Asciidoctor::Block.new(
+  parent_block: section,
+  context: :paragraph,
+  content_model: Asciidoctor::ContentModel::Simple,
+  source: "Hello, AsciiDoc!"
+)
+section << para
+
+# Convert to HTML
+puts converter.convert_section(section)
+----
+
+== Development
+
+[source,bash]
+----
+# Run all tests (468 examples)
+crystal spec
+
+# Run only integration tests
+crystal spec spec/integration/
+
+# Type-check without codegen
+crystal build --no-codegen src/crystal-asciidoctor.cr
+----

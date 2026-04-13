@@ -1,0 +1,47 @@
+= Crystal Asciidoctor
+
+A Crystal port of the https://github.com/asciidoctor/asciidoctor[Asciidoctor] document processor.
+
+This shard provides a complete AsciiDoc processing pipeline in Crystal: an Abstract Syntax Tree (AST) model, a parser, a substitution engine, and three output converters (HTML5, DocBook 5, Manpage), faithfully ported from the Ruby implementation.
+
+== Status
+
+*Beta* -- The core pipeline (parse -> substitute -> convert) is functional. Extensions API and syntax highlighting integration are not yet implemented.
+
+== Implemented Components
+
+[cols="3,2"]
+|===
+| Component | Crystal module
+
+| Abstract node (base class) | `Asciidoctor::AbstractNode`
+| Abstract block | `Asciidoctor::AbstractBlock`
+| API (load / convert) | `Asciidoctor.load`, `Asciidoctor.convert`
+| Attribute list parser | `Asciidoctor::AttributeList`
+| Block | `Asciidoctor::Block`
+| Callouts | `Asciidoctor::Callouts`
+| CLI (options / invoker) | `Asciidoctor::Cli::Options`, `Asciidoctor::Cli::Invoker`
+| Converter HTML5 | `Asciidoctor::Converter::Html5Converter`
+| Converter DocBook 5 | `Asciidoctor::Converter::DocBook5Converter`
+| Converter Manpage | `Asciidoctor::Converter::ManPageConverter`
+| Document | `Asciidoctor::Document`
+| Parser | `Asciidoctor::Parser`
+| Reader / PreprocessorReader | `Asciidoctor::Reader`
+| Section | `Asciidoctor::Section`
+| Table / Column / Cell | `Asciidoctor::Table`
+| Substitutors | `Asciidoctor::Substitutors`
+|===
+
+== Not Yet Implemented
+
+* Extensions API
+* Syntax highlighting integration
+* Template-based converter
+
+== Versions
+
+Ported from Ruby Asciidoctor *2.0.26* (2025-10-24).
+
+== License
+
+MIT
