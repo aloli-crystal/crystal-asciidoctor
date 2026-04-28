@@ -16,9 +16,9 @@ module Asciidoctor
       APOS => "\\'",
     }
 
-    NAME_RX      = /[\p{L}\d_][\p{L}\d_-]*/
-    BLANK_RX     = /[ \t]+/
-    SKIP_RX      = {"," => /[ \t]*(,|$)/}
+    NAME_RX  = /[\p{L}\d_][\p{L}\d_-]*/
+    BLANK_RX = /[ \t]+/
+    SKIP_RX  = {"," => /[ \t]*(,|$)/}
 
     @scanner_pos : Int32
     @source : String

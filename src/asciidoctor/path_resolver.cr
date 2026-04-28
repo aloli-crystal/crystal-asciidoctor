@@ -15,11 +15,11 @@ module Asciidoctor
   class PathResolver
     include Logging
 
-    DOT       = "."
-    DOT_DOT   = ".."
-    DOT_SLASH = "./"
-    SLASH     = "/"
-    BACKSLASH = "\\"
+    DOT          = "."
+    DOT_DOT      = ".."
+    DOT_SLASH    = "./"
+    SLASH        = "/"
+    BACKSLASH    = "\\"
     DOUBLE_SLASH = "//"
 
     WindowsRootRx = /^(?:[a-zA-Z]:)?[\\\/]/

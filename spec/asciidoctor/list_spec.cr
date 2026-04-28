@@ -716,7 +716,7 @@ describe "Lists" do
       output.should contain("glossary")
     end
 
-      it "should convert horizontal list with proper markup" do
+    it "should convert horizontal list with proper markup" do
       # Convertisseur Crystal ne gère pas encore les hdlist avec table
       input = "[horizontal]\nfirst term:: description\n+\nmore detail\n\nsecond term:: description"
       output = convert_string_to_embedded(input)
@@ -726,7 +726,7 @@ describe "Lists" do
       output.should contain("second term")
     end
 
-      it "should set col widths of item and label if specified" do
+    it "should set col widths of item and label if specified" do
       # Convertisseur Crystal ne gère pas encore les hdlist avec colgroup
       input = "[horizontal]\n[labelwidth=\"25\", itemwidth=\"75\"]\nterm:: def"
       output = convert_string_to_embedded(input)
@@ -736,7 +736,7 @@ describe "Lists" do
       output.should contain("75%")
     end
 
-     it "should add strong class to label if strong option is set" do
+    it "should add strong class to label if strong option is set" do
       # Convertisseur Crystal ne gère pas encore les hdlistt
       input = "[horizontal, options=\"strong\"]\nterm:: def"
       output = convert_string_to_embedded(input)

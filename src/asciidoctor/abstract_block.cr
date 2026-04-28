@@ -260,10 +260,10 @@ module Asciidoctor
     # Get the String title of this Block with title substitutions applied.
     def title : String?
       @converted_title ||= if (t = @title)
-        apply_title_subs(t)
-      else
-        nil
-      end
+                             apply_title_subs(t)
+                           else
+                             nil
+                           end
     end
 
     # Apply inline substitutions to the title

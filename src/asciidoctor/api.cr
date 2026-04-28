@@ -82,9 +82,9 @@ module Asciidoctor
     # Normalize backend name
     backend = case raw_backend
               when "docbook" then "docbook5"
-              when "html" then "html5"
-              when "xhtml" then "xhtml5"
-              else raw_backend
+              when "html"    then "html5"
+              when "xhtml"   then "xhtml5"
+              else                raw_backend
               end
     doctype = attributes.delete("doctype") || options.fetch("doctype", "article")
     # header_footer=false is equivalent to standalone=false (embedded mode)
@@ -126,29 +126,29 @@ module Asciidoctor
     basebackend = case backend
                   when "html5", "html", "xhtml5", "xhtml" then "html"
                   when "docbook5", "docbook", "docbook45" then "docbook"
-                  when "manpage" then "manpage"
-                  else "html"
+                  when "manpage"                          then "manpage"
+                  else                                         "html"
                   end
     filetype = case basebackend
-               when "html" then "html"
+               when "html"    then "html"
                when "docbook" then "xml"
                when "manpage" then "man"
-               else "html"
+               else                "html"
                end
     outfilesuffix = case filetype
                     when "html" then ".html"
-                    when "xml" then ".xml"
-                    when "man" then ".man"
-                    else ".html"
+                    when "xml"  then ".xml"
+                    when "man"  then ".man"
+                    else             ".html"
                     end
 
     # Set intrinsic attributes
     # user-home: resolved to actual home dir if safe mode < SERVER, else "."
     user_home = if safe_mode < SafeMode::SERVER
-      ENV["HOME"]? || "."
-    else
-      "."
-    end
+                  ENV["HOME"]? || "."
+                else
+                  "."
+                end
     doc.attributes["user-home"] = user_home
     doc.attributes["backend"] = backend
     doc.attributes["backend-#{backend}"] = ""
@@ -236,13 +236,13 @@ module Asciidoctor
     parse_now = !(options.has_key?("parse") && options["parse"] == "false")
     # Create a cursor with the document file if available (before safe mode filtering)
     reader_cursor = if (docfile_raw = doc.attributes["docfile"]?)
-      Cursor.new(docfile_raw, doc.attributes["docdir"]?, doc.attributes["docname"]?)
-    elsif base_dir_opt != "."
-      # Use base_dir as the working directory for includes
-      Cursor.new(nil, base_dir_opt, "<stdin>")
-    else
-      nil
-    end
+                      Cursor.new(docfile_raw, doc.attributes["docdir"]?, doc.attributes["docname"]?)
+                    elsif base_dir_opt != "."
+                      # Use base_dir as the working directory for includes
+                      Cursor.new(nil, base_dir_opt, "<stdin>")
+                    else
+                      nil
+                    end
 
     # Filter docdir and docfile according to safe mode
     # In SERVER mode or greater, docdir is hidden and docfile shows only relative path

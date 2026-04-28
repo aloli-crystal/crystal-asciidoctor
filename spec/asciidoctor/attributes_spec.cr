@@ -296,7 +296,6 @@ describe "Attributes" do
     end
   end
 
-
   context "API" do
     it "attribute set via API overrides attribute set in document" do
       doc = TestHelpers.document_from_string(":cash: money", {"cash" => "heroes"})
@@ -370,68 +369,67 @@ describe "Attributes" do
       # end
     end
   end
+end
 
+context "Default Attributes" do
+  it "backend and doctype attributes are set by default in default configuration" do
+    input = <<-EOS
+      = Document Title
+      Author Name
+
+      content
+      EOS
+
+    doc = TestHelpers.document_from_string(input)
+    expect = {
+      "backend"                          => "html5",
+      "backend-html5"                    => "",
+      "backend-html5-doctype-article"    => "",
+      "outfilesuffix"                    => ".html",
+      "basebackend"                      => "html",
+      "basebackend-html"                 => "",
+      "basebackend-html-doctype-article" => "",
+      "doctype"                          => "article",
+      "doctype-article"                  => "",
+      "filetype"                         => "html",
+      "filetype-html"                    => "",
+    }
+    expect.each do |key, val|
+      doc.attributes.has_key?(key).should be_truthy
+      doc.attributes[key].should eq(val)
+    end
   end
 
-  context "Default Attributes" do
-    it "backend and doctype attributes are set by default in default configuration" do
-      input = <<-EOS
+  it "backend and doctype attributes are set by default in custom configuration" do
+    input = <<-EOS
       = Document Title
       Author Name
 
       content
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      expect = {
-        "backend" => "html5",
-        "backend-html5" => "",
-        "backend-html5-doctype-article" => "",
-        "outfilesuffix" => ".html",
-        "basebackend" => "html",
-        "basebackend-html" => "",
-        "basebackend-html-doctype-article" => "",
-        "doctype" => "article",
-        "doctype-article" => "",
-        "filetype" => "html",
-        "filetype-html" => "",
-      }
-      expect.each do |key, val|
-        doc.attributes.has_key?(key).should be_truthy
-        doc.attributes[key].should eq(val)
-      end
+    doc = TestHelpers.document_from_string(input, {"doctype" => "book", "backend" => "docbook"})
+    expect = {
+      "backend"                          => "docbook5",
+      "backend-docbook5"                 => "",
+      "backend-docbook5-doctype-book"    => "",
+      "outfilesuffix"                    => ".xml",
+      "basebackend"                      => "docbook",
+      "basebackend-docbook"              => "",
+      "basebackend-docbook-doctype-book" => "",
+      "doctype"                          => "book",
+      "doctype-book"                     => "",
+      "filetype"                         => "xml",
+      "filetype-xml"                     => "",
+    }
+    expect.each do |key, val|
+      doc.attributes.has_key?(key).should be_truthy
+      doc.attributes[key].should eq(val)
     end
+  end
 
-    it "backend and doctype attributes are set by default in custom configuration" do
-      input = <<-EOS
-      = Document Title
-      Author Name
-
-      content
-      EOS
-
-      doc = TestHelpers.document_from_string(input, {"doctype" => "book", "backend" => "docbook"})
-      expect = {
-        "backend" => "docbook5",
-        "backend-docbook5" => "",
-        "backend-docbook5-doctype-book" => "",
-        "outfilesuffix" => ".xml",
-        "basebackend" => "docbook",
-        "basebackend-docbook" => "",
-        "basebackend-docbook-doctype-book" => "",
-        "doctype" => "book",
-        "doctype-book" => "",
-        "filetype" => "xml",
-        "filetype-xml" => "",
-      }
-      expect.each do |key, val|
-        doc.attributes.has_key?(key).should be_truthy
-        doc.attributes[key].should eq(val)
-      end
-    end
-
-    it "backend attributes are updated if backend attribute is defined in document and safe mode is less than SERVER" do
-      input = <<-EOS
+  it "backend attributes are updated if backend attribute is defined in document and safe mode is less than SERVER" do
+    input = <<-EOS
       = Document Title
       Author Name
       :backend: docbook
@@ -440,158 +438,155 @@ describe "Attributes" do
       content
       EOS
 
-      doc = TestHelpers.document_from_string(input, {"safe" => "1"})
-      expect = {
-        "backend" => "docbook5",
-        "backend-docbook5" => "",
-        "backend-docbook5-doctype-book" => "",
-        "outfilesuffix" => ".xml",
-        "basebackend" => "docbook",
-        "basebackend-docbook" => "",
-        "basebackend-docbook-doctype-book" => "",
-        "doctype" => "book",
-        "doctype-book" => "",
-        "filetype" => "xml",
-        "filetype-xml" => "",
-      }
-      expect.each do |key, val|
-        doc.attributes.has_key?(key).should be_truthy
-        doc.attributes[key].should eq(val)
-      end
-
-      doc.attributes.has_key?("backend-html5").should be_falsey
-      doc.attributes.has_key?("backend-html5-doctype-article").should be_falsey
-      doc.attributes.has_key?("basebackend-html").should be_falsey
-      doc.attributes.has_key?("basebackend-html-doctype-article").should be_falsey
-      doc.attributes.has_key?("doctype-article").should be_falsey
-      doc.attributes.has_key?("filetype-html").should be_falsey
+    doc = TestHelpers.document_from_string(input, {"safe" => "1"})
+    expect = {
+      "backend"                          => "docbook5",
+      "backend-docbook5"                 => "",
+      "backend-docbook5-doctype-book"    => "",
+      "outfilesuffix"                    => ".xml",
+      "basebackend"                      => "docbook",
+      "basebackend-docbook"              => "",
+      "basebackend-docbook-doctype-book" => "",
+      "doctype"                          => "book",
+      "doctype-book"                     => "",
+      "filetype"                         => "xml",
+      "filetype-xml"                     => "",
+    }
+    expect.each do |key, val|
+      doc.attributes.has_key?(key).should be_truthy
+      doc.attributes[key].should eq(val)
     end
 
-    it "backend attributes defined in document options overrides backend attribute in document" do
-      doc = TestHelpers.document_from_string(":backend: docbook5", {"safe" => "1", "backend" => "html5"})
-      doc.attributes["backend"].should eq("html5")
-      doc.attributes.has_key?("backend-html5").should be_truthy
-      doc.attributes["basebackend"].should eq("html")
-      doc.attributes.has_key?("basebackend-html").should be_truthy
-    end
+    doc.attributes.has_key?("backend-html5").should be_falsey
+    doc.attributes.has_key?("backend-html5-doctype-article").should be_falsey
+    doc.attributes.has_key?("basebackend-html").should be_falsey
+    doc.attributes.has_key?("basebackend-html-doctype-article").should be_falsey
+    doc.attributes.has_key?("doctype-article").should be_falsey
+    doc.attributes.has_key?("filetype-html").should be_falsey
   end
 
-  context "Block Attributes" do
-    it "can only access a positional attribute from the attributes hash" do
-      node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"1" => "position 1"})
-      node.attr("1").should be_nil
-      node.attr?("1").should be_falsey
-      node.attributes["1"].should eq("position 1")
-    end
+  it "backend attributes defined in document options overrides backend attribute in document" do
+    doc = TestHelpers.document_from_string(":backend: docbook5", {"safe" => "1", "backend" => "html5"})
+    doc.attributes["backend"].should eq("html5")
+    doc.attributes.has_key?("backend-html5").should be_truthy
+    doc.attributes["basebackend"].should eq("html")
+    doc.attributes.has_key?("basebackend-html").should be_truthy
+  end
+end
 
-    it "attr should not retrieve attribute from document if not set on block" do
-      doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
-      para = doc.blocks[0]
-      para.attr("name").should be_nil
-    end
-
-    it "attr looks for attribute on document if fallback name is true" do
-      doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
-      para = doc.blocks[0]
-      para.attr("name", nil, true).should eq("value")
-    end
-
-    it "attr uses fallback name when looking for attribute on document" do
-      doc = TestHelpers.document_from_string("paragraph", {"alt-name" => "value"})
-      para = doc.blocks[0]
-      para.attr("name", nil, "alt-name").should eq("value")
-    end
-
-    it "attr? should not check for attribute on document if not set on block" do
-      doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
-      para = doc.blocks[0]
-      para.attr?("name").should be_falsey
-    end
-
-    it "attr? checks for attribute on document if fallback name is true" do
-      doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
-      para = doc.blocks[0]
-      para.attr?("name", nil, true).should be_truthy
-    end
-
-    it "attr? checks for fallback name when looking for attribute on document" do
-      doc = TestHelpers.document_from_string("paragraph", {"alt-name" => "value"})
-      para = doc.blocks[0]
-      para.attr?("name", nil, "alt-name").should be_truthy
-    end
-
-    it "set_attr should set value to empty string if no value is specified" do
-      node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph)
-      node.set_attr("foo")
-      node.attr("foo").should eq("")
-    end
-
-    it "remove_attr should remove attribute and return previous value" do
-      doc = TestHelpers.empty_document
-      node = Asciidoctor::Block.new(doc, :paragraph, nil, nil, {"foo" => "bar"})
-      node.remove_attr("foo").should eq("bar")
-      node.attr("foo").should be_nil
-    end
-
-    it "set_attr should not overwrite existing key if overwrite is false" do
-      node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
-      node.attr("foo").should eq("bar")
-      node.set_attr("foo", "baz", false)
-      node.attr("foo").should eq("bar")
-    end
-
-    it "set_attr should overwrite existing key by default" do
-      node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
-      node.attr("foo").should eq("bar")
-      node.set_attr("foo", "baz")
-      node.attr("foo").should eq("baz")
-    end
-
-    pending "set_attr should set header attribute in loaded document" do
-      # input = <<-EOS
-      # :uri: http://example.org
-
-      # {uri}
-      # EOS
-
-      # doc = Asciidoctor.load(input, {"uri" => "https://github.com"})
-      # doc.set_attr("uri", "https://google.com")
-      # output = doc.convert.to_s
-      # TestHelpers.xpath_count("//a[@href=\"https://google.com\"]", output).should eq(1)
-    end
-
-    it "set_attribute should set attribute if key is not locked" do
-      doc = TestHelpers.empty_document
-      doc.attr?("foo").should be_falsey
-      res = doc.set_attribute("foo", "baz")
-      res.should be_truthy
-      doc.attr("foo").should eq("baz")
-    end
-
-    it "set_attribute should not set key if key is locked" do
-      doc = TestHelpers.empty_document({"foo" => "bar"})
-      doc.attr("foo").should eq("bar")
-      res = doc.set_attribute("foo", "baz")
-      res.should be_falsey
-      doc.attr("foo").should eq("bar")
-    end
-
-    it "set_attribute should update backend attributes" do
-      doc = TestHelpers.empty_document({"backend" => "html5@"})
-      doc.attr("backend-html5").should eq("")
-      res = doc.set_attribute("backend", "docbook5")
-      res.should be_truthy
-      doc.attr?("backend-html5").should be_falsey
-      doc.attr("backend-docbook5").should eq("")
-    end
+context "Block Attributes" do
+  it "can only access a positional attribute from the attributes hash" do
+    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"1" => "position 1"})
+    node.attr("1").should be_nil
+    node.attr?("1").should be_falsey
+    node.attributes["1"].should eq("position 1")
   end
 
+  it "attr should not retrieve attribute from document if not set on block" do
+    doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
+    para = doc.blocks[0]
+    para.attr("name").should be_nil
+  end
 
+  it "attr looks for attribute on document if fallback name is true" do
+    doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
+    para = doc.blocks[0]
+    para.attr("name", nil, true).should eq("value")
+  end
 
+  it "attr uses fallback name when looking for attribute on document" do
+    doc = TestHelpers.document_from_string("paragraph", {"alt-name" => "value"})
+    para = doc.blocks[0]
+    para.attr("name", nil, "alt-name").should eq("value")
+  end
 
-  context "TOC Attributes" do
-    pending "verify toc attribute matrix" do
-      expected_data = <<-EOS
+  it "attr? should not check for attribute on document if not set on block" do
+    doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
+    para = doc.blocks[0]
+    para.attr?("name").should be_falsey
+  end
+
+  it "attr? checks for attribute on document if fallback name is true" do
+    doc = TestHelpers.document_from_string("paragraph", {"name" => "value"})
+    para = doc.blocks[0]
+    para.attr?("name", nil, true).should be_truthy
+  end
+
+  it "attr? checks for fallback name when looking for attribute on document" do
+    doc = TestHelpers.document_from_string("paragraph", {"alt-name" => "value"})
+    para = doc.blocks[0]
+    para.attr?("name", nil, "alt-name").should be_truthy
+  end
+
+  it "set_attr should set value to empty string if no value is specified" do
+    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph)
+    node.set_attr("foo")
+    node.attr("foo").should eq("")
+  end
+
+  it "remove_attr should remove attribute and return previous value" do
+    doc = TestHelpers.empty_document
+    node = Asciidoctor::Block.new(doc, :paragraph, nil, nil, {"foo" => "bar"})
+    node.remove_attr("foo").should eq("bar")
+    node.attr("foo").should be_nil
+  end
+
+  it "set_attr should not overwrite existing key if overwrite is false" do
+    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
+    node.attr("foo").should eq("bar")
+    node.set_attr("foo", "baz", false)
+    node.attr("foo").should eq("bar")
+  end
+
+  it "set_attr should overwrite existing key by default" do
+    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
+    node.attr("foo").should eq("bar")
+    node.set_attr("foo", "baz")
+    node.attr("foo").should eq("baz")
+  end
+
+  pending "set_attr should set header attribute in loaded document" do
+    # input = <<-EOS
+    # :uri: http://example.org
+
+    # {uri}
+    # EOS
+
+    # doc = Asciidoctor.load(input, {"uri" => "https://github.com"})
+    # doc.set_attr("uri", "https://google.com")
+    # output = doc.convert.to_s
+    # TestHelpers.xpath_count("//a[@href=\"https://google.com\"]", output).should eq(1)
+  end
+
+  it "set_attribute should set attribute if key is not locked" do
+    doc = TestHelpers.empty_document
+    doc.attr?("foo").should be_falsey
+    res = doc.set_attribute("foo", "baz")
+    res.should be_truthy
+    doc.attr("foo").should eq("baz")
+  end
+
+  it "set_attribute should not set key if key is locked" do
+    doc = TestHelpers.empty_document({"foo" => "bar"})
+    doc.attr("foo").should eq("bar")
+    res = doc.set_attribute("foo", "baz")
+    res.should be_falsey
+    doc.attr("foo").should eq("bar")
+  end
+
+  it "set_attribute should update backend attributes" do
+    doc = TestHelpers.empty_document({"backend" => "html5@"})
+    doc.attr("backend-html5").should eq("")
+    res = doc.set_attribute("backend", "docbook5")
+    res.should be_truthy
+    doc.attr?("backend-html5").should be_falsey
+    doc.attr("backend-docbook5").should eq("")
+  end
+end
+
+context "TOC Attributes" do
+  pending "verify toc attribute matrix" do
+    expected_data = <<-EOS
       #attributes                               |toc|toc-position|toc-placement|toc-class
       toc                                       |   |nil         |auto         |nil
       toc=header                                |   |nil         |auto         |nil
@@ -605,122 +600,118 @@ describe "Attributes" do
       toc toc-placement!                        |   |content     |macro        |nil
       EOS
 
-      expected = expected_data.split("\n").map do |l|
-        next if l.starts_with?("#")
-        l.split("|").map(&.strip)
-      end.compact
+    expected = expected_data.split("\n").map do |l|
+      next if l.starts_with?("#")
+      l.split("|").map(&.strip)
+    end.compact
 
-      expected.each do |(attributes, toc, toc_position, toc_placement, toc_class)|
-        doc = TestHelpers.document_from_string("", {"attributes" => attributes})
-        doc.attr?("toc").should eq(toc.empty? ? false : true)
-        doc.attr("toc-position").should eq(toc_position == "nil" ? nil : toc_position)
-        doc.attr("toc-placement").should eq(toc_placement == "nil" ? nil : toc_placement)
-        doc.attr("toc-class").should eq(toc_class == "nil" ? nil : toc_class)
-      end
+    expected.each do |(attributes, toc, toc_position, toc_placement, toc_class)|
+      doc = TestHelpers.document_from_string("", {"attributes" => attributes})
+      doc.attr?("toc").should eq(toc.empty? ? false : true)
+      doc.attr("toc-position").should eq(toc_position == "nil" ? nil : toc_position)
+      doc.attr("toc-placement").should eq(toc_placement == "nil" ? nil : toc_placement)
+      doc.attr("toc-class").should eq(toc_class == "nil" ? nil : toc_class)
     end
   end
+end
 
+context "Interpolation" do
+  it "convert properly with simple names" do
+    html = TestHelpers.convert_string(":frog: Tanglefoot\n:my_super-hero: Spiderman\n\nYo, {frog}!\nBeat {my_super-hero}!")
+    TestHelpers.xpath_count("//p[text()=\"Yo, Tanglefoot!\nBeat Spiderman!\"]", html).should eq(1)
+  end
 
-
-
-
-  context "Interpolation" do
-    it "convert properly with simple names" do
-      html = TestHelpers.convert_string(":frog: Tanglefoot\n:my_super-hero: Spiderman\n\nYo, {frog}!\nBeat {my_super-hero}!")
-      TestHelpers.xpath_count("//p[text()=\"Yo, Tanglefoot!\nBeat Spiderman!\"]", html).should eq(1)
-    end
-
-    it "attribute lookup is not case sensitive" do
-      input = <<-EOS
+  it "attribute lookup is not case sensitive" do
+    input = <<-EOS
       :He-Man: The most powerful man in the universe
 
       He-Man: {He-Man}
 
       She-Ra: {She-Ra}
       EOS
-      result = TestHelpers.convert_string_to_embedded(input, {"She-Ra" => "The Princess of Power"})
-      TestHelpers.xpath_count("//p[text()=\"He-Man: The most powerful man in the universe\"]", result).should eq(1)
-      TestHelpers.xpath_count("//p[text()=\"She-Ra: The Princess of Power\"]", result).should eq(1)
-    end
+    result = TestHelpers.convert_string_to_embedded(input, {"She-Ra" => "The Princess of Power"})
+    TestHelpers.xpath_count("//p[text()=\"He-Man: The most powerful man in the universe\"]", result).should eq(1)
+    TestHelpers.xpath_count("//p[text()=\"She-Ra: The Princess of Power\"]", result).should eq(1)
+  end
 
-    it "convert properly with single character name" do
-      html = TestHelpers.convert_string(":r: Ruby\n\nR is for {r}!")
-      TestHelpers.xpath_count("//p[text()=\"R is for Ruby!\"]", html).should eq(1)
-    end
+  it "convert properly with single character name" do
+    html = TestHelpers.convert_string(":r: Ruby\n\nR is for {r}!")
+    TestHelpers.xpath_count("//p[text()=\"R is for Ruby!\"]", html).should eq(1)
+  end
 
-    it "collapses spaces in attribute names" do
-      input = <<-EOS
+  it "collapses spaces in attribute names" do
+    input = <<-EOS
       = Main Header
       :My frog: Tanglefoot
 
       Yo, {myfrog}!
       EOS
-      output = TestHelpers.convert_string(input)
-      TestHelpers.xpath_count("(//p)[1][text()=\"Yo, Tanglefoot!\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string(input)
+    TestHelpers.xpath_count("(//p)[1][text()=\"Yo, Tanglefoot!\"]", output).should eq(1)
+  end
 
-    it "ignores lines with bad attributes if attribute-missing is drop-line" do
-      # input = <<-EOS
-      # :attribute-missing: drop-line
+  it "ignores lines with bad attributes if attribute-missing is drop-line" do
+    # input = <<-EOS
+    # :attribute-missing: drop-line
 
-      # This is
-      # blah blah {foobarbaz}
-      # all there is.
-      # EOS
-      # output = convert_string_to_embedded input
-      # para = xmlnodes_at_css "p", output, 1
-      # refute_includes "blah blah", para.content
-      # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: foobarbaz"
-    end
+    # This is
+    # blah blah {foobarbaz}
+    # all there is.
+    # EOS
+    # output = convert_string_to_embedded input
+    # para = xmlnodes_at_css "p", output, 1
+    # refute_includes "blah blah", para.content
+    # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: foobarbaz"
+  end
 
-    it "attribute value gets interpreted when converting" do
-      doc = TestHelpers.document_from_string(":google: http://google.com[Google]\n\n{google}")
-      doc.attributes["google"].should eq("http://google.com[Google]")
-      output = doc.convert.to_s
-      TestHelpers.xpath_count("//a[@href=\"http://google.com\"][text() = \"Google\"]", output).should eq(1)
-    end
+  it "attribute value gets interpreted when converting" do
+    doc = TestHelpers.document_from_string(":google: http://google.com[Google]\n\n{google}")
+    doc.attributes["google"].should eq("http://google.com[Google]")
+    output = doc.convert.to_s
+    TestHelpers.xpath_count("//a[@href=\"http://google.com\"][text() = \"Google\"]", output).should eq(1)
+  end
 
-    it "should drop line with reference to missing attribute if attribute-missing attribute is drop-line" do
-      # input = <<-EOS
-      # :attribute-missing: drop-line
+  it "should drop line with reference to missing attribute if attribute-missing attribute is drop-line" do
+    # input = <<-EOS
+    # :attribute-missing: drop-line
 
-      # Line 1: This line should appear in the output.
-      # Line 2: Oh no, a {bogus-attribute}! This line should not appear in the output.
-      # EOS
+    # Line 1: This line should appear in the output.
+    # Line 2: Oh no, a {bogus-attribute}! This line should not appear in the output.
+    # EOS
 
-      # output = convert_string_to_embedded input
-      # output.should match(/Line 1/)
-      # output.should_not match(/Line 2/)
-      # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: bogus-attribute"
-    end
+    # output = convert_string_to_embedded input
+    # output.should match(/Line 1/)
+    # output.should_not match(/Line 2/)
+    # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: bogus-attribute"
+  end
 
-    it "should not drop line with reference to missing attribute by default" do
-      input = <<-EOS
+  it "should not drop line with reference to missing attribute by default" do
+    input = <<-EOS
       Line 1: This line should appear in the output.
       Line 2: A {bogus-attribute}! This time, this line should appear in the output.
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input)
-      output.should match(/Line 1/)
-      output.should match(/Line 2/)
-      output.should match(/\{bogus-attribute\}/)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    output.should match(/Line 1/)
+    output.should match(/Line 2/)
+    output.should match(/\{bogus-attribute\}/)
+  end
 
-    it "should drop line with attribute unassignment by default" do
-      input = <<-EOS
+  it "should drop line with attribute unassignment by default" do
+    input = <<-EOS
       :a:
 
       Line 1: This line should appear in the output.
       Line 2: {set:a!}This line should not appear in the output.
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input)
-      output.should match(/Line 1/)
-      output.should_not match(/Line 2/)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    output.should match(/Line 1/)
+    output.should_not match(/Line 2/)
+  end
 
-    it "should not drop line with attribute unassignment if attribute-undefined is drop" do
-      input = <<-EOS
+  it "should not drop line with attribute unassignment if attribute-undefined is drop" do
+    input = <<-EOS
       :attribute-undefined: drop
       :a:
 
@@ -728,48 +719,48 @@ describe "Attributes" do
       Line 2: {set:a!}This line should appear in the output.
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input)
-      output.should match(/Line 1/)
-      output.should match(/Line 2/)
-      output.should_not match(/\{set:a!\}/)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    output.should match(/Line 1/)
+    output.should match(/Line 2/)
+    output.should_not match(/\{set:a!\}/)
+  end
 
-    it "should drop line that only contains attribute assignment" do
-      input = <<-EOS
+  it "should drop line that only contains attribute assignment" do
+    input = <<-EOS
       Line 1
       {set:a}
       Line 2
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//p[text()=\"Line 1\nLine 2\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//p[text()=\"Line 1\nLine 2\"]", output).should eq(1)
+  end
 
-    it "should drop line that only contains unresolved attribute when attribute-missing is drop" do
-      input = <<-EOS
+  it "should drop line that only contains unresolved attribute when attribute-missing is drop" do
+    input = <<-EOS
       Line 1
       {unresolved}
       Line 2
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input, {"attribute-missing" => "drop"})
-      TestHelpers.xpath_count("//p[text()=\"Line 1\nLine 2\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input, {"attribute-missing" => "drop"})
+    TestHelpers.xpath_count("//p[text()=\"Line 1\nLine 2\"]", output).should eq(1)
+  end
 
-    it "substitutes inside unordered list items" do
-      html = TestHelpers.convert_string(":foo: bar\n* snort at the {foo}\n* yawn")
-      TestHelpers.xpath_count("//li/p[text()=\"snort at the bar\"]", html).should eq(1)
-    end
+  it "substitutes inside unordered list items" do
+    html = TestHelpers.convert_string(":foo: bar\n* snort at the {foo}\n* yawn")
+    TestHelpers.xpath_count("//li/p[text()=\"snort at the bar\"]", html).should eq(1)
+  end
 
-    it "substitutes inside section title" do
-      output = TestHelpers.convert_string(":prefix: Cool\n\n== {prefix} Title\n\ncontent")
-      TestHelpers.xpath_count("//h2[text()=\"Cool Title\"]", output).should eq(1)
-      # Section ID generation from substituted title not yet implemented
-      # TestHelpers.xpath_count("//h2[@id=\"_cool_title\"]", output).should eq(1)
-    end
+  it "substitutes inside section title" do
+    output = TestHelpers.convert_string(":prefix: Cool\n\n== {prefix} Title\n\ncontent")
+    TestHelpers.xpath_count("//h2[text()=\"Cool Title\"]", output).should eq(1)
+    # Section ID generation from substituted title not yet implemented
+    # TestHelpers.xpath_count("//h2[@id=\"_cool_title\"]", output).should eq(1)
+  end
 
-    it "interpolates attribute defined in header inside attribute entry in header" do
-      input = <<-EOS
+  it "interpolates attribute defined in header inside attribute entry in header" do
+    input = <<-EOS
       = Title
       Author Name
       :attribute-a: value
@@ -777,24 +768,24 @@ describe "Attributes" do
 
       preamble
       EOS
-      doc = TestHelpers.document_from_string(input, {"parse_header_only" => "true"})
-      doc.attributes["attribute-b"].should eq("value")
-    end
+    doc = TestHelpers.document_from_string(input, {"parse_header_only" => "true"})
+    doc.attributes["attribute-b"].should eq("value")
+  end
 
-    it "interpolates author attribute inside attribute entry in header" do
-      input = <<-EOS
+  it "interpolates author attribute inside attribute entry in header" do
+    input = <<-EOS
       = Title
       Author Name
       :name: {author}
 
       preamble
       EOS
-      doc = TestHelpers.document_from_string(input, {"parse_header_only" => "true"})
-      doc.attributes["name"].should eq("Author Name")
-    end
+    doc = TestHelpers.document_from_string(input, {"parse_header_only" => "true"})
+    doc.attributes["name"].should eq("Author Name")
+  end
 
-    it "interpolates revinfo attribute inside attribute entry in header" do
-      input = <<-EOS
+  it "interpolates revinfo attribute inside attribute entry in header" do
+    input = <<-EOS
       = Title
       Author Name
       2013-01-01
@@ -802,12 +793,12 @@ describe "Attributes" do
 
       preamble
       EOS
-      doc = TestHelpers.document_from_string(input, {"parse_header_only" => "true"})
-      doc.attributes["date"].should eq("2013-01-01")
-    end
+    doc = TestHelpers.document_from_string(input, {"parse_header_only" => "true"})
+    doc.attributes["date"].should eq("2013-01-01")
+  end
 
-    it "attribute entries can resolve previously defined attributes" do
-      input = <<-EOS
+  it "attribute entries can resolve previously defined attributes" do
+    input = <<-EOS
       = Title
       Author Name
       v1.0, 2010-01-01: First release!
@@ -820,53 +811,53 @@ describe "Attributes" do
       {revdate} == {revdate2}
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      doc.attr("revdate").should eq("2010-01-01")
-      doc.attr("revdate2").should eq("2010-01-01")
-      doc.attr("a").should eq("value")
-      doc.attr("a2").should eq("value")
+    doc = TestHelpers.document_from_string(input)
+    doc.attr("revdate").should eq("2010-01-01")
+    doc.attr("revdate2").should eq("2010-01-01")
+    doc.attr("a").should eq("value")
+    doc.attr("a2").should eq("value")
 
-      output = doc.convert.to_s
-      output.should contain("value == value")
-      output.should contain("2010-01-01 == 2010-01-01")
-    end
+    output = doc.convert.to_s
+    output.should contain("value == value")
+    output.should contain("2010-01-01 == 2010-01-01")
+  end
 
-    it "should warn if unterminated block comment is detected in document header" do
-      # input = <<-EOS
-      # = Document Title
-      # :foo: bar
-      # ////
-      # :hey: there
+  it "should warn if unterminated block comment is detected in document header" do
+    # input = <<-EOS
+    # = Document Title
+    # :foo: bar
+    # ////
+    # :hey: there
 
-      # content
-      # EOS
-      # doc = document_from_string input
-      # doc.attr("hey").should be_nil
-      # assert_message @logger, :WARN, "<stdin>: line 3: unterminated comment block", Hash
-    end
+    # content
+    # EOS
+    # doc = document_from_string input
+    # doc.attr("hey").should be_nil
+    # assert_message @logger, :WARN, "<stdin>: line 3: unterminated comment block", Hash
+  end
 
-    it "substitutes inside block title" do
-      input = <<-EOS
+  it "substitutes inside block title" do
+    input = <<-EOS
       :gem_name: asciidoctor
 
       .Require the +{gem_name}+ gem
       To use {gem_name}, the first thing to do is to import it in your Ruby source file.
       EOS
-      output = TestHelpers.convert_string_to_embedded(input, {"compat-mode" => ""})
-      TestHelpers.xpath_count("//*[@class=\"title\"]/code[text()=\"asciidoctor\"]", output).should eq(1)
+    output = TestHelpers.convert_string_to_embedded(input, {"compat-mode" => ""})
+    TestHelpers.xpath_count("//*[@class=\"title\"]/code[text()=\"asciidoctor\"]", output).should eq(1)
 
-      input = <<-EOS
+    input = <<-EOS
       :gem_name: asciidoctor
 
       .Require the `{gem_name}` gem
       To use {gem_name}, the first thing to do is to import it in your Ruby source file.
       EOS
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//*[@class=\"title\"]/code[text()=\"asciidoctor\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//*[@class=\"title\"]/code[text()=\"asciidoctor\"]", output).should eq(1)
+  end
 
-    it "sets attribute until it is deleted" do
-      input = <<-EOS
+  it "sets attribute until it is deleted" do
+    input = <<-EOS
       :foo: bar
 
       Crossing the {foo}.
@@ -875,13 +866,13 @@ describe "Attributes" do
 
       Belly up to the {foo}.
       EOS
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//p[text()=\"Crossing the bar.\"]", output).should eq(1)
-      TestHelpers.xpath_count("//p[text()=\"Belly up to the bar.\"]", output).should eq(0)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//p[text()=\"Crossing the bar.\"]", output).should eq(1)
+    TestHelpers.xpath_count("//p[text()=\"Belly up to the bar.\"]", output).should eq(0)
+  end
 
-    pending "should allow compat-mode to be set and unset in middle of document" do
-      input = <<-EOS
+  pending "should allow compat-mode to be set and unset in middle of document" do
+    input = <<-EOS
       :foo: bar
 
       [[paragraph-a]]
@@ -898,38 +889,37 @@ describe "Attributes" do
       `{foo}`
       EOS
 
-      result = TestHelpers.convert_string_to_embedded(input, {"compat-mode" => "@"})
-      TestHelpers.xpath_count("/*[@id=\"paragraph-a\"]//code[text()=\"{foo}\"]", result).should eq(1)
-      TestHelpers.xpath_count("/*[@id=\"paragraph-b\"]//code[text()=\"bar\"]", result).should eq(1)
-      TestHelpers.xpath_count("/*[@id=\"paragraph-c\"]//code[text()=\"{foo}\"]", result).should eq(1)
-    end
-
-    it "does not disturb attribute-looking things escaped with backslash" do
-      html = TestHelpers.convert_string(":foo: bar\nThis is a \\{foo} day.")
-      TestHelpers.xpath_count("//p[text()=\"This is a {foo} day.\"]", html).should eq(1)
-    end
+    result = TestHelpers.convert_string_to_embedded(input, {"compat-mode" => "@"})
+    TestHelpers.xpath_count("/*[@id=\"paragraph-a\"]//code[text()=\"{foo}\"]", result).should eq(1)
+    TestHelpers.xpath_count("/*[@id=\"paragraph-b\"]//code[text()=\"bar\"]", result).should eq(1)
+    TestHelpers.xpath_count("/*[@id=\"paragraph-c\"]//code[text()=\"{foo}\"]", result).should eq(1)
   end
-  context "Substitution and Escaping" do
 
-    it "does not disturb attribute-looking things escaped with literals" do
-      html = TestHelpers.convert_string(":foo: bar\nThis is a +++{foo}+++ day.")
-      TestHelpers.xpath_count("//p[text()=\"This is a {foo} day.\"]", html).should eq(1)
-    end
+  it "does not disturb attribute-looking things escaped with backslash" do
+    html = TestHelpers.convert_string(":foo: bar\nThis is a \\{foo} day.")
+    TestHelpers.xpath_count("//p[text()=\"This is a {foo} day.\"]", html).should eq(1)
+  end
+end
+context "Substitution and Escaping" do
+  it "does not disturb attribute-looking things escaped with literals" do
+    html = TestHelpers.convert_string(":foo: bar\nThis is a +++{foo}+++ day.")
+    TestHelpers.xpath_count("//p[text()=\"This is a {foo} day.\"]", html).should eq(1)
+  end
 
-    it "does not substitute attributes inside listing blocks" do
-      input = <<-EOS
+  it "does not substitute attributes inside listing blocks" do
+    input = <<-EOS
       :forecast: snow
 
       ----
       puts 'The forecast for today is {forecast}'
       ----
       EOS
-      output = TestHelpers.convert_string(input)
-      output.should match(/\{forecast\}/)
-    end
+    output = TestHelpers.convert_string(input)
+    output.should match(/\{forecast\}/)
+  end
 
-    it "does not substitute attributes inside literal blocks" do
-      input = <<-EOS
+  it "does not substitute attributes inside literal blocks" do
+    input = <<-EOS
       :foo: bar
 
       ....
@@ -937,76 +927,70 @@ describe "Attributes" do
       of the attribute named foo in your document.
       ....
       EOS
-      output = TestHelpers.convert_string(input)
-      output.should match(/\{foo\}/)
-    end
+    output = TestHelpers.convert_string(input)
+    output.should match(/\{foo\}/)
+  end
 
-    it "does not show docdir and shows relative docfile if safe mode is SERVER or greater" do
-      input = <<-EOS
+  it "does not show docdir and shows relative docfile if safe mode is SERVER or greater" do
+    input = <<-EOS
       * docdir: {docdir}
       * docfile: {docfile}
       EOS
 
-      docdir = Dir.current
-      docfile = File.join(docdir, "sample.adoc")
-      output = TestHelpers.convert_string_to_embedded(input, {"safe" => "server", "docdir" => docdir, "docfile" => docfile})
-      TestHelpers.xpath_count("//li[1]/p[text()=\"docdir: \"]", output).should eq(1)
-      TestHelpers.xpath_count("//li[2]/p[text()=\"docfile: sample.adoc\"]", output).should eq(1)
-    end
+    docdir = Dir.current
+    docfile = File.join(docdir, "sample.adoc")
+    output = TestHelpers.convert_string_to_embedded(input, {"safe" => "server", "docdir" => docdir, "docfile" => docfile})
+    TestHelpers.xpath_count("//li[1]/p[text()=\"docdir: \"]", output).should eq(1)
+    TestHelpers.xpath_count("//li[2]/p[text()=\"docfile: sample.adoc\"]", output).should eq(1)
+  end
 
-    it "shows absolute docdir and docfile paths if safe mode is less than SERVER" do
-      input = <<-EOS
+  it "shows absolute docdir and docfile paths if safe mode is less than SERVER" do
+    input = <<-EOS
       * docdir: {docdir}
       * docfile: {docfile}
       EOS
 
-      docdir = Dir.current
-      docfile = File.join(docdir, "sample.adoc")
-      output = TestHelpers.convert_string_to_embedded(input, {"safe" => "safe", "docdir" => docdir, "docfile" => docfile})
-      TestHelpers.xpath_count("//li[1]/p[text()=\"docdir: #{docdir}\"]", output).should eq(1)
-      TestHelpers.xpath_count("//li[2]/p[text()=\"docfile: #{docfile}\"]", output).should eq(1)
-    end
+    docdir = Dir.current
+    docfile = File.join(docdir, "sample.adoc")
+    output = TestHelpers.convert_string_to_embedded(input, {"safe" => "safe", "docdir" => docdir, "docfile" => docfile})
+    TestHelpers.xpath_count("//li[1]/p[text()=\"docdir: #{docdir}\"]", output).should eq(1)
+    TestHelpers.xpath_count("//li[2]/p[text()=\"docfile: #{docfile}\"]", output).should eq(1)
+  end
 
-    it "assigns attribute defined in attribute reference with set prefix and value" do
-      input = "{set:foo:bar}{foo}"
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//p", output).should eq(1)
-      TestHelpers.xpath_count("//p[text()=\"bar\"]", output).should eq(1)
-    end
+  it "assigns attribute defined in attribute reference with set prefix and value" do
+    input = "{set:foo:bar}{foo}"
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//p", output).should eq(1)
+    TestHelpers.xpath_count("//p[text()=\"bar\"]", output).should eq(1)
+  end
 
-    it "assigns attribute defined in attribute reference with set prefix and no value" do
-      input = "{set:foo}\n{foo}yes"
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//p", output).should eq(1)
-      TestHelpers.xpath_count("//p[normalize-space(text())=\"yes\"]", output).should eq(1)
-    end
+  it "assigns attribute defined in attribute reference with set prefix and no value" do
+    input = "{set:foo}\n{foo}yes"
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//p", output).should eq(1)
+    TestHelpers.xpath_count("//p[normalize-space(text())=\"yes\"]", output).should eq(1)
+  end
 
-    it "assigns attribute defined in attribute reference with set prefix and empty value" do
-      input = "{set:foo:}\n{foo}yes"
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//p", output).should eq(1)
-      TestHelpers.xpath_count("//p[normalize-space(text())=\"yes\"]", output).should eq(1)
-    end
+  it "assigns attribute defined in attribute reference with set prefix and empty value" do
+    input = "{set:foo:}\n{foo}yes"
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//p", output).should eq(1)
+    TestHelpers.xpath_count("//p[normalize-space(text())=\"yes\"]", output).should eq(1)
+  end
 
-    it "unassigns attribute defined in attribute reference with set prefix" do
-      # input = <<-EOS
-      # :attribute-missing: drop-line
-      # :foo:
+  it "unassigns attribute defined in attribute reference with set prefix" do
+    # input = <<-EOS
+    # :attribute-missing: drop-line
+    # :foo:
 
-      # {set:foo!}
-      # {foo}yes
-      # EOS
-      # output = convert_string_to_embedded input
-      # TestHelpers.xpath_count("//p", output).should eq(1)
-      # TestHelpers.xpath_count("//p/child::text()", output).should eq(0)
-      # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: foo"
-    end
-
-
-
-
-
-
+    # {set:foo!}
+    # {foo}yes
+    # EOS
+    # output = convert_string_to_embedded input
+    # TestHelpers.xpath_count("//p", output).should eq(1)
+    # TestHelpers.xpath_count("//p/child::text()", output).should eq(0)
+    # assert_message @logger, :INFO, "dropping line containing reference to missing attribute: foo"
+  end
 
   context "Intrinsic attributes" do
     it "substitute intrinsics" do
@@ -1222,8 +1206,8 @@ describe "Attributes" do
     end
   end
 
-    pending "nested document should use counter from parent document" do
-      input = <<-EOS
+  pending "nested document should use counter from parent document" do
+    input = <<-EOS
       .Title for Foo
       image::foo.jpg[]
 
@@ -1242,54 +1226,53 @@ describe "Attributes" do
       image::qux.jpg[]
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//div[@class=\"title\"]", output).should eq(4)
-      TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 1. Title for Foo\"]", output).should eq(1)
-      TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 2. Title for Bar\"]", output).should eq(1)
-      TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 3. Title for Baz\"]", output).should eq(1)
-      TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 4. Title for Qux\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//div[@class=\"title\"]", output).should eq(4)
+    TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 1. Title for Foo\"]", output).should eq(1)
+    TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 2. Title for Bar\"]", output).should eq(1)
+    TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 3. Title for Baz\"]", output).should eq(1)
+    TestHelpers.xpath_count("//div[@class=\"title\"][text() = \"Figure 4. Title for Qux\"]", output).should eq(1)
+  end
 
-    it "should not allow counter to modify locked attribute" do
-      input = <<-EOS
+  it "should not allow counter to modify locked attribute" do
+    input = <<-EOS
       {counter:foo:ignored} is not {foo}
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input, {"foo" => "bar"})
-      TestHelpers.xpath_count("//p[text()=\"bas is not bar\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input, {"foo" => "bar"})
+    TestHelpers.xpath_count("//p[text()=\"bas is not bar\"]", output).should eq(1)
+  end
 
-    it "should not allow counter2 to modify locked attribute" do
-      input = <<-EOS
+  it "should not allow counter2 to modify locked attribute" do
+    input = <<-EOS
       {counter2:foo:ignored}{foo}
       EOS
 
-      output = TestHelpers.convert_string_to_embedded(input, {"foo" => "bar"})
-      TestHelpers.xpath_count("//p[text()=\"bar\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input, {"foo" => "bar"})
+    TestHelpers.xpath_count("//p[text()=\"bar\"]", output).should eq(1)
+  end
 
-    it "should not allow counter to modify built-in locked attribute" do
-      input = <<-EOS
+  it "should not allow counter to modify built-in locked attribute" do
+    input = <<-EOS
       {counter:max-include-depth:128} is one more than {max-include-depth}
       EOS
 
-      doc = TestHelpers.document_from_string(input, {"standalone" => "false"})
-      output = doc.convert.to_s
-      TestHelpers.xpath_count("//p[text()=\"65 is one more than 64\"]", output).should eq(1)
-      doc.attributes["max-include-depth"].should eq("64")
-    end
+    doc = TestHelpers.document_from_string(input, {"standalone" => "false"})
+    output = doc.convert.to_s
+    TestHelpers.xpath_count("//p[text()=\"65 is one more than 64\"]", output).should eq(1)
+    doc.attributes["max-include-depth"].should eq("64")
+  end
 
-    it "should not allow counter2 to modify built-in locked attribute" do
-      input = <<-EOS
+  it "should not allow counter2 to modify built-in locked attribute" do
+    input = <<-EOS
       {counter2:max-include-depth:128}{max-include-depth}
       EOS
 
-      doc = TestHelpers.document_from_string(input, {"standalone" => "false"})
-      output = doc.convert.to_s
-      TestHelpers.xpath_count("//p[text()=\"64\"]", output).should eq(1)
-      doc.attributes["max-include-depth"].should eq("64")
-    end
-
+    doc = TestHelpers.document_from_string(input, {"standalone" => "false"})
+    output = doc.convert.to_s
+    TestHelpers.xpath_count("//p[text()=\"64\"]", output).should eq(1)
+    doc.attributes["max-include-depth"].should eq("64")
+  end
 
   context "Block attributes" do
     it "parses named attribute with valid name" do
@@ -1513,294 +1496,293 @@ describe "Attributes" do
     end
   end
 
+  it "roles returns empty array if role attribute is not set" do
+    input = "a paragraph"
 
-    it "roles returns empty array if role attribute is not set" do
-      input = "a paragraph"
+    doc = TestHelpers.document_from_string(input)
+    p = doc.blocks.first
+    p.roles.empty?.should be_truthy
+  end
 
-      doc = TestHelpers.document_from_string(input)
-      p = doc.blocks.first
-      p.roles.empty?.should be_truthy
-    end
-
-    it "roles does not return value of roles document attribute" do
-      input = <<-EOS
+  it "roles does not return value of roles document attribute" do
+    input = <<-EOS
       :role: story lead
 
       A paragraph
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      p = doc.blocks.first
-      p.roles.empty?.should be_truthy
-    end
+    doc = TestHelpers.document_from_string(input)
+    p = doc.blocks.first
+    p.roles.empty?.should be_truthy
+  end
 
-    it "roles= sets the role attribute on the node" do
-      doc = TestHelpers.document_from_string("a paragraph")
-      p = doc.blocks.first
-      p.role = "foobar"
-      p.attr("role").should eq("foobar")
-    end
+  it "roles= sets the role attribute on the node" do
+    doc = TestHelpers.document_from_string("a paragraph")
+    p = doc.blocks.first
+    p.role = "foobar"
+    p.attr("role").should eq("foobar")
+  end
 
-    it "roles= coerces array value to a space-separated string" do
-      doc = TestHelpers.document_from_string("a paragraph")
-      p = doc.blocks.first
-      p.role = ["foo", "bar"]
-      p.attr("role").should eq("foo bar")
-    end
+  it "roles= coerces array value to a space-separated string" do
+    doc = TestHelpers.document_from_string("a paragraph")
+    p = doc.blocks.first
+    p.role = ["foo", "bar"]
+    p.attr("role").should eq("foo bar")
+  end
 
-    it "Attribute substitutions are performed on attribute list before parsing attributes" do
-      input = <<-EOS
-      :lead: role=\"lead\"
+  it "Attribute substitutions are performed on attribute list before parsing attributes" do
+    input = <<-EOS
+      :lead: role="lead"
 
       [{lead}]
       A paragraph
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.attributes["role"].should eq("lead")
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.attributes["role"].should eq("lead")
+  end
 
-    it "id, role and options attributes can be specified on block style using shorthand syntax" do
-      input = <<-EOS
+  it "id, role and options attributes can be specified on block style using shorthand syntax" do
+    input = <<-EOS
       [literal#first.lead%step]
       A literal paragraph.
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.context.should eq(:literal)
-      para.attributes["id"].should eq("first")
-      para.attributes["role"].should eq("lead")
-      para.attributes.has_key?("step-option").should be_truthy
-      para.attributes.has_key?("options").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.context.should eq(:literal)
+    para.attributes["id"].should eq("first")
+    para.attributes["role"].should eq("lead")
+    para.attributes.has_key?("step-option").should be_truthy
+    para.attributes.has_key?("options").should be_falsey
+  end
 
-    it "id, role and options attributes can be specified using shorthand syntax on block style using multiple block attribute lines" do
-      input = <<-EOS
+  it "id, role and options attributes can be specified using shorthand syntax on block style using multiple block attribute lines" do
+    input = <<-EOS
       [literal]
       [#first]
       [.lead]
       [%step]
       A literal paragraph.
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.context.should eq(:literal)
-      para.attributes["id"].should eq("first")
-      para.attributes["role"].should eq("lead")
-      para.attributes.has_key?("step-option").should be_truthy
-      para.attributes.has_key?("options").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.context.should eq(:literal)
+    para.attributes["id"].should eq("first")
+    para.attributes["role"].should eq("lead")
+    para.attributes.has_key?("step-option").should be_truthy
+    para.attributes.has_key?("options").should be_falsey
+  end
 
-    it "multiple roles and options can be specified in block style using shorthand syntax" do
-      input = <<-EOS
+  it "multiple roles and options can be specified in block style using shorthand syntax" do
+    input = <<-EOS
       [.role1%option1.role2%option2]
       Text
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.attributes["role"].should eq("role1 role2")
-      para.attributes.has_key?("option1-option").should be_truthy
-      para.attributes.has_key?("option2-option").should be_truthy
-      para.attributes.has_key?("options").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.attributes["role"].should eq("role1 role2")
+    para.attributes.has_key?("option1-option").should be_truthy
+    para.attributes.has_key?("option2-option").should be_truthy
+    para.attributes.has_key?("options").should be_falsey
+  end
 
-    it "options specified using shorthand syntax on block style across multiple lines should be additive" do
-      input = <<-EOS
+  it "options specified using shorthand syntax on block style across multiple lines should be additive" do
+    input = <<-EOS
       [%option1]
       [%option2]
       Text
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.attributes.has_key?("option1-option").should be_truthy
-      para.attributes.has_key?("option2-option").should be_truthy
-      para.attributes.has_key?("options").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.attributes.has_key?("option1-option").should be_truthy
+    para.attributes.has_key?("option2-option").should be_truthy
+    para.attributes.has_key?("options").should be_falsey
+  end
 
-    it "roles specified using shorthand syntax on block style across multiple lines should be additive" do
-      input = <<-EOS
+  it "roles specified using shorthand syntax on block style across multiple lines should be additive" do
+    input = <<-EOS
       [.role1]
       [.role2.role3]
       Text
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.attributes["role"].should eq("role1 role2 role3")
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.attributes["role"].should eq("role1 role2 role3")
+  end
 
-    it "setting a role using the role attribute replaces any existing roles" do
-      input = <<-EOS
+  it "setting a role using the role attribute replaces any existing roles" do
+    input = <<-EOS
       [.role1]
       [role=role2]
       [.role3]
       Text
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.attributes["role"].should eq("role2 role3")
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.attributes["role"].should eq("role2 role3")
+  end
 
-    it "setting a role using the shorthand syntax on block style should not clear the ID" do
-      input = <<-EOS
+  it "setting a role using the shorthand syntax on block style should not clear the ID" do
+    input = <<-EOS
       [#id]
       [.role]
       Text
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.id.should eq("id")
-      para.role.should eq("role")
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.id.should eq("id")
+    para.role.should eq("role")
+  end
 
-    it "a role can be added using add_role when the node has no roles" do
-      input = "A normal paragraph"
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.add_role("role1")
-      res.should be_truthy
-      para.attributes["role"].should eq("role1")
-      para.has_role?("role1").should be_truthy
-    end
+  it "a role can be added using add_role when the node has no roles" do
+    input = "A normal paragraph"
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.add_role("role1")
+    res.should be_truthy
+    para.attributes["role"].should eq("role1")
+    para.has_role?("role1").should be_truthy
+  end
 
-    it "a role can be added using add_role when the node already has a role" do
-      input = <<-EOS
+  it "a role can be added using add_role when the node already has a role" do
+    input = <<-EOS
       [.role1]
       A normal paragraph
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.add_role("role2")
-      res.should be_truthy
-      para.attributes["role"].should eq("role1 role2")
-      para.has_role?("role1").should be_truthy
-      para.has_role?("role2").should be_truthy
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.add_role("role2")
+    res.should be_truthy
+    para.attributes["role"].should eq("role1 role2")
+    para.has_role?("role1").should be_truthy
+    para.has_role?("role2").should be_truthy
+  end
 
-    it "a role is not added using add_role if the node already has that role" do
-      input = <<-EOS
+  it "a role is not added using add_role if the node already has that role" do
+    input = <<-EOS
       [.role1]
       A normal paragraph
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.add_role("role1")
-      res.should be_falsey
-      para.attributes["role"].should eq("role1")
-      para.has_role?("role1").should be_truthy
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.add_role("role1")
+    res.should be_falsey
+    para.attributes["role"].should eq("role1")
+    para.has_role?("role1").should be_truthy
+  end
 
-    it "an existing role can be removed using remove_role" do
-      input = <<-EOS
+  it "an existing role can be removed using remove_role" do
+    input = <<-EOS
       [.role1.role2]
       A normal paragraph
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.remove_role("role1")
-      res.should be_truthy
-      para.attributes["role"].should eq("role2")
-      para.has_role?("role2").should be_truthy
-      para.has_role?("role1").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.remove_role("role1")
+    res.should be_truthy
+    para.attributes["role"].should eq("role2")
+    para.has_role?("role2").should be_truthy
+    para.has_role?("role1").should be_falsey
+  end
 
-    it "roles are removed when last role is removed using remove_role" do
-      input = <<-EOS
+  it "roles are removed when last role is removed using remove_role" do
+    input = <<-EOS
       [.role1]
       A normal paragraph
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.remove_role("role1")
-      res.should be_truthy
-      para.role?.should be_falsey
-      para.attributes["role"]?.should be_nil
-      para.has_role?("role1").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.remove_role("role1")
+    res.should be_truthy
+    para.role?.should be_falsey
+    para.attributes["role"]?.should be_nil
+    para.has_role?("role1").should be_falsey
+  end
 
-    it "roles are not changed when a non-existent role is removed using remove_role" do
-      input = <<-EOS
+  it "roles are not changed when a non-existent role is removed using remove_role" do
+    input = <<-EOS
       [.role1]
       A normal paragraph
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.remove_role("role2")
-      res.should be_falsey
-      para.attributes["role"].should eq("role1")
-      para.has_role?("role1").should be_truthy
-      para.has_role?("role2").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.remove_role("role2")
+    res.should be_falsey
+    para.attributes["role"].should eq("role1")
+    para.has_role?("role1").should be_truthy
+    para.has_role?("role2").should be_falsey
+  end
 
-    it "roles are not changed when using remove_role if the node has no roles" do
-      input = "A normal paragraph"
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      res = para.remove_role("role1")
-      res.should be_falsey
-      para.attributes["role"]?.should be_nil
-      para.has_role?("role1").should be_falsey
-    end
+  it "roles are not changed when using remove_role if the node has no roles" do
+    input = "A normal paragraph"
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    res = para.remove_role("role1")
+    res.should be_falsey
+    para.attributes["role"]?.should be_nil
+    para.has_role?("role1").should be_falsey
+  end
 
-    it "option can be specified in first position of block style using shorthand syntax" do
-      input = <<-EOS
+  it "option can be specified in first position of block style using shorthand syntax" do
+    input = <<-EOS
       [%interactive]
       - [x] checked
       EOS
 
-      doc = TestHelpers.document_from_string(input)
-      list = doc.blocks.first
-      list.attributes.has_key?("interactive-option").should be_truthy
-      list.attributes.has_key?("options").should be_falsey
-    end
+    doc = TestHelpers.document_from_string(input)
+    list = doc.blocks.first
+    list.attributes.has_key?("interactive-option").should be_truthy
+    list.attributes.has_key?("options").should be_falsey
+  end
 
-    it "id and role attributes can be specified on section style using shorthand syntax" do
-      input = <<-EOS
+  it "id and role attributes can be specified on section style using shorthand syntax" do
+    input = <<-EOS
       [dedication#dedication.small]
       == Section
       Content.
       EOS
-      output = TestHelpers.convert_string_to_embedded(input)
-      TestHelpers.xpath_count("//div[@class=\"sect1 small\"]", output).should eq(1)
-      TestHelpers.xpath_count("//div[@class=\"sect1 small\"]/h2[@id=\"dedication\"]", output).should eq(1)
-    end
+    output = TestHelpers.convert_string_to_embedded(input)
+    TestHelpers.xpath_count("//div[@class=\"sect1 small\"]", output).should eq(1)
+    TestHelpers.xpath_count("//div[@class=\"sect1 small\"]/h2[@id=\"dedication\"]", output).should eq(1)
+  end
 
-    pending "id attribute specified using shorthand syntax should not create a special section" do
-      input = <<-EOS
+  pending "id attribute specified using shorthand syntax should not create a special section" do
+    input = <<-EOS
       [#idname]
       == Section
 
       content
       EOS
 
-      doc = TestHelpers.document_from_string(input, {"backend" => "docbook"})
-      section = doc.blocks[0]
-      section.should_not be_nil
-      section.context.should eq(:section)
-      section.as(Asciidoctor::Section).special.should be_falsey
-      output = doc.convert.to_s
-      TestHelpers.xpath_count("article:root > section", output).should eq(1)
-      TestHelpers.xpath_count("article:root > section[xml|id=\"idname\"]", output).should eq(1)
-    end
+    doc = TestHelpers.document_from_string(input, {"backend" => "docbook"})
+    section = doc.blocks[0]
+    section.should_not be_nil
+    section.context.should eq(:section)
+    section.as(Asciidoctor::Section).special.should be_falsey
+    output = doc.convert.to_s
+    TestHelpers.xpath_count("article:root > section", output).should eq(1)
+    TestHelpers.xpath_count("article:root > section[xml|id=\"idname\"]", output).should eq(1)
+  end
 
-    it "Block attributes are additive" do
-      input = <<-EOS
-      [id=\"foo\"]
-      [role=\"lead\"]
+  it "Block attributes are additive" do
+    input = <<-EOS
+      [id="foo"]
+      [role="lead"]
       A paragraph.
       EOS
-      doc = TestHelpers.document_from_string(input)
-      para = doc.blocks.first
-      para.id.should eq("foo")
-      para.attributes["role"].should eq("lead")
-    end
+    doc = TestHelpers.document_from_string(input)
+    para = doc.blocks.first
+    para.id.should eq("foo")
+    para.attributes["role"].should eq("lead")
+  end
 
-    it "Last wins for id attribute" do
-      input = <<-EOS
+  it "Last wins for id attribute" do
+    input = <<-EOS
       [[bar]]
       [[foo]]
       == Section
@@ -1808,18 +1790,18 @@ describe "Attributes" do
       paragraph
 
       [[baz]]
-      [id=\"coolio\"]
+      [id="coolio"]
       === Section
       EOS
-      doc = TestHelpers.document_from_string(input)
-      sec = doc.first_section.not_nil!
-      sec.id.should eq("foo")
-      subsec = sec.blocks.last
-      subsec.id.should eq("coolio")
-    end
+    doc = TestHelpers.document_from_string(input)
+    sec = doc.first_section.not_nil!
+    sec.id.should eq("foo")
+    subsec = sec.blocks.last
+    subsec.id.should eq("coolio")
+  end
 
-    it "trailing block attributes transfer to the following section" do
-      input = <<-EOS
+  it "trailing block attributes transfer to the following section" do
+    input = <<-EOS
       [[one]]
 
       == Section One
@@ -1833,7 +1815,7 @@ describe "Attributes" do
 
       paragraph
 
-      [role=\"classy\"]
+      [role="classy"]
 
       ////
       block comment
@@ -1843,16 +1825,12 @@ describe "Attributes" do
 
       content
       EOS
-      doc = TestHelpers.document_from_string(input)
-      section_one = doc.blocks.first
-      section_one.id.should eq("one")
-      subsection = section_one.blocks.last
-      subsection.id.should eq("sub")
-      section_two = doc.blocks.last.as(Asciidoctor::Section)
-      section_two.attr("role").should eq("classy")
-    end
-
-
-
-
+    doc = TestHelpers.document_from_string(input)
+    section_one = doc.blocks.first
+    section_one.id.should eq("one")
+    subsection = section_one.blocks.last
+    subsection.id.should eq("sub")
+    section_two = doc.blocks.last.as(Asciidoctor::Section)
+    section_two.attr("role").should eq("classy")
+  end
 end

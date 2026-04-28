@@ -446,10 +446,10 @@ module Asciidoctor
         rest = line[(idx + delimiter.size)..]
         m = CellSpecStartRx.match(spec_part)
         return {nil, line} unless m
-        return { {} of String => String | Int32, rest} if m[0].empty?
+        return { {} of String => String | Int32, rest } if m[0].empty?
       elsif (m = CellSpecEndRx.match(line))
         if m[0].lstrip.empty?
-          return { {} of String => String | Int32, line.rstrip}
+          return { {} of String => String | Int32, line.rstrip }
         end
         rest = m.pre_match
       else
@@ -458,17 +458,17 @@ module Asciidoctor
         # But only if the spec contains meaningful elements (colspan, rowspan, alignment, or valid style)
         if (m2 = CellSpecStartRx.match(line.strip)) && !m2[0].empty? && line.strip == m2[0]
           # Verify the match contains meaningful spec elements
-          has_span = m2[1]? && m2[2]?  # colspan/rowspan spec like "2+" or "3*"
-          has_align = m2[3]?  # alignment like "<", ">", "^"
+          has_span = m2[1]? && m2[2]? # colspan/rowspan spec like "2+" or "3*"
+          has_align = m2[3]?          # alignment like "<", ">", "^"
           has_valid_style = m2[4]? && !m2[4].empty? && TableCellStyles.has_key?(m2[4][0])
           if has_span || has_align || has_valid_style
             m = m2
             rest = ""
           else
-            return { {} of String => String | Int32, line}
+            return { {} of String => String | Int32, line }
           end
         else
-          return { {} of String => String | Int32, line}
+          return { {} of String => String | Int32, line }
         end
       end
       spec = {} of String => String | Int32
@@ -919,7 +919,7 @@ module Asciidoctor
       if preamble
         if preamble.blocks?
           # Only keep preamble if there are sections in the document
-          has_sections = parent.as(AbstractBlock).blocks.any? { |b| b.is_a?(Section) }
+          has_sections = parent.as(AbstractBlock).blocks.any?(Section)
           unless has_sections
             # No sections - move preamble content directly to parent
             preamble.blocks.each { |b| parent.as(AbstractBlock).blocks << b }
@@ -1017,7 +1017,7 @@ module Asciidoctor
             reader.unshift_line(this_line)
             block = parse_list(reader, :olist, parent, attributes)
             return finalize_block(block, document, reader, attributes, style)
-          elsif (this_line.includes?("::") || this_line.includes?(";;" )) && (m = DescriptionListRx.match(this_line))
+          elsif (this_line.includes?("::") || this_line.includes?(";;")) && (m = DescriptionListRx.match(this_line))
             reader.unshift_line(this_line)
             block = parse_description_list(reader, parent, attributes)
             return finalize_block(block, document, reader, attributes, style)
@@ -1058,7 +1058,6 @@ module Asciidoctor
 
           # Check for block macros
           if this_line.ends_with?(']') && this_line.includes?("::")
-
             # Hook: check for BlockMacroProcessor extensions
             if document.extensions?
               registry = document.extensions!
@@ -1182,8 +1181,8 @@ module Asciidoctor
             adjust_indentation!(lines)
           end
           # Markdown-style quote block: lines starting with '> '
-          if !text_only && ch0 == '>' && this_line.starts_with?("\> ")
-            lines.map! { |line| line == ">" ? line[1..] : (line.starts_with?("\> ") ? line[2..] : line) }
+          if !text_only && ch0 == '>' && this_line.starts_with?("> ")
+            lines.map! { |line| line == ">" ? line[1..] : (line.starts_with?("> ") ? line[2..] : line) }
             credit_line = nil
             if !lines.empty? && lines[-1].starts_with?("-- ")
               credit_line = lines.pop[3..]
@@ -1201,7 +1200,7 @@ module Asciidoctor
               attributes["attribution"] = parts[0] unless parts[0].empty?
               attributes["citetitle"] = parts[1] if parts.size > 1
             end
-          # Quoted paragraph-style quote block: starts with '"', ends with '"' then '-- '
+            # Quoted paragraph-style quote block: starts with '"', ends with '"' then '-- '
           elsif !text_only && ch0 == '"' && lines.size > 1 && lines[-1].starts_with?("-- ") && lines[-2].ends_with?('"')
             lines[0] = this_line[1..] # strip leading quote
             credit_line = lines.pop[3..]
@@ -1512,7 +1511,6 @@ module Asciidoctor
         section.numbered = true
       end
 
-
       if (reftext = sect_reftext || attributes["reftext"]?)
         section.attributes["reftext"] = reftext
       end
@@ -1540,6 +1538,7 @@ module Asciidoctor
       reader.skip_blank_lines
       section
     end
+
     # Parse a list (unordered, ordered, or callout).
     def parse_list(reader : Reader, list_type : Symbol, parent : AbstractBlock, attributes : Hash(String, String) = {} of String => String, start : String? = nil) : List
       list = List.new(parent, list_type)
@@ -1857,7 +1856,7 @@ module Asciidoctor
       # Handle TSV tab separator
       separator = "\t" if attributes["format"]? == "tsv"
 
-          has_header = attributes.has_key?("header-option")
+      has_header = attributes.has_key?("header-option")
       has_footer = attributes.has_key?("footer-option")
       row_index = 0
       implicit_header_checked = false
@@ -1915,43 +1914,43 @@ module Asciidoctor
           # Parse spec for cell 1 from fragments[0]
           first_frag = fragments[0]
           pending_spec = if first_frag.strip.empty?
-            {} of String => String | Int32
-          else
-            # Use CellSpecStartRx directly on the first fragment
-            m = CellSpecStartRx.match(first_frag.strip)
-            if m && !m[0].empty?
-              s = {} of String => String | Int32
-              if m[1]?
-                parts = m[1].split('.')
-                colspec = parts[0]?.try(&.to_i?) || 1
-                rowspec = parts[1]?.try(&.to_i?) || 1
-                case m[2]?
-                when "+"
-                  s["colspan"] = colspec unless colspec == 1
-                  s["rowspan"] = rowspec unless rowspec == 1
-                when "*"
-                  s["repeatcol"] = colspec unless colspec == 1
-                end
-              end
-              if (align = m[3]?)
-                parts = align.split('.')
-                colspec_align = parts[0]? || ""
-                rowspec_align = parts[1]? || ""
-                if !colspec_align.empty? && colspec_align.size == 1 && TableCellHorzAlignments.has_key?(colspec_align[0])
-                  s["halign"] = TableCellHorzAlignments[colspec_align[0]]
-                end
-                if !rowspec_align.empty? && rowspec_align.size == 1 && TableCellVertAlignments.has_key?(rowspec_align[0])
-                  s["valign"] = TableCellVertAlignments[rowspec_align[0]]
-                end
-              end
-              if (style_char = m[4]?) && !style_char.empty? && TableCellStyles.has_key?(style_char[0])
-                s["style"] = style_char
-              end
-              s
-            else
-              {} of String => String | Int32
-            end
-          end
+                           {} of String => String | Int32
+                         else
+                           # Use CellSpecStartRx directly on the first fragment
+                           m = CellSpecStartRx.match(first_frag.strip)
+                           if m && !m[0].empty?
+                             s = {} of String => String | Int32
+                             if m[1]?
+                               parts = m[1].split('.')
+                               colspec = parts[0]?.try(&.to_i?) || 1
+                               rowspec = parts[1]?.try(&.to_i?) || 1
+                               case m[2]?
+                               when "+"
+                                 s["colspan"] = colspec unless colspec == 1
+                                 s["rowspan"] = rowspec unless rowspec == 1
+                               when "*"
+                                 s["repeatcol"] = colspec unless colspec == 1
+                               end
+                             end
+                             if (align = m[3]?)
+                               parts = align.split('.')
+                               colspec_align = parts[0]? || ""
+                               rowspec_align = parts[1]? || ""
+                               if !colspec_align.empty? && colspec_align.size == 1 && TableCellHorzAlignments.has_key?(colspec_align[0])
+                                 s["halign"] = TableCellHorzAlignments[colspec_align[0]]
+                               end
+                               if !rowspec_align.empty? && rowspec_align.size == 1 && TableCellVertAlignments.has_key?(rowspec_align[0])
+                                 s["valign"] = TableCellVertAlignments[rowspec_align[0]]
+                               end
+                             end
+                             if (style_char = m[4]?) && !style_char.empty? && TableCellStyles.has_key?(style_char[0])
+                               s["style"] = style_char
+                             end
+                             s
+                           else
+                             {} of String => String | Int32
+                           end
+                         end
           (1...fragments.size).each do |i|
             frag = fragments[i]
             spec_for_next, cell_content = parse_cellspec(frag, :end)
@@ -1979,7 +1978,7 @@ module Asciidoctor
             sub_frags.each_with_index do |sf, idx|
               cell_content = sf.strip
               # Empty fragment at end of line means empty cell (trailing separator)
-              parsed_cells << ({ {} of String => String | Int32, cell_content})
+              parsed_cells << ({ {} of String => String | Int32, cell_content })
             end
           end
         end
@@ -2028,28 +2027,28 @@ module Asciidoctor
             # first_frags[i] (i>0) is content + spec for next cell
             # Count effective columns in first line
             pending_first_spec = if first_frags[0].strip.empty?
-              {} of String => String | Int32
-            else
-              m2 = CellSpecStartRx.match(first_frags[0].strip)
-              if m2 && !m2[0].empty?
-                s2 = {} of String => String | Int32
-                if m2[1]?
-                  parts2 = m2[1].split('.')
-                  cs2 = parts2[0]?.try(&.to_i?) || 1
-                  rs2 = parts2[1]?.try(&.to_i?) || 1
-                  case m2[2]?
-                  when "+"
-                    s2["colspan"] = cs2 unless cs2 == 1
-                    s2["rowspan"] = rs2 unless rs2 == 1
-                  when "*"
-                    s2["repeatcol"] = cs2 unless cs2 == 1
-                  end
-                end
-                s2
-              else
-                {} of String => String | Int32
-              end
-            end
+                                   {} of String => String | Int32
+                                 else
+                                   m2 = CellSpecStartRx.match(first_frags[0].strip)
+                                   if m2 && !m2[0].empty?
+                                     s2 = {} of String => String | Int32
+                                     if m2[1]?
+                                       parts2 = m2[1].split('.')
+                                       cs2 = parts2[0]?.try(&.to_i?) || 1
+                                       rs2 = parts2[1]?.try(&.to_i?) || 1
+                                       case m2[2]?
+                                       when "+"
+                                         s2["colspan"] = cs2 unless cs2 == 1
+                                         s2["rowspan"] = rs2 unless rs2 == 1
+                                       when "*"
+                                         s2["repeatcol"] = cs2 unless cs2 == 1
+                                       end
+                                     end
+                                     s2
+                                   else
+                                     {} of String => String | Int32
+                                   end
+                                 end
             effective_cols = 0
             (1...first_frags.size).each do |fi|
               frag_r = first_frags[fi].gsub(ph, separator)
@@ -2075,7 +2074,7 @@ module Asciidoctor
       # Distribute cells into rows based on column count, respecting colspan/rowspan
       # Track which cells are occupied by rowspans
       current_row = [] of Table::Cell
-      current_row_cols = 0  # effective columns used in current row (accounting for colspan)
+      current_row_cols = 0 # effective columns used in current row (accounting for colspan)
       row_num = 0
       # Grid to track rowspan occupancy: grid[row][col] = true if occupied
       rowspan_grid = Array(Array(Bool)).new
@@ -2087,17 +2086,17 @@ module Asciidoctor
         valign = spec["valign"]?.try { |v| v.is_a?(String) ? v : nil }
         style_char = spec["style"]?.try { |v| v.is_a?(String) ? v : nil }
         cell_style = if style_char
-          case style_char
-          when "d" then :none
-          when "s" then :strong
-          when "e" then :emphasis
-          when "m" then :monospaced
-          when "h" then :header
-          when "l" then :literal
-          when "a" then :asciidoc
-          else nil
-          end
-        end
+                       case style_char
+                       when "d" then :none
+                       when "s" then :strong
+                       when "e" then :emphasis
+                       when "m" then :monospaced
+                       when "h" then :header
+                       when "l" then :literal
+                       when "a" then :asciidoc
+                       else          nil
+                       end
+                     end
 
         # Ensure rowspan_grid has enough rows
         (rowspan_grid.size..row_num + rowspan).each do |r|
@@ -2332,7 +2331,7 @@ module Asciidoctor
         # Check if it's a line-break continuation: ends with " + \"
         if value.rstrip.ends_with?(" + \\")
           # Line-break continuation: preserve + and join with \n
-          value = value.rstrip[0...-2].rstrip  # remove " \\"
+          value = value.rstrip[0...-2].rstrip # remove " \\"
           while reader.advance
             next_line = reader.peek_line || ""
             break if next_line.empty?
@@ -2731,37 +2730,37 @@ module Asciidoctor
     end
 
     BLOCK_CONTEXT_MAP = {
-      "abstract"     => :abstract,
-      "admonition"   => :admonition,
-      "asciimath"    => :asciimath,
-      "audio"        => :audio,
-      "colist"       => :colist,
-      "comment"      => :comment,
-      "dlist"        => :dlist,
-      "example"      => :example,
-      "fenced_code"  => :fenced_code,
+      "abstract"       => :abstract,
+      "admonition"     => :admonition,
+      "asciimath"      => :asciimath,
+      "audio"          => :audio,
+      "colist"         => :colist,
+      "comment"        => :comment,
+      "dlist"          => :dlist,
+      "example"        => :example,
+      "fenced_code"    => :fenced_code,
       "floating_title" => :floating_title,
-      "image"        => :image,
-      "latexmath"    => :latexmath,
-      "listing"      => :listing,
-      "literal"      => :literal,
-      "olist"        => :olist,
-      "open"         => :open,
-      "page_break"   => :page_break,
-      "paragraph"    => :paragraph,
-      "partintro"    => :partintro,
-      "pass"         => :pass,
-      "preamble"     => :preamble,
-      "quote"        => :quote,
-      "sidebar"      => :sidebar,
-      "source"       => :source,
-      "stem"         => :stem,
-      "table"        => :table,
+      "image"          => :image,
+      "latexmath"      => :latexmath,
+      "listing"        => :listing,
+      "literal"        => :literal,
+      "olist"          => :olist,
+      "open"           => :open,
+      "page_break"     => :page_break,
+      "paragraph"      => :paragraph,
+      "partintro"      => :partintro,
+      "pass"           => :pass,
+      "preamble"       => :preamble,
+      "quote"          => :quote,
+      "sidebar"        => :sidebar,
+      "source"         => :source,
+      "stem"           => :stem,
+      "table"          => :table,
       "thematic_break" => :thematic_break,
-      "toc"          => :toc,
-      "ulist"        => :ulist,
-      "verse"        => :verse,
-      "video"        => :video,
+      "toc"            => :toc,
+      "ulist"          => :ulist,
+      "verse"          => :verse,
+      "video"          => :video,
     }
 
     # Check if a string is uniform (all the same character).

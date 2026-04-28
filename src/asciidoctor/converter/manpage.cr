@@ -10,17 +10,17 @@ module Asciidoctor
 
       WHITESPACE_CHARS = "\n\t "
 
-      LiteralBackslashRx  = /\A\\|(#{Regex.escape ESC})?\\/
-      LeadingPeriodRx     = /^\./m
+      LiteralBackslashRx       = /\A\\|(#{Regex.escape ESC})?\\/
+      LeadingPeriodRx          = /^\./m
       LiteralBackslashInlineRx = /\\(?=[^\\]|$)/
-      TroffEscapeRx       = /\\(?=[a-zA-Z(])/
-      EmDashCharRefRx     = /&#8212;(?:&#8203;)?/
-      EllipsisCharRefRx   = /&#8230;(?:&#8203;)?/
-      WrappedIndentRx     = /\h*\n\h*/
-      MockMacroRx         = /<\/?(#{Regex.escape ESC_BS}[^>]+)>/
-      EscapedMacroRx      = /^(?:#{Regex.escape ESC_BS}c\n)?#{Regex.escape ESC_FS}((?:URL|MTO) ".*?" ".*?" )( |[^\s]*)(.*?)(?: *#{Regex.escape ESC_BS}c)?$/m
-      XMLMarkupRx         = /&#?[a-z\d]+;|</
-      PCDATAFilterRx      = /(&#?[a-z\d]+;|<#{Regex.escape ESC_BS}f\(CR.*?<\/#{Regex.escape ESC_BS}fP>|<[^>]+>)|([^&<]+)/
+      TroffEscapeRx            = /\\(?=[a-zA-Z(])/
+      EmDashCharRefRx          = /&#8212;(?:&#8203;)?/
+      EllipsisCharRefRx        = /&#8230;(?:&#8203;)?/
+      WrappedIndentRx          = /\h*\n\h*/
+      MockMacroRx              = /<\/?(#{Regex.escape ESC_BS}[^>]+)>/
+      EscapedMacroRx           = /^(?:#{Regex.escape ESC_BS}c\n)?#{Regex.escape ESC_FS}((?:URL|MTO) ".*?" ".*?" )( |[^\s]*)(.*?)(?: *#{Regex.escape ESC_BS}c)?$/m
+      XMLMarkupRx              = /&#?[a-z\d]+;|</
+      PCDATAFilterRx           = /(&#?[a-z\d]+;|<#{Regex.escape ESC_BS}f\(CR.*?<\/#{Regex.escape ESC_BS}fP>|<[^>]+>)|([^&<]+)/
 
       def initialize(backend : String = "manpage")
         super(backend)
@@ -40,7 +40,7 @@ module Asciidoctor
           when List     then convert_list(node)
           when Table    then convert_table(node)
           when Inline   then convert_inline(node)
-          else ""
+          else               ""
           end
         end
       end
@@ -73,7 +73,7 @@ module Asciidoctor
         when :stem           then convert_stem(node)
         when :thematic_break then convert_thematic_break(node)
         when :verse          then convert_verse(node)
-        else ""
+        else                      ""
         end
       end
 
@@ -87,11 +87,11 @@ module Asciidoctor
         authors_str = node.attr?("authors") ? node.attr("authors").to_s : "[see the \"AUTHOR(S)\" section]"
 
         result = [] of String
-        result << %('\" t\n.\"     Title: #{mantitle}\n.\"    Author: #{authors_str}\n.\" Generator: Asciidoctor Crystal #{VERSION})
-        result << %(.\"      Date: #{docdate}) if docdate
+        result << %('" t\n."     Title: #{mantitle}\n."    Author: #{authors_str}\n." Generator: Asciidoctor Crystal #{VERSION})
+        result << %(."      Date: #{docdate}) if docdate
         manual_str = manmanual ? manmanual.to_s.tr(WHITESPACE_CHARS, " ").squeeze(' ') : "\\ \\&"
         source_str = mansource ? mansource.to_s.tr(WHITESPACE_CHARS, " ").squeeze(' ') : "\\ \\&"
-        result << %(.\"    Manual: #{manual_str}\n.\"    Source: #{source_str}\n.\"  Language: English\n.\\")
+        result << %(."    Manual: #{manual_str}\n."    Source: #{source_str}\n."  Language: English\n.\\")
         result << %(.TH "#{manify(manname.to_s.upcase)}" "#{manvolnum}" "#{docdate}" "#{mansource ? manify(mansource.to_s) : "\\ \\&"}" "#{manmanual ? manify(manmanual.to_s) : "\\ \\&"}")
         result << ".ie \\n(.g .ds Aq \\(aq"
         result << ".el       .ds Aq '"
@@ -111,10 +111,11 @@ module Asciidoctor
           end
         end
 
-         result << node.content.to_s
+        result << node.content.to_s
         append_footnotes(result, node)
         result.join("\n")
       end
+
       def convert_embedded(node : Document) : String
         result = [node.content.to_s]
         append_footnotes(result, node)
@@ -149,7 +150,7 @@ module Asciidoctor
         when :kbd       then convert_inline_kbd(node)
         when :menu      then convert_inline_menu(node)
         when :quoted    then convert_inline_quoted(node)
-        else ""
+        else                 ""
         end
       end
 
@@ -245,12 +246,12 @@ module Asciidoctor
       def convert_inline_quoted(node : Inline) : String
         text = node.text || ""
         case node.type
-        when :emphasis  then %(<#{ESC_BS}fI>#{text}</#{ESC_BS}fP>)
-        when :strong    then %(<#{ESC_BS}fB>#{text}</#{ESC_BS}fP>)
+        when :emphasis   then %(<#{ESC_BS}fI>#{text}</#{ESC_BS}fP>)
+        when :strong     then %(<#{ESC_BS}fB>#{text}</#{ESC_BS}fP>)
         when :monospaced then "<#{ESC_BS}f(CR>#{text}</#{ESC_BS}fP>"
-        when :single    then "<#{ESC_BS}(oq>#{text}</#{ESC_BS}(cq>"
-        when :double    then "<#{ESC_BS}(lq>#{text}</#{ESC_BS}(rq>"
-        else text
+        when :single     then "<#{ESC_BS}(oq>#{text}</#{ESC_BS}(cq>"
+        when :double     then "<#{ESC_BS}(lq>#{text}</#{ESC_BS}(rq>"
+        else                  text
         end
       end
 
@@ -260,7 +261,7 @@ module Asciidoctor
         when :dlist  then convert_dlist(node)
         when :olist  then convert_olist(node)
         when :ulist  then convert_ulist(node)
-        else ""
+        else              ""
         end
       end
 
@@ -481,23 +482,22 @@ module Asciidoctor
         # First, convert literal backslashes in content to \(rs (before generating new backslashes)
         # Protect ESC_BS markers from being converted
         str = str
-          .gsub(ESC_BS, "\u001c")  # temporarily hide ESC_BS markers
-          .gsub("\\", "\\(rs")  # convert literal backslashes in content to \(rs
-          .gsub("\u001c", ESC_BS)  # restore ESC_BS markers
+          .gsub(ESC_BS, "\u001c") # temporarily hide ESC_BS markers
+          .gsub("\\", "\\(rs")    # convert literal backslashes in content to \(rs
+          .gsub("\u001c", ESC_BS) # restore ESC_BS markers
         str = str
           .gsub(EllipsisCharRefRx, ".|.|.")
-          .gsub(LeadingPeriodRx, "#{ESC_BS}&.")  # use ESC_BS so it won't be re-converted
-          .gsub(EscapedMacroRx) { |_, md|  # unescape troff macro, quote adjacent char, isolate macro line
-            macro_part = md[1]? || ""
-            adj_char = md[2]? || ""
-            rest = (md[3]? || "").lstrip
-            dq = '"'
-            if rest.empty?
-              ".#{macro_part}#{dq}#{adj_char}#{dq}"
-            else
-              ".#{macro_part}#{dq}#{adj_char.rstrip}#{dq}\n#{rest}"
-            end
-          }
+          .gsub(LeadingPeriodRx, "#{ESC_BS}&.") # use ESC_BS so it won't be re-converted
+          .gsub(EscapedMacroRx) { |_, md|       # unescape troff macro, quote adjacent char, isolate macro line
+ macro_part = md[1]? || ""
+          adj_char = md[2]? || ""
+          rest = (md[3]? || "").lstrip
+          dq = '"'
+          if rest.empty?
+            ".#{macro_part}#{dq}#{adj_char}#{dq}"
+          else
+            ".#{macro_part}#{dq}#{adj_char.rstrip}#{dq}\n#{rest}"
+          end }
           .gsub("-", "#{ESC_BS}-")
           .gsub("&lt;", "<")
           .gsub("&gt;", ">")
@@ -521,8 +521,8 @@ module Asciidoctor
           .gsub("&#8203;", "#{ESC_BS}:")
           .gsub("&amp;", "&")
           .gsub("'", "#{ESC_BS}*(Aq")
-          .gsub(MockMacroRx) { |_, md| md[1]? || "" }  # remove mock boundary markers
-          .gsub(ESC_BS, "\\")  # restore all ESC_BS as real backslashes
+          .gsub(MockMacroRx) { |_, md| md[1]? || "" } # remove mock boundary markers
+          .gsub(ESC_BS, "\\")                         # restore all ESC_BS as real backslashes
           .gsub(ESC_FS, ".")
           .rstrip
         str

@@ -23,12 +23,12 @@ module Asciidoctor
 
       DEFAULT_QUOTE_TAG = {"", "", false}
 
-      DropAnchorRx      = /<(?:a\b[^>]*|\/a)>/
-      LeadingAnchorsRx  = /^(?:<a id="[^"]+"><\/a>)+/
-      StemBreakRx       = / *\\\n(?:\\?\n)*|\n\n+/
-      SvgPreambleRx     = /\A.*?(?=<svg[\s>])/m
-      SvgStartTagRx     = /\A<svg(?:\s[^>]*)?>/
-      DimensionAttrRx   = /\s(?:width|height|style)=(["']).*?\1/
+      DropAnchorRx     = /<(?:a\b[^>]*|\/a)>/
+      LeadingAnchorsRx = /^(?:<a id="[^"]+"><\/a>)+/
+      StemBreakRx      = / *\\\n(?:\\?\n)*|\n\n+/
+      SvgPreambleRx    = /\A.*?(?=<svg[\s>])/m
+      SvgStartTagRx    = /\A<svg(?:\s[^>]*)?>/
+      DimensionAttrRx  = /\s(?:width|height|style)=(["']).*?\1/
 
       @xml_mode : Bool
       @void_element_slash : String
@@ -259,7 +259,7 @@ Your browser does not support the audio tag.
             result << "<colgroup>"
             lw = label_width ? "#{label_width}%" : "15%"
             iw = item_width ? "#{item_width}%" : "85%"
-            result << %(<col style="width: #{lw};">) 
+            result << %(<col style="width: #{lw};">)
             result << %(<col style="width: #{iw};">)
             result << "</colgroup>"
           end
@@ -419,10 +419,10 @@ Your browser does not support the audio tag.
         # Content
         content = node.is_a?(AbstractBlock) ? (node.content || "") : ""
         max_width_style = if node.is_a?(Document) && (mw = node.attr("max-width"))
-          %( style="max-width: #{mw};")
-        else
-          ""
-        end
+                            %( style="max-width: #{mw};")
+                          else
+                            ""
+                          end
         result << %(<div id="content"#{max_width_style}>\n#{content}\n</div>)
 
         # Footer
@@ -980,17 +980,17 @@ Your browser does not support the audio tag.
                   base_content = cell_content_parts.empty? ? "" : %(<p class="tableblock">#{cell_content_parts.join("</p>\n<p class=\"tableblock\">")}</p>)
                   # Apply cell style wrapping
                   cell_content = case cell.cell_style
-                  when :emphasis, :e
-                    %(<p class="tableblock"><em>#{cell_content_parts.join}</em></p>)
-                  when :monospaced, :m
-                    %(<p class="tableblock"><code>#{cell_content_parts.join}</code></p>)
-                  when :strong, :s
-                    %(<p class="tableblock"><strong>#{cell_content_parts.join}</strong></p>)
-                  when :verse
-                    %(<div class="verse">#{cell.text || ""}</div>)
-                  else
-                    base_content
-                  end
+                                 when :emphasis, :e
+                                   %(<p class="tableblock"><em>#{cell_content_parts.join}</em></p>)
+                                 when :monospaced, :m
+                                   %(<p class="tableblock"><code>#{cell_content_parts.join}</code></p>)
+                                 when :strong, :s
+                                   %(<p class="tableblock"><strong>#{cell_content_parts.join}</strong></p>)
+                                 when :verse
+                                   %(<div class="verse">#{cell.text || ""}</div>)
+                                 else
+                                   base_content
+                                 end
                 end
               end
               cell_tag = (tsec == "head" || cell.cell_style == :header) ? "th" : "td"

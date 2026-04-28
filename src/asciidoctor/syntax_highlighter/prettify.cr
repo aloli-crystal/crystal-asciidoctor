@@ -8,8 +8,8 @@ module Asciidoctor
   class PrettifyAdapter < SyntaxHighlighterBase
     register_for "prettify"
 
-    CDN_BASE_URL      = "https://cdnjs.cloudflare.com/ajax/libs/prettify"
-    PRETTIFY_VERSION  = "r298"
+    CDN_BASE_URL     = "https://cdnjs.cloudflare.com/ajax/libs/prettify"
+    PRETTIFY_VERSION = "r298"
 
     def initialize(name : String = "prettify", backend : String = "html5")
       super(name, backend)

@@ -283,7 +283,7 @@ module Asciidoctor
       skip_line_comments : Bool = false,
       skip_processing : Bool = false,
       context : Symbol? = nil,
-      cursor_at : Cursor? = nil
+      cursor_at : Cursor? = nil,
     ) : Array(String)
       read_lines_until_impl(
         terminator: terminator,
@@ -522,7 +522,7 @@ module Asciidoctor
       skip_line_comments : Bool = false,
       skip_processing : Bool = false,
       context : Symbol? = nil,
-      cursor_at : Cursor? = nil
+      cursor_at : Cursor? = nil,
     ) : Array(String)
       result = [] of String
       restore_process_lines = false
@@ -967,38 +967,38 @@ module Asciidoctor
           if m[1]? == "\\"
             @unescape_next_line = true
             @look_ahead += 1
-            return line[1..]
+            line[1..]
           elsif preprocess_conditional_directive(m[2], m[3], m[4]?, m[5]?)
             shift
-            return nil
+            nil
           else
             @look_ahead += 1
-            return line
+            line
           end
         elsif @skipping
           shift
-          return nil
+          nil
         elsif (line.starts_with?("inc") || line.starts_with?("\\inc")) && (m = IncludeDirectiveRx.match(line))
           if m[1]? == "\\"
             @unescape_next_line = true
             @look_ahead += 1
-            return line[1..]
+            line[1..]
           elsif preprocess_include_directive(m[2], m[3]?)
-            return nil
+            nil
           else
             @look_ahead += 1
-            return line
+            line
           end
         else
           @look_ahead += 1
-          return line
+          line
         end
       elsif @skipping
         shift
-        return nil
+        nil
       else
         @look_ahead += 1
-        return line
+        line
       end
     end
 

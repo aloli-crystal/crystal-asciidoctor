@@ -622,7 +622,7 @@ module Asciidoctor
       # Auto-detected email addresses (bare email without mailto: prefix)
       if result.includes?("@")
         result = result.gsub(InlineEmailRx) do |match_str, md|
-          if md[1]?  # preceded by \, >, :, / - leave as-is
+          if md[1]? # preceded by \, >, :, / - leave as-is
             match_str
           else
             address = match_str
@@ -739,11 +739,11 @@ module Asciidoctor
       # Check hardbreaks on self, parent chain, or document
       # First check if hardbreaks is explicitly disabled on this block
       hardbreaks_disabled = self.responds_to?(:attributes) &&
-        (self.attributes["hardbreaks"]? == "false" || self.attributes["hardbreaks-option"]? == "false")
+                            (self.attributes["hardbreaks"]? == "false" || self.attributes["hardbreaks-option"]? == "false")
       has_hardbreaks = false
       unless hardbreaks_disabled
         has_hardbreaks = (self.responds_to?(:attributes) && (self.attributes["hardbreaks-option"]? == "" || self.attributes["hardbreaks"]? == "")) ||
-           (self.responds_to?(:document) && (self.document.attributes["hardbreaks-option"]? == "" || self.document.attributes["hardbreaks"]? == ""))
+                         (self.responds_to?(:document) && (self.document.attributes["hardbreaks-option"]? == "" || self.document.attributes["hardbreaks"]? == ""))
         unless has_hardbreaks
           # Check parent chain for hardbreaks-option
           if self.responds_to?(:parent)

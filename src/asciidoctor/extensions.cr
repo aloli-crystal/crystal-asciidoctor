@@ -355,10 +355,10 @@ module Asciidoctor
         end
         key = {name, format}
         @@rx_cache[key] ||= if format == :short
-                               /\\?#{Regex.escape(name)}:(){0}\[(|.*?[^\\])\]/
-                             else
-                               /\\?#{Regex.escape(name)}:(\S+?)\[(|.*?[^\\])\]/
-                             end
+                              /\\?#{Regex.escape(name)}:(){0}\[(|.*?[^\\])\]/
+                            else
+                              /\\?#{Regex.escape(name)}:(\S+?)\[(|.*?[^\\])\]/
+                            end
       end
 
       def process(parent : AbstractBlock, target : String, attributes : Hash(String, String)) : AbstractBlock | Inline | Nil

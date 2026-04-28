@@ -202,7 +202,7 @@ describe Asciidoctor::Section do
       sect_a.should be_a(Asciidoctor::Section)
       if sect_a.is_a?(Asciidoctor::Section)
         sect_a.sections?.should be_true
-        child_sections = sect_a.blocks.select { |b| b.is_a?(Asciidoctor::Section) }
+        child_sections = sect_a.blocks.select(Asciidoctor::Section)
         child_sections.size.should eq(2)
       end
     end

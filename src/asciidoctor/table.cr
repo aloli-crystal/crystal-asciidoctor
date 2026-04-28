@@ -222,20 +222,20 @@ module Asciidoctor
       col_style = @column.style
       # Map column style string to symbol
       col_sym = if col_style && !col_style.empty?
-        case col_style
-        when "e" then :emphasis
-        when "m" then :monospaced
-        when "s" then :strong
-        when "h" then :header
-        when "l" then :literal
-        when "v" then :verse
-        when "a" then :asciidoc
-        when "d" then :default
-        else nil
-        end
-      else
-        nil
-      end
+                  case col_style
+                  when "e" then :emphasis
+                  when "m" then :monospaced
+                  when "s" then :strong
+                  when "h" then :header
+                  when "l" then :literal
+                  when "v" then :verse
+                  when "a" then :asciidoc
+                  when "d" then :default
+                  else          nil
+                  end
+                else
+                  nil
+                end
       @cell_style = style || col_sym
       @colspan = colspan
       @content_model = ContentModel::Simple

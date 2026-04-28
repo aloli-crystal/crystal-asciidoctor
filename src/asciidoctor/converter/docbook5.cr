@@ -4,7 +4,7 @@ module Asciidoctor
       register_for "docbook5"
 
       DLIST_TAGS_DEFAULT = {list: "variablelist", entry: "varlistentry", label: "label", term: "term", item: "listitem"}
-      DLIST_TAGS = {
+      DLIST_TAGS         = {
         "qanda"    => {list: "qandaset", entry: "qandaentry", label: "question", term: "simpara", item: "answer"},
         "glossary" => {list: nil, entry: "glossentry", label: nil, term: "glossterm", item: "glossdef"},
       }
@@ -12,16 +12,16 @@ module Asciidoctor
       MANPAGE_SECTION_TAGS = {"section" => "refsection", "synopsis" => "refsynopsisdiv"}
 
       QUOTE_TAGS = {
-        :asciimath   => { "", "" },
+        :asciimath   => {"", ""},
         :double      => { %(<quote role="double">), "</quote>" },
-        :emphasis    => { "<emphasis>", "</emphasis>" },
-        :latexmath   => { "", "" },
+        :emphasis    => {"<emphasis>", "</emphasis>"},
+        :latexmath   => {"", ""},
         :mark        => { %(<emphasis role="marked">), "</emphasis>" },
-        :monospaced  => { "<literal>", "</literal>" },
+        :monospaced  => {"<literal>", "</literal>"},
         :single      => { %(<quote role="single">), "</quote>" },
         :strong      => { %(<emphasis role="strong">), "</emphasis>" },
-        :subscript   => { "<subscript>", "</subscript>" },
-        :superscript => { "<superscript>", "</superscript>" },
+        :subscript   => {"<subscript>", "</subscript>"},
+        :superscript => {"<superscript>", "</superscript>"},
       }
 
       TABLE_PI_NAMES = ["dbhtml", "dbfo", "dblatex"]
@@ -38,13 +38,13 @@ module Asciidoctor
           convert_document(node)
         else
           case node
-          when Document  then node.attributes.has_key?("embedded") ? convert_embedded(node) : convert_document(node)
-          when Section   then node.style == "discrete" ? convert_floating_title(node) : convert_section(node)
-          when Block     then convert_block(node)
-          when List      then convert_list(node)
-          when Table     then convert_table(node)
-          when Inline    then convert_inline(node)
-          else ""
+          when Document then node.attributes.has_key?("embedded") ? convert_embedded(node) : convert_document(node)
+          when Section  then node.style == "discrete" ? convert_floating_title(node) : convert_section(node)
+          when Block    then convert_block(node)
+          when List     then convert_list(node)
+          when Table    then convert_table(node)
+          when Inline   then convert_inline(node)
+          else               ""
           end
         end
       end
@@ -76,7 +76,7 @@ module Asciidoctor
         when :stem           then convert_stem(node)
         when :thematic_break then convert_thematic_break(node)
         when :verse          then convert_verse(node)
-        else ""
+        else                      ""
         end
       end
 
@@ -176,7 +176,7 @@ module Asciidoctor
         when :kbd       then convert_inline_kbd(node)
         when :menu      then convert_inline_menu(node)
         when :quoted    then convert_inline_quoted(node)
-        else ""
+        else                 ""
         end
       end
 
@@ -308,7 +308,7 @@ module Asciidoctor
         when :dlist  then convert_dlist(node)
         when :olist  then convert_olist(node)
         when :ulist  then convert_ulist(node)
-        else ""
+        else              ""
         end
       end
 
@@ -551,7 +551,7 @@ module Asciidoctor
           result << %(<bibliodiv#{common_attributes(node.id, node.role, node.reftext)}>)
           result << %(<title>#{node.title}</title>) if node.title?
           node.items.each do |_item|
-          item = _item.as(ListItem)
+            item = _item.as(ListItem)
             result << "<bibliomixed>"
             result << %(<bibliomisc>#{item.text}</bibliomisc>)
             result << item.content.to_s if item.blocks?
@@ -565,7 +565,7 @@ module Asciidoctor
           result << %(<itemizedlist#{common_attributes(node.id, node.role, node.reftext)}#{mark_attribute}>)
           result << %(<title>#{node.title}</title>) if node.title?
           node.items.each do |_item|
-          item = _item.as(ListItem)
+            item = _item.as(ListItem)
             text_marker = ""
             if checklist && item.attr?("checkbox")
               text_marker = item.attr?("checked") ? "&#10003; " : "&#10063; "

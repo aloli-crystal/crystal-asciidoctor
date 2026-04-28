@@ -147,12 +147,12 @@ module Asciidoctor
     # Resolve and normalize a system path from the target and start paths.
     def normalize_system_path(target : String, start : String? = nil, jail : String? = nil) : String
       raw = if target.starts_with?('/')
-        target
-      elsif start
-        File.join(start, target)
-      else
-        File.join(document.base_dir, target)
-      end
+              target
+            elsif start
+              File.join(start, target)
+            else
+              File.join(document.base_dir, target)
+            end
       # Normalize the path to resolve .. and . components
       Path.new(raw).normalize.to_s
     end

@@ -1,9 +1,9 @@
 module Asciidoctor
   module SafeMode
-    SAFE    =  1
-    SECURE  = 20
-    SERVER  = 10
-    UNSAFE  =  0
+    SAFE   =  1
+    SECURE = 20
+    SERVER = 10
+    UNSAFE =  0
 
     def self.name_for_value(value)
       case value

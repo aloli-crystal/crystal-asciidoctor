@@ -797,7 +797,7 @@ module Asciidoctor
       # In SECURE mode, default to 4096 bytes; can be overridden by max-attribute-value-size attribute
       if (max_size_str = attrs["max-attribute-value-size"]?)
         if max_size_str.empty?
-          @max_attribute_value_size = nil  # disabled
+          @max_attribute_value_size = nil # disabled
         elsif (max_size = max_size_str.to_i?)
           @max_attribute_value_size = max_size
         end

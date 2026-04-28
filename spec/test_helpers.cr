@@ -3,7 +3,7 @@ require "./spec_helper"
 
 # Test helper methods ported from Ruby Asciidoctor test_helper.rb
 module TestHelpers
-  BACKSLASH = "\\"
+  BACKSLASH   = "\\"
   SAMPLE_DATA = ["first line", "second line", "third line"]
 
   # Parse the source string into a Document.
