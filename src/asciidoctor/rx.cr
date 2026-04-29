@@ -172,7 +172,13 @@ module Asciidoctor
 
   # Parses the start and end of a cell spec (cellspec) for a table.
   CellSpecStartRx = /^[ \t]*(?:(\d+(?:\.\d*)?|(?:\d*\.)?\d+)([*+]))?([<^>](?:\.[<^>]?)?|(?:[<^>]?\.)?[<^>])?([a-z])?$/
-  CellSpecEndRx   = /[ \t]+(?:(\d+(?:\.\d*)?|(?:\d*\.)?\d+)([*+]))?([<^>](?:\.[<^>]?)?|(?:[<^>]?\.)?[<^>])?([a-z])?$/
+  # Accepte tout type d'espace blanc avant la spec (`\s+` au lieu
+  # de `[ \t]+`), pour reconnaître aussi les specs placées sur leur
+  # propre ligne, comme dans :
+  #     | cellule
+  #     3+| trois colonnes
+  # — où le « 3+ » est précédé d'un `\n`, pas d'un espace ASCII.
+  CellSpecEndRx = /\s+(?:(\d+(?:\.\d*)?|(?:\d*\.)?\d+)([*+]))?([<^>](?:\.[<^>]?)?|(?:[<^>]?\.)?[<^>])?([a-z])?$/
 
   # --------------------------------------------------------------------------
   # Block macros
