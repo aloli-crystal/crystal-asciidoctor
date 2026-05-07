@@ -44,7 +44,15 @@ class SecurityError < Exception
 end
 
 module Asciidoctor
-  VERSION = "2.0.26.2"
+  # Lue au compile-time depuis `shard.yml` via le macro `read_file`.
+  # Cf. note mémoire `feedback_shard_version_macro.md` (mémoire ALOLI).
+  VERSION = {{
+              (read_file("#{__DIR__}/../shard.yml")
+                .lines
+                .find(&.starts_with?("version:")) || "version: 0.0.0")
+                .gsub(/^version:\s*/, "")
+                .chomp
+            }}
 
   # Version de la gem Ruby Asciidoctor utilisée comme base du portage.
   UPSTREAM_VERSION = "2.0.26"
