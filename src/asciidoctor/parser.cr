@@ -376,7 +376,7 @@ module Asciidoctor
           num_str = (autonum += 1).to_s
         end
         unless num_str == next_index.to_s
-          logger.warn { "callout list item index: expected #{next_index}, got #{num_str}" }
+          logger.warn { "callout list item index: expected #{next_index}, got #{num_str} (line #{reader.lineno})" }
         end
         item_text = match[2]? || ""
         list_item = ListItem.new(list_block, item_text)
@@ -2607,7 +2607,8 @@ module Asciidoctor
         marker = "I)"
       end
       if validate && expected && actual && expected != actual
-        logger.warn { "list item index: expected #{expected}, got #{actual}" }
+        line_info = reader.try { |r| " (line #{r.lineno})" } || ""
+        logger.warn { "list item index: expected #{expected}, got #{actual}#{line_info}" }
       end
       {marker, style}
     end

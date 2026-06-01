@@ -1,5 +1,5 @@
 name: crystal-asciidoctor
-version: 2.0.26.3
+version: 2.0.26.4
 
 description: |
   A Crystal port of the Asciidoctor document processor.
