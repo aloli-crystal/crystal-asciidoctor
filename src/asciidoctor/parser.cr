@@ -2576,6 +2576,13 @@ module Asciidoctor
       actual : String? = nil
       case style
       when :arabic
+        # Convention ALOLI : un marker `0.` est un sentinel
+        # d'auto-numérotation explicite (équivalent fonctionnel de
+        # `.` répété, mais avec marqueur visible dans l'éditeur ;
+        # permet de réordonner les items sans renuméroter). On le
+        # préserve tel quel — au call site, `sibling_trait` restera
+        # à "0." pour tous les items et le validate sera désactivé.
+        return {marker, :arabic} if marker == "0."
         if validate && ordinal
           expected = (ordinal + 1).to_s
           actual = marker.chomp('.')

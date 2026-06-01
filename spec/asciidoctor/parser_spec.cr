@@ -327,6 +327,32 @@ describe Asciidoctor::Parser do
       marker.should eq("A.")
       style.should eq(:upperalpha)
     end
+
+    it "preserves `0.` as a sentinel for auto-numbering (ALOLI convention)" do
+      # `0.` is a sentinel that lets the author keep the same
+      # explicit marker on every item while letting the parser
+      # auto-number them — facilitates reordering without
+      # renumbering. The resolver preserves "0." (instead of
+      # normalising to "1.") so the validate path is skipped on
+      # every item and no warning is emitted.
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("0.", 1, true)
+      marker.should eq("0.")
+      style.should eq(:arabic)
+
+      marker, style = Asciidoctor::Parser.resolve_ordered_list_marker("0.", 5, true)
+      marker.should eq("0.")
+      style.should eq(:arabic)
+    end
+
+    it "normalises any arabic marker to `1.` regardless of input" do
+      # The marker is always normalised to "1." at the resolve step ;
+      # numbering itself is driven by the list block's ordinal.
+      marker, _ = Asciidoctor::Parser.resolve_ordered_list_marker("2.", nil, false)
+      marker.should eq("1.")
+
+      marker, _ = Asciidoctor::Parser.resolve_ordered_list_marker("42.", nil, false)
+      marker.should eq("1.")
+    end
   end
 
   describe ".sanitize_attribute_name" do
