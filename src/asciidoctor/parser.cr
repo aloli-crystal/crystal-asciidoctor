@@ -1286,6 +1286,14 @@ module Asciidoctor
             attributes["language"] = language if language && !language.empty?
           end
         end
+        # Récupère le `language` depuis l'attribut positional 2 quand
+        # l'utilisateur écrit `[source,console]` avant un délimiteur
+        # ``` (forme hybride supportée par Asciidoctor Ruby en mode
+        # de compatibilité Markdown). Sans ça, l'info reste coincée
+        # dans `attributes["2"]` et n'atteint pas les converters.
+        if !attributes.has_key?("language") && (positional_lang = attributes["2"]?) && !positional_lang.empty?
+          attributes["language"] = positional_lang
+        end
         unless attributes.has_key?("language")
           if (src_lang = doc_attrs["source-language"]?)
             attributes["language"] = src_lang

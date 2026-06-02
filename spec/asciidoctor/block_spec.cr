@@ -799,6 +799,28 @@ describe "Blocks" do
       output.should contain("language-ruby")
     end
 
+    it "should pick up language from [source,LANG] preceding a bare fenced delimiter" do
+      # Hybrid Markdown + AsciiDoc form supported by Asciidoctor Ruby
+      # in Markdown compatibility mode : `[source,console]` then bare
+      # ```. The language must reach the block as attribute "language",
+      # not just as positional "2", so downstream converters (PDF, etc.)
+      # can apply syntax highlighting and the code background.
+      input = "[source,console]\n```\nberyl rescue host\n```"
+      doc = load_string(input)
+      matches = doc.find_by(context: :listing, style: "source")
+      matches.size.should eq(1)
+      matches[0].attributes["language"]?.should eq("console")
+    end
+
+    it "should let an explicit language on the delimiter win over [source,LANG]" do
+      # `[source,console]` then ```ruby — the delimiter wins.
+      input = "[source,console]\n```ruby\nputs 'hi'\n```"
+      doc = load_string(input)
+      matches = doc.find_by(context: :listing, style: "source")
+      matches.size.should eq(1)
+      matches[0].attributes["language"]?.should eq("ruby")
+    end
+
     it "should allow source style to be specified on literal block" do
       input = "[source]\n....\nconsole.log('Hello, World!')\n...."
       output = convert_string_to_embedded(input)
