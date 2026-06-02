@@ -259,7 +259,15 @@ module Asciidoctor
   # --------------------------------------------------------------------------
 
   # Matches a trailing + preceded by at least one space (hard line break).
-  HardLineBreakRx = /^(.*) \+$/m
+  # NOTE : on utilise `[^\n]*` (et non `.*` avec flag `m`) car Crystal
+  # interprète le flag `m` comme « `.` matche aussi `\n` » — ce qui
+  # rendrait `(.*)` greedy sur plusieurs lignes et ne capturerait
+  # qu'UN seul hard break (le dernier) au lieu de tous les hard
+  # breaks d'un paragraphe multi-lignes. Avec `[^\n]*` on est
+  # explicite sur le fait qu'on ne franchit pas la fin de ligne, et
+  # le lookahead `(?=\n|$)` ancre la position de fin sans consommer
+  # le `\n`.
+  HardLineBreakRx = /([^\n]*) \+(?=\n|$)/
 
   # Matches a Markdown horizontal rule.
   MarkdownThematicBreakRx = /^ {0,3}([-*_])( *)\1\2\1$/
