@@ -609,9 +609,23 @@ module Asciidoctor
           else
             prefix = md[1]? || ""
             scheme = md[3]? || ""
-            url_part = md[4]? || ""
+            # `url_part` = la portion de l'URL APRÈS le scheme. Selon
+            # la forme matchée par `InlineLinkRx`, elle se trouve dans
+            # un groupe différent :
+            #   md[4] → forme macro `scheme://url[texte]`
+            #   md[6] → forme chevrons `<scheme://url>`
+            #   md[7] → URL « bare » `scheme://url`
+            # L'ancien code ne lisait que md[4] : pour une URL bare
+            # (le cas le plus courant), `url_part` était vide, d'où
+            # `target = "https://"` tronqué et le domaine renvoyé à
+            # tort dans le texte du lien.
+            url_part = md[4]? || md[6]? || md[7]? || ""
             target = scheme + url_part
-            link_text = md[5]? || md[7]? || md[8]? || target
+            # Texte du lien : le libellé explicite de la forme macro
+            # (md[5]) s'il est non vide ; sinon l'URL complète (target),
+            # conformément au rendu d'une URL bare en AsciiDoc.
+            link_text = md[5]?
+            link_text = target if link_text.nil? || link_text.empty?
             prefix = "" if prefix == "link:"
             Inline.new(self.as(AbstractBlock), :anchor, link_text,
               type: :link, target: target).convert

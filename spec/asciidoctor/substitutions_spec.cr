@@ -490,6 +490,28 @@ describe "Substitutions" do
         result.should contain("Example")
       end
 
+      it "uses the FULL url as href for a bare auto-detected URL" do
+        block = create_block
+        result = block.sub_macros("https://fds-pentest.quimeo.eu")
+        # Régression : le href ne doit pas être tronqué au scheme
+        # (« https:// ») avec le domaine renvoyé dans le texte.
+        result.should contain(%(href="https://fds-pentest.quimeo.eu"))
+        result.should contain(">https://fds-pentest.quimeo.eu<")
+      end
+
+      it "keeps the full path/query of a bare URL embedded in text" do
+        block = create_block
+        result = block.sub_macros("Voir https://example.com/path?a=1 ici")
+        result.should contain(%(href="https://example.com/path?a=1"))
+      end
+
+      it "keeps the explicit link text of the scheme://url[text] form" do
+        block = create_block
+        result = block.sub_macros("https://example.com[Mon site]")
+        result.should contain(%(href="https://example.com"))
+        result.should contain(">Mon site<")
+      end
+
       it "should convert xref macro" do
         block = create_block
         result = block.sub_macros("xref:chapter1.adoc[Chapter 1]")
