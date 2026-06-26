@@ -885,4 +885,31 @@ describe Asciidoctor::Table do
       output.should contain("valign-bottom")
     end
   end
+
+  # ==========================================================================
+  # Cell-spec multiplier (`N*`) vs cell content
+  # ==========================================================================
+  describe "cell spec multiplier vs multi-line cell content" do
+    it "does not treat a bold cell ending in a number as a repeat multiplier" do
+      # Régression : le `6.0*` final de `*Rails 5.2 6.0*` (un gras qui
+      # se termine par un nombre) était matché par CellSpecEndRx comme
+      # le multiplicateur « répéter 6× » de la cellule suivante, ce qui
+      # gonflait le tableau (21 rangées au lieu de 10 sur un cas réel).
+      # Le spec de fin ne doit être cherché que sur la DERNIÈRE ligne du
+      # fragment, jamais dans le contenu d'une ligne précédente.
+      input = "[cols=\"1,4\"]\n|===\n| *Rails 5.2 6.0*\n| desc un\n\n| *Rails 6.0 6.1*\n| desc deux\n|==="
+      doc = table_document_from_string(input)
+      table = doc.blocks[0].as(Asciidoctor::Table)
+      table.rows.body.size.should eq(2)
+      table.rows.body.each { |row| row.size.should eq(2) }
+    end
+
+    it "still honors a real repeat multiplier (N*) on a single-line cell spec" do
+      # `3*|` répète la cellule suivante 3 fois : a, b, b, b, c => 5 cellules.
+      input = "[cols=\"4\"]\n|===\n| a 3*| b\n| c\n|==="
+      doc = table_document_from_string(input)
+      table = doc.blocks[0].as(Asciidoctor::Table)
+      table.rows.body.sum(&.size).should eq(5)
+    end
+  end
 end
