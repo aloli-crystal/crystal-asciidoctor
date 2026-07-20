@@ -342,8 +342,14 @@ module Asciidoctor
     converter.convert(doc)
   end
 
-  # Create a converter for the given backend
-  protected def self.create_converter(backend : String) : Converter::Base
+  # Create a converter for the given backend.
+  #
+  # PUBLIQUE (et non plus `protected`) : la CLI (`Cli::Invoker`) doit
+  # pouvoir fabriquer un converter pour le backend résolu. En Ruby elle
+  # y accédait via `Asciidoctor.send(:create_converter, …)` — `send`
+  # contournant la visibilité — ce qui ne se porte pas en Crystal.
+  # Exposer la fabrique est plus propre qu'un contournement.
+  def self.create_converter(backend : String) : Converter::Base
     case backend
     when "html5", "html", "xhtml5", "xhtml"
       Converter::Html5Converter.new(backend)

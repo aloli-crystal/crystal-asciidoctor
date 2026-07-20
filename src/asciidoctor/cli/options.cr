@@ -38,7 +38,7 @@ module Asciidoctor
         show_version = false
 
         parser = OptionParser.new do |p|
-          p.banner = "Usage: asciidoctor [OPTION]... FILE...\nConvert AsciiDoc input to the backend output format (e.g., HTML 5, DocBook 5, etc.)\n"
+          p.banner = "Usage: crystal-asciidoctor [OPTION]... FILE...\nConvert AsciiDoc input to the backend output format (e.g., HTML 5, DocBook 5, etc.)\n"
 
           p.on("-b BACKEND", "--backend=BACKEND", "Set backend output format (default: html5)") do |backend|
             opts.backend = backend

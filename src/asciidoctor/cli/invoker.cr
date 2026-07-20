@@ -43,7 +43,11 @@ module Asciidoctor
         doc = Asciidoctor.load(source, opts_hash)
         @document = doc
 
-        converter = doc.converter || Asciidoctor.send(:create_converter, doc.backend)
+        # `Asciidoctor.load` pose déjà `doc.converter` ; le `||` reste
+        # un filet. L'original portait `Asciidoctor.send(:create_converter,
+        # …)` — un ruby-isme (`send` contourne la visibilité) qui
+        # n'existe pas en Crystal et empêchait toute compilation du CLI.
+        converter = doc.converter || Asciidoctor.create_converter(doc.backend)
         converted = converter.convert(doc)
         @output = converted
 

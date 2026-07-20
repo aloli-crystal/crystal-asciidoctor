@@ -1,5 +1,5 @@
 name: crystal-asciidoctor
-version: 2.0.26.10
+version: 2.0.26.11
 
 description: |
   A Crystal port of the Asciidoctor document processor.
@@ -8,6 +8,14 @@ description: |
 
 authors:
   - Philippe Nénert pour ALOLI sas à Laguiole
+
+# Le shard est à la fois une BIBLIOTHÈQUE (AST + parser, utilisée par
+# crystal-asciidoctor-pdf) et un EXÉCUTABLE : `crystal-asciidoctor`,
+# équivalent de la commande `asciidoctor` Ruby (.adoc → HTML/DocBook/
+# manpage). Sans cette section, `shards build` ne produisait rien.
+targets:
+  crystal-asciidoctor:
+    main: src/cli.cr
 
 dependencies:
   crystal-rouge:

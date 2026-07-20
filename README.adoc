@@ -85,6 +85,25 @@ Run `shards install`.
 
 == Usage
 
+=== Command line
+
+The shard also ships an executable, `crystal-asciidoctor` — the
+equivalent of the Ruby `asciidoctor` command (AsciiDoc in, HTML 5 /
+DocBook 5 / manpage out):
+
+[source,sh]
+----
+shards build            # produces bin/crystal-asciidoctor
+
+bin/crystal-asciidoctor doc.adoc              # → doc.html
+bin/crystal-asciidoctor doc.adoc -o out.html  # explicit output
+bin/crystal-asciidoctor doc.adoc -b docbook5  # another backend
+bin/crystal-asciidoctor --help                # all options
+----
+
+NOTE: For PDF output, use the companion shard
+https://github.com/aloli-crystal/crystal-asciidoctor-pdf[crystal-asciidoctor-pdf].
+
 === High-level API
 
 [source,crystal]
