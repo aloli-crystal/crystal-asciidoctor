@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Represents the types of substitutions that can be applied to AsciiDoc content.
   @[Flags]
   enum Substitution

@@ -2,15 +2,15 @@ require "../spec_helper"
 
 # Helper methods for list tests
 def convert_string(input : String) : String
-  Asciidoctor.convert(input, {"standalone" => "true", "backend" => "html5", "attributes" => "linkcss"})
+  Asciicrystal.convert(input, {"standalone" => "true", "backend" => "html5", "attributes" => "linkcss"})
 end
 
 def convert_string_to_embedded(input : String) : String
-  Asciidoctor.convert(input, {"backend" => "html5", "standalone" => "false"})
+  Asciicrystal.convert(input, {"backend" => "html5", "standalone" => "false"})
 end
 
-def load_string(input : String) : Asciidoctor::Document
-  Asciidoctor.load(input, {"backend" => "html5"})
+def load_string(input : String) : Asciicrystal::Document
+  Asciicrystal.load(input, {"backend" => "html5"})
 end
 
 describe "Lists" do
@@ -772,7 +772,7 @@ describe "Lists" do
 
     it "should create checklist with font icons if icons attribute is font" do
       input = "- [ ] todo\n- [x] done\n- plain"
-      output = Asciidoctor.convert(input, {"backend" => "html5", "attributes" => "icons=font"})
+      output = Asciicrystal.convert(input, {"backend" => "html5", "attributes" => "icons=font"})
       output.should contain("checklist")
     end
   end
@@ -784,7 +784,7 @@ describe "Lists" do
     it "content should return items in list" do
       input = "* one\n* two\n* three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
+      list = doc.blocks.first.as(Asciicrystal::List)
       items = list.items
       items.size.should eq(3)
     end
@@ -792,7 +792,7 @@ describe "Lists" do
     it "list item should be the parent of block attached to a list item" do
       input = "* list item 1\n+\n----\nlisting block in list item 1\n----"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
+      list = doc.blocks.first.as(Asciicrystal::List)
       list_item_1 = list.items.first
       list_item_1.blocks.size.should be >= 1
       listing_block = list_item_1.blocks.first
@@ -802,57 +802,57 @@ describe "Lists" do
     it "outline? should return true for unordered list" do
       input = "* one\n* two\n* three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
+      list = doc.blocks.first.as(Asciicrystal::List)
       list.outline?.should be_true
     end
 
     it "outline? should return true for ordered list" do
       input = ". one\n. two\n. three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
+      list = doc.blocks.first.as(Asciicrystal::List)
       list.outline?.should be_true
     end
 
     it "outline? should return false for description list" do
       input = "label:: desc"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
+      list = doc.blocks.first.as(Asciicrystal::List)
       list.outline?.should be_false
     end
 
     it "simple? should return true for list item with no nested blocks" do
       input = "* one\n* two\n* three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
-      list.items.first.as(Asciidoctor::ListItem).simple?.should be_true
+      list = doc.blocks.first.as(Asciicrystal::List)
+      list.items.first.as(Asciicrystal::ListItem).simple?.should be_true
     end
 
     it "simple? should return true for list item with nested outline list" do
       input = "* one\n** more about one\n** and more\n* two\n* three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
-      list.items.first.as(Asciidoctor::ListItem).simple?.should be_true
+      list = doc.blocks.first.as(Asciicrystal::List)
+      list.items.first.as(Asciicrystal::ListItem).simple?.should be_true
     end
 
     it "simple? should return false for list item with block content" do
       input = "* one\n+\n----\nlisting block in list item 1\n----\n* two\n* three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
-      list.items.first.as(Asciidoctor::ListItem).simple?.should be_false
+      list = doc.blocks.first.as(Asciicrystal::List)
+      list.items.first.as(Asciicrystal::ListItem).simple?.should be_false
     end
 
     it "should allow text of ListItem to be read" do
       input = "* one\n* two\n* three"
       doc = load_string(input)
-      list = doc.blocks.first.as(Asciidoctor::List)
+      list = doc.blocks.first.as(Asciicrystal::List)
       list.items.size.should eq(3)
-      list.items[0].as(Asciidoctor::ListItem).text.should eq("one")
+      list.items[0].as(Asciicrystal::ListItem).text.should eq("one")
     end
 
     it "should set lineno to line number in source where list starts" do
       # sourcemap is now implemented
       input = "* bullet 1\n** bullet 1.1\n*** bullet 1.1.1\n* bullet 2"
-      doc = Asciidoctor.load(input, {"sourcemap" => "true"})
+      doc = Asciicrystal.load(input, {"sourcemap" => "true"})
       lists = doc.find_by(context: :ulist)
       lists[0].lineno.should eq(1)
       lists[1].lineno.should eq(2)

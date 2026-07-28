@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # A utility class for working with the built-in stylesheets.
   #
   # Ported from Ruby Asciidoctor lib/asciidoctor/stylesheets.rb
@@ -57,7 +57,7 @@ module Asciidoctor
 
     # Minimal embedded CSS fallback if the file is not found.
     DEFAULT_STYLESHEET_DATA = <<-CSS
-    /* Asciidoctor default stylesheet - minimal fallback */
+    /* Asciicrystal default stylesheet - minimal fallback */
     body { font-family: "Noto Serif", "DejaVu Serif", serif; font-size: 1em; line-height: 1.6; color: rgba(0,0,0,.8); background: #fff; }
     #content { margin: 0 auto; max-width: 62.5em; padding: 0 1em; }
     h1, h2, h3, h4, h5, h6 { font-family: "Open Sans", "DejaVu Sans", sans-serif; font-weight: 300; color: #ba3925; }

@@ -1,7 +1,7 @@
 require "./spec_helper"
 
-describe Asciidoctor do
+describe Asciicrystal do
   it "has a version" do
-    Asciidoctor::VERSION.should_not be_nil
+    Asciicrystal::VERSION.should_not be_nil
   end
 end

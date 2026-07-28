@@ -1,11 +1,11 @@
 require "./abstract_block"
 
-module Asciidoctor
+module Asciicrystal
   # Methods for managing AsciiDoc content blocks.
   #
   # Examples
   #
-  #   block = Asciidoctor::Block.new(parent, :paragraph, source: "_This_ is a <test>")
+  #   block = Asciicrystal::Block.new(parent, :paragraph, source: "_This_ is a <test>")
   #   block.content
   #   # => "<em>This</em> is a &lt;test&gt;"
   class Block < AbstractBlock

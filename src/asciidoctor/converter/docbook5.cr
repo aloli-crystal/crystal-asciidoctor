@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Converter
     class DocBook5Converter < Base
       register_for "docbook5"

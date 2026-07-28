@@ -4,7 +4,7 @@
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 # Convertir une chaine AsciiDoc en HTML5
 html = Asciidoctor.convert("= Bonjour\n\nUn paragraphe en *gras*.")
@@ -23,7 +23,7 @@ puts doc.doctitle  # => "Mon Document"
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 source = <<-ASCIIDOC
 = Mon Document
@@ -49,7 +49,7 @@ puts doc.doctitle  # => "Mon Document"
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 doc = Asciidoctor::Document.new
 converter = Asciidoctor::Converter::Html5Converter.new

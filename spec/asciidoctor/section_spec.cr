@@ -3,24 +3,24 @@ require "../spec_helper"
 # Helper methods used across section tests
 def convert_string(input : String, options : Hash(String, String) = {} of String => String) : String
   options["standalone"] = "true" unless options.has_key?("standalone")
-  Asciidoctor.convert(input, options)
+  Asciicrystal.convert(input, options)
 end
 
 def convert_string_to_embedded(input : String, options : Hash(String, String) = {} of String => String) : String
   options["standalone"] = "false"
-  Asciidoctor.convert(input, options)
+  Asciicrystal.convert(input, options)
 end
 
-def document_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciidoctor::Document
-  Asciidoctor.load(input, options)
+def document_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciicrystal::Document
+  Asciicrystal.load(input, options)
 end
 
-def block_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciidoctor::AbstractBlock
+def block_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciicrystal::AbstractBlock
   doc = document_from_string(input, options)
   doc.blocks.first? || doc.header.not_nil!
 end
 
-describe Asciidoctor::Section do
+describe Asciicrystal::Section do
   # ==========================================================================
   # Ids
   # ==========================================================================
@@ -191,7 +191,7 @@ describe Asciidoctor::Section do
       doc = document_from_string(input)
       doc.blocks.size.should eq(1)
       sect1 = doc.blocks[0]
-      sect1.should be_a(Asciidoctor::Section)
+      sect1.should be_a(Asciicrystal::Section)
       sect1.level.should eq(1)
     end
 
@@ -199,10 +199,10 @@ describe Asciidoctor::Section do
       input = "= Document Title\n\n== Section A\n\n=== Nested A1\n\n=== Nested A2\n\ncontent"
       doc = document_from_string(input)
       sect_a = doc.blocks[0]
-      sect_a.should be_a(Asciidoctor::Section)
-      if sect_a.is_a?(Asciidoctor::Section)
+      sect_a.should be_a(Asciicrystal::Section)
+      if sect_a.is_a?(Asciicrystal::Section)
         sect_a.sections?.should be_true
-        child_sections = sect_a.blocks.select(Asciidoctor::Section)
+        child_sections = sect_a.blocks.select(Asciicrystal::Section)
         child_sections.size.should eq(2)
       end
     end
@@ -256,7 +256,7 @@ describe Asciidoctor::Section do
       input = "[float]\n=== Independent Heading!\n\nnot in section"
       doc = document_from_string(input)
       heading = doc.blocks.first
-      heading.should be_a(Asciidoctor::Block)
+      heading.should be_a(Asciicrystal::Block)
       heading.context.should eq(:floating_title)
     end
 
@@ -285,61 +285,61 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "Section Numbering" do
     it "should create section number with one entry for level 1" do
-      doc = Asciidoctor::Document.new
-      sect1 = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      sect1 = Asciicrystal::Section.new(doc, numbered: true)
       sect1.numeral = "1"
       doc << sect1
       sect1.sectnum.should eq("1.")
     end
 
     it "should create section number with two entries for level 2" do
-      doc = Asciidoctor::Document.new
-      sect1 = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      sect1 = Asciicrystal::Section.new(doc, numbered: true)
       sect1.numeral = "1"
       doc << sect1
-      sect1_1 = Asciidoctor::Section.new(doc, parent: sect1, numbered: true)
+      sect1_1 = Asciicrystal::Section.new(doc, parent: sect1, numbered: true)
       sect1_1.numeral = "1"
       sect1 << sect1_1
       sect1_1.sectnum.should eq("1.1.")
     end
 
     it "should create section number with three entries for level 3" do
-      doc = Asciidoctor::Document.new
-      sect1 = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      sect1 = Asciicrystal::Section.new(doc, numbered: true)
       sect1.numeral = "1"
       doc << sect1
-      sect1_1 = Asciidoctor::Section.new(doc, parent: sect1, numbered: true)
+      sect1_1 = Asciicrystal::Section.new(doc, parent: sect1, numbered: true)
       sect1_1.numeral = "1"
       sect1 << sect1_1
-      sect1_1_1 = Asciidoctor::Section.new(doc, parent: sect1_1, numbered: true)
+      sect1_1_1 = Asciicrystal::Section.new(doc, parent: sect1_1, numbered: true)
       sect1_1_1.numeral = "1"
       sect1_1 << sect1_1_1
       sect1_1_1.sectnum.should eq("1.1.1.")
     end
 
     it "should create section number for second section in level" do
-      doc = Asciidoctor::Document.new
-      sect1 = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      sect1 = Asciicrystal::Section.new(doc, numbered: true)
       sect1.numeral = "1"
       doc << sect1
-      sect1_1 = Asciidoctor::Section.new(doc, parent: sect1, numbered: true)
+      sect1_1 = Asciicrystal::Section.new(doc, parent: sect1, numbered: true)
       sect1_1.numeral = "1"
       sect1 << sect1_1
-      sect1_2 = Asciidoctor::Section.new(doc, parent: sect1, numbered: true)
+      sect1_2 = Asciicrystal::Section.new(doc, parent: sect1, numbered: true)
       sect1_2.numeral = "2"
       sect1 << sect1_2
       sect1_2.sectnum.should eq("1.2.")
     end
 
     it "sectnum should use specified delimiter and append string" do
-      doc = Asciidoctor::Document.new
-      sect1 = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      sect1 = Asciicrystal::Section.new(doc, numbered: true)
       sect1.numeral = "1"
       doc << sect1
-      sect1_1 = Asciidoctor::Section.new(doc, parent: sect1, numbered: true)
+      sect1_1 = Asciicrystal::Section.new(doc, parent: sect1, numbered: true)
       sect1_1.numeral = "1"
       sect1 << sect1_1
-      sect1_1_1 = Asciidoctor::Section.new(doc, parent: sect1_1, numbered: true)
+      sect1_1_1 = Asciicrystal::Section.new(doc, parent: sect1_1, numbered: true)
       sect1_1_1.numeral = "1"
       sect1_1 << sect1_1_1
       sect1_1_1.sectnum(",").should eq("1,1,1,")
@@ -371,8 +371,8 @@ describe Asciidoctor::Section do
     it "second section should have correct numeral" do
       input = "= Title\n:sectnums:\n\n== Section_1\n\ntext\n\n== Section_2\n\ntext"
       doc = document_from_string(input)
-      sect1 = doc.blocks[0].as(Asciidoctor::Section)
-      sect2 = doc.blocks[1].as(Asciidoctor::Section)
+      sect1 = doc.blocks[0].as(Asciicrystal::Section)
+      sect2 = doc.blocks[1].as(Asciicrystal::Section)
       sect1.numeral.should eq("1")
       sect2.numeral.should eq("2")
     end
@@ -420,8 +420,8 @@ describe Asciidoctor::Section do
     it "should assign appendix sectname" do
       input = ":sectids:\n\n[appendix]\n== Attribute Options\n\nDetails"
       sec = block_from_string(input)
-      sec.should be_a(Asciidoctor::Section)
-      if sec.is_a?(Asciidoctor::Section)
+      sec.should be_a(Asciicrystal::Section)
+      if sec.is_a?(Asciicrystal::Section)
         sec.sectname.should eq("appendix")
         sec.numbered.should be_true
       end
@@ -481,7 +481,7 @@ describe Asciidoctor::Section do
       input = ":sectids:\n\n[glossary]\n== Terms\n\nDetails"
       doc = document_from_string(input)
       sect = doc.blocks[0]
-      if sect.is_a?(Asciidoctor::Section)
+      if sect.is_a?(Asciicrystal::Section)
         sect.sectname.should eq("glossary")
       end
     end
@@ -490,7 +490,7 @@ describe Asciidoctor::Section do
       input = ":sectids:\n\n[bibliography]\n== References\n\nDetails"
       doc = document_from_string(input)
       sect = doc.blocks[0]
-      if sect.is_a?(Asciidoctor::Section)
+      if sect.is_a?(Asciicrystal::Section)
         sect.sectname.should eq("bibliography")
       end
     end
@@ -499,7 +499,7 @@ describe Asciidoctor::Section do
       input = ":sectids:\n\n[preface]\n== Preface\n\nDetails"
       doc = document_from_string(input, {"doctype" => "book"})
       sect = doc.blocks[0]
-      if sect.is_a?(Asciidoctor::Section)
+      if sect.is_a?(Asciicrystal::Section)
         sect.sectname.should eq("preface")
         sect.special.should be_true
       end
@@ -579,7 +579,7 @@ describe Asciidoctor::Section do
       doc = document_from_string(input, {"doctype" => "book"})
       doc.blocks.size.should be >= 1
       part = doc.blocks[0]
-      if part.is_a?(Asciidoctor::Section)
+      if part.is_a?(Asciicrystal::Section)
         part.sectname.should eq("part")
         part.level.should eq(0)
       end
@@ -590,7 +590,7 @@ describe Asciidoctor::Section do
       doc = document_from_string(input, {"doctype" => "book"})
       doc.blocks.size.should eq(2)
       ch1 = doc.blocks[0]
-      if ch1.is_a?(Asciidoctor::Section)
+      if ch1.is_a?(Asciicrystal::Section)
         ch1.sectname.should eq("chapter")
         ch1.level.should eq(1)
       end
@@ -667,8 +667,8 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#initialize" do
     it "creates a section with default values" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.context.should eq(:section)
       section.level.should eq(1)
       section.numbered.should be_false
@@ -677,36 +677,36 @@ describe Asciidoctor::Section do
     end
 
     it "creates a section with custom level" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc, level: 2)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc, level: 2)
       section.level.should eq(2)
     end
 
     it "creates a numbered section" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc, numbered: true)
       section.numbered.should be_true
     end
 
     it "inherits level from parent section" do
-      doc = Asciidoctor::Document.new
-      parent = Asciidoctor::Section.new(doc, level: 1)
-      child = Asciidoctor::Section.new(doc, parent: parent)
+      doc = Asciicrystal::Document.new
+      parent = Asciicrystal::Section.new(doc, level: 1)
+      child = Asciicrystal::Section.new(doc, parent: parent)
       child.level.should eq(2)
     end
 
     it "inherits special from parent section" do
-      doc = Asciidoctor::Document.new
-      parent = Asciidoctor::Section.new(doc, level: 1)
+      doc = Asciicrystal::Document.new
+      parent = Asciicrystal::Section.new(doc, level: 1)
       parent.special = true
-      child = Asciidoctor::Section.new(doc, parent: parent)
+      child = Asciicrystal::Section.new(doc, parent: parent)
       child.special.should be_true
     end
 
     it "sets parent reference" do
-      doc = Asciidoctor::Document.new
-      parent = Asciidoctor::Section.new(doc, level: 1)
-      child = Asciidoctor::Section.new(doc, parent: parent)
+      doc = Asciicrystal::Document.new
+      parent = Asciicrystal::Section.new(doc, level: 1)
+      child = Asciicrystal::Section.new(doc, parent: parent)
       child.parent.should eq(parent)
     end
   end
@@ -716,18 +716,18 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#<<" do
     it "appends a block to the section" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
-      block = Asciidoctor::Block.new(doc, :paragraph, source: "Hello")
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
+      block = Asciicrystal::Block.new(doc, :paragraph, source: "Hello")
       section << block
       section.blocks.size.should eq(1)
     end
 
     it "assigns numeral to child sections" do
-      doc = Asciidoctor::Document.new
-      parent = Asciidoctor::Section.new(doc, level: 1, numbered: true)
+      doc = Asciicrystal::Document.new
+      parent = Asciicrystal::Section.new(doc, level: 1, numbered: true)
       parent.numeral = "1"
-      child1 = Asciidoctor::Section.new(doc, parent: parent, numbered: true)
+      child1 = Asciicrystal::Section.new(doc, parent: parent, numbered: true)
       parent << child1
       child1.index.should eq(0)
     end
@@ -738,8 +738,8 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#block?" do
     it "returns true" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.block?.should be_true
     end
   end
@@ -749,15 +749,15 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#generate_id" do
     it "generates an id from the title" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.title = "My First Section"
       section.generate_id.should eq("_my_first_section")
     end
 
     it "returns nil when no title" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.generate_id.should be_nil
     end
   end
@@ -767,42 +767,42 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe ".generate_id" do
     it "generates an id from a title string" do
-      doc = Asciidoctor::Document.new
-      Asciidoctor::Section.generate_id("Hello World", doc).should eq("_hello_world")
+      doc = Asciicrystal::Document.new
+      Asciicrystal::Section.generate_id("Hello World", doc).should eq("_hello_world")
     end
 
     it "respects custom idprefix" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["idprefix"] = "id-"
-      Asciidoctor::Section.generate_id("Hello World", doc).should eq("id-hello_world")
+      Asciicrystal::Section.generate_id("Hello World", doc).should eq("id-hello_world")
     end
 
     it "respects custom idseparator" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["idseparator"] = "-"
-      Asciidoctor::Section.generate_id("Hello World", doc).should eq("_hello-world")
+      Asciicrystal::Section.generate_id("Hello World", doc).should eq("_hello-world")
     end
 
     it "lowercases the title" do
-      doc = Asciidoctor::Document.new
-      Asciidoctor::Section.generate_id("HELLO WORLD", doc).should eq("_hello_world")
+      doc = Asciicrystal::Document.new
+      Asciicrystal::Section.generate_id("HELLO WORLD", doc).should eq("_hello_world")
     end
 
     it "removes special characters" do
-      doc = Asciidoctor::Document.new
-      Asciidoctor::Section.generate_id("Hello! World?", doc).should eq("_hello_world")
+      doc = Asciicrystal::Document.new
+      Asciicrystal::Section.generate_id("Hello! World?", doc).should eq("_hello_world")
     end
 
     it "handles empty idprefix" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["idprefix"] = ""
-      Asciidoctor::Section.generate_id("Hello World", doc).should eq("hello_world")
+      Asciicrystal::Section.generate_id("Hello World", doc).should eq("hello_world")
     end
 
     it "handles empty idseparator" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["idseparator"] = ""
-      Asciidoctor::Section.generate_id("Hello World", doc).should eq("_helloworld")
+      Asciicrystal::Section.generate_id("Hello World", doc).should eq("_helloworld")
     end
   end
 
@@ -811,8 +811,8 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#name" do
     it "returns the title" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.title = "Introduction"
       section.name.should eq("Introduction")
     end
@@ -823,42 +823,42 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#sectnum" do
     it "returns the section number with delimiter" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc, numbered: true)
       section.numeral = "1"
       section.sectnum.should eq("1.")
     end
 
     it "returns nested section number" do
-      doc = Asciidoctor::Document.new
-      parent = Asciidoctor::Section.new(doc, level: 1, numbered: true)
+      doc = Asciicrystal::Document.new
+      parent = Asciicrystal::Section.new(doc, level: 1, numbered: true)
       parent.numeral = "1"
-      child = Asciidoctor::Section.new(doc, parent: parent, numbered: true)
+      child = Asciicrystal::Section.new(doc, parent: parent, numbered: true)
       child.numeral = "2"
       child.sectnum.should eq("1.2.")
     end
 
     it "supports custom delimiter" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc, numbered: true)
       section.numeral = "1"
       section.sectnum("-").should eq("1-")
     end
 
     it "supports custom append" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc, numbered: true)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc, numbered: true)
       section.numeral = "1"
       section.sectnum(".", "").should eq("1")
     end
 
     it "returns deeply nested section number" do
-      doc = Asciidoctor::Document.new
-      s1 = Asciidoctor::Section.new(doc, level: 1, numbered: true)
+      doc = Asciicrystal::Document.new
+      s1 = Asciicrystal::Section.new(doc, level: 1, numbered: true)
       s1.numeral = "2"
-      s1_1 = Asciidoctor::Section.new(doc, parent: s1, numbered: true)
+      s1_1 = Asciicrystal::Section.new(doc, parent: s1, numbered: true)
       s1_1.numeral = "3"
-      s1_1_1 = Asciidoctor::Section.new(doc, parent: s1_1, numbered: true)
+      s1_1_1 = Asciicrystal::Section.new(doc, parent: s1_1, numbered: true)
       s1_1_1.numeral = "4"
       s1_1_1.sectnum.should eq("2.3.4.")
     end
@@ -869,23 +869,23 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#sections?" do
     it "returns false when no child sections" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.sections?.should be_false
     end
 
     it "returns true when child sections exist" do
-      doc = Asciidoctor::Document.new
-      parent = Asciidoctor::Section.new(doc)
-      child = Asciidoctor::Section.new(doc, parent: parent)
+      doc = Asciicrystal::Document.new
+      parent = Asciicrystal::Section.new(doc)
+      child = Asciicrystal::Section.new(doc, parent: parent)
       parent << child
       parent.sections?.should be_true
     end
 
     it "returns false when only non-section blocks exist" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
-      block = Asciidoctor::Block.new(doc, :paragraph, source: "Hello")
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
+      block = Asciicrystal::Block.new(doc, :paragraph, source: "Hello")
       section << block
       section.sections?.should be_false
     end
@@ -896,23 +896,23 @@ describe Asciidoctor::Section do
   # ==========================================================================
   describe "#xreftext" do
     it "returns reftext when set" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.set_attr("reftext", "See here")
       section.xreftext.should eq("See here")
     end
 
     it "returns title when no reftext and no xrefstyle" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.title = "Introduction"
       section.xreftext.should eq("Introduction")
     end
 
     it "returns full xreftext with numbered section" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["section-refsig"] = "Section"
-      section = Asciidoctor::Section.new(doc, numbered: true)
+      section = Asciicrystal::Section.new(doc, numbered: true)
       section.title = "Introduction"
       section.numeral = "1"
       section.sectname = "section"
@@ -920,9 +920,9 @@ describe Asciidoctor::Section do
     end
 
     it "returns short xreftext with numbered section" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["section-refsig"] = "Section"
-      section = Asciidoctor::Section.new(doc, numbered: true)
+      section = Asciicrystal::Section.new(doc, numbered: true)
       section.title = "Introduction"
       section.numeral = "1"
       section.sectname = "section"
@@ -930,15 +930,15 @@ describe Asciidoctor::Section do
     end
 
     it "returns basic xreftext (title only)" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.title = "Introduction"
       section.xreftext("basic").should eq("Introduction")
     end
 
     it "returns title when xrefstyle is full but section is not numbered" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(doc)
       section.title = "Introduction"
       section.xreftext("full").should eq("\"Introduction\"")
     end
@@ -952,18 +952,18 @@ describe Asciidoctor::Section do
       input = "= Document Title\n\n== First Section\n\nFirst content.\n\n== Second Section\n\nSecond content.\n\n== Third Section\n\nThird content."
       doc = document_from_string(input)
       doc.blocks.size.should eq(3)
-      doc.blocks[0].should be_a(Asciidoctor::Section)
-      doc.blocks[1].should be_a(Asciidoctor::Section)
-      doc.blocks[2].should be_a(Asciidoctor::Section)
+      doc.blocks[0].should be_a(Asciicrystal::Section)
+      doc.blocks[1].should be_a(Asciicrystal::Section)
+      doc.blocks[2].should be_a(Asciicrystal::Section)
     end
 
     it "should parse nested sections with correct levels" do
       input = "= Document Title\n\n== Level 1\n\n=== Level 2\n\n==== Level 3\n\ncontent"
       doc = document_from_string(input)
       sect1 = doc.blocks[0]
-      sect1.should be_a(Asciidoctor::Section)
+      sect1.should be_a(Asciicrystal::Section)
       sect1.level.should eq(1)
-      if sect1.is_a?(Asciidoctor::Section)
+      if sect1.is_a?(Asciicrystal::Section)
         sect1.sections?.should be_true
       end
     end
@@ -996,8 +996,8 @@ describe Asciidoctor::Section do
       input = "= Document Title\n:product: Crystal\n\n== About {product}\n\ncontent"
       doc = document_from_string(input)
       sect = doc.blocks[0]
-      sect.should be_a(Asciidoctor::Section)
-      if sect.is_a?(Asciidoctor::Section)
+      sect.should be_a(Asciicrystal::Section)
+      if sect.is_a?(Asciicrystal::Section)
         sect.title.should eq("About Crystal")
       end
     end

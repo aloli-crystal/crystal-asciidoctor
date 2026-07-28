@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Public: Parse the AsciiDoc source input into a Document.
   #
   # Accepts input as a String.
@@ -346,7 +346,7 @@ module Asciidoctor
   #
   # PUBLIQUE (et non plus `protected`) : la CLI (`Cli::Invoker`) doit
   # pouvoir fabriquer un converter pour le backend résolu. En Ruby elle
-  # y accédait via `Asciidoctor.send(:create_converter, …)` — `send`
+  # y accédait via `Asciicrystal.send(:create_converter, …)` — `send`
   # contournant la visibilité — ce qui ne se porte pas en Crystal.
   # Exposer la fabrique est plus propre qu'un contournement.
   def self.create_converter(backend : String) : Converter::Base

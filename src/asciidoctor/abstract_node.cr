@@ -1,6 +1,6 @@
 require "./logging"
 
-module Asciidoctor
+module Asciicrystal
   # An abstract base class that provides state and methods for managing a
   # node of AsciiDoc content. The state and methods on this class are common to
   # all content segments in an AsciiDoc document.

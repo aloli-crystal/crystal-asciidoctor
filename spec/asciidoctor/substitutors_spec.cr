@@ -1,11 +1,11 @@
 require "../spec_helper"
 
-private def create_block(source : String = "") : Asciidoctor::Block
-  doc = Asciidoctor::Document.new
-  Asciidoctor::Block.new(doc, :paragraph, source: source.empty? ? nil : source.split("\n"))
+private def create_block(source : String = "") : Asciicrystal::Block
+  doc = Asciicrystal::Document.new
+  Asciicrystal::Block.new(doc, :paragraph, source: source.empty? ? nil : source.split("\n"))
 end
 
-describe Asciidoctor::Substitutors do
+describe Asciicrystal::Substitutors do
   describe "#apply_header_subs" do
     it "applies specialcharacters and attributes substitutions" do
       block = create_block
@@ -14,9 +14,9 @@ describe Asciidoctor::Substitutors do
     end
 
     it "substitutes attribute references" do
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       doc.attributes["name"] = "AsciiDoc"
-      block = Asciidoctor::Block.new(doc, :paragraph)
+      block = Asciicrystal::Block.new(doc, :paragraph)
       result = block.apply_header_subs("Hello {name}")
       result.should eq("Hello AsciiDoc")
     end
@@ -138,8 +138,8 @@ describe Asciidoctor::Substitutors do
 
   describe "#restore_callouts" do
     it "restores callout markers into highlighted source" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(doc, :listing)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(doc, :listing)
       # Register callouts so read_next_id works
       doc.callouts.register(1)
       doc.callouts.register(2)
@@ -166,8 +166,8 @@ describe Asciidoctor::Substitutors do
     end
 
     it "processes callouts when requested" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(doc, :listing)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(doc, :listing)
       doc.callouts.register(1)
       doc.callouts.rewind
       result = block.highlight_source("code <1>", true)

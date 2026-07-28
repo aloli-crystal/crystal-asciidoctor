@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # A Cursor tracks the file, directory, path, and line number of a position
   # in the source.
   class Cursor

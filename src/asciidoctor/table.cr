@@ -1,7 +1,7 @@
 require "./abstract_block"
 require "./abstract_node"
 
-module Asciidoctor
+module Asciicrystal
   # Methods and constants for managing AsciiDoc table content in a document.
   class Table < AbstractBlock
     # Precision of column widths.

@@ -1,6 +1,6 @@
 require "./abstract_node"
 
-module Asciidoctor
+module Asciicrystal
   # Methods for managing inline elements in AsciiDoc block.
   class Inline < AbstractNode
     # The parent block.

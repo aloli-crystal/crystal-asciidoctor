@@ -4,7 +4,7 @@
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 # Convert an AsciiDoc string to HTML5
 html = Asciidoctor.convert("= Hello\n\nA *bold* paragraph.")
@@ -23,7 +23,7 @@ puts doc.doctitle  # => "My Document"
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 source = <<-ASCIIDOC
 = My Document
@@ -62,7 +62,7 @@ end
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 # Create a document with an HTML5 converter
 doc = Asciidoctor::Document.new
@@ -100,5 +100,5 @@ crystal spec
 crystal spec spec/integration/
 
 # Type-check without codegen
-crystal build --no-codegen src/crystal-asciidoctor.cr
+crystal build --no-codegen src/asciicrystal.cr
 ----

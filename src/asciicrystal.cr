@@ -43,7 +43,7 @@ require "./asciidoctor/cli/invoker"
 class SecurityError < Exception
 end
 
-module Asciidoctor
+module Asciicrystal
   # Lue au compile-time depuis `shard.yml` via le macro `read_file`.
   # Cf. note mémoire `feedback_shard_version_macro.md` (mémoire ALOLI).
   VERSION = {{

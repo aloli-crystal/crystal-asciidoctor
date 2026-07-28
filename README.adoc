@@ -1,6 +1,6 @@
-= crystal-asciidoctor
+= asciicrystal
 :description: A Crystal port of the Asciidoctor document processor.
-:repo_url: https://github.com/aloli-crystal/crystal-asciidoctor
+:repo_url: https://github.com/aloli-crystal/asciicrystal
 
 A Crystal port of the https://github.com/asciidoctor/asciidoctor[Asciidoctor] document processor.
 
@@ -16,7 +16,7 @@ This shard provides a complete AsciiDoc processing pipeline in Crystal: an Abstr
 | 2.0.26
 | 2025-10-24
 
-| *Shard Crystal crystal-asciidoctor*
+| *Shard Crystal asciicrystal*
 | 0.1.0
 | 2026-04-02
 |===
@@ -77,8 +77,9 @@ Add the dependency to your `shard.yml`:
 [source,yaml]
 ----
 dependencies:
-  crystal-asciidoctor:
-    github: aloli-crystal/crystal-asciidoctor
+  asciicrystal:
+    github: aloli-crystal/asciicrystal
+    version: "~> 2.0.26.12"
 ----
 
 Run `shards install`.
@@ -87,28 +88,28 @@ Run `shards install`.
 
 === Command line
 
-The shard also ships an executable, `crystal-asciidoctor` — the
+The shard also ships an executable, `asciicrystal` — the
 equivalent of the Ruby `asciidoctor` command (AsciiDoc in, HTML 5 /
 DocBook 5 / manpage out):
 
 [source,sh]
 ----
-shards build            # produces bin/crystal-asciidoctor
+shards build            # produces bin/asciicrystal
 
-bin/crystal-asciidoctor doc.adoc              # → doc.html
-bin/crystal-asciidoctor doc.adoc -o out.html  # explicit output
-bin/crystal-asciidoctor doc.adoc -b docbook5  # another backend
-bin/crystal-asciidoctor --help                # all options
+bin/asciicrystal doc.adoc              # → doc.html
+bin/asciicrystal doc.adoc -o out.html  # explicit output
+bin/asciicrystal doc.adoc -b docbook5  # another backend
+bin/asciicrystal --help                # all options
 ----
 
 NOTE: For PDF output, use the companion shard
-https://github.com/aloli-crystal/crystal-asciidoctor-pdf[crystal-asciidoctor-pdf].
+https://github.com/aloli-crystal/asciicrystal-pdf[asciicrystal-pdf].
 
 === High-level API
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 # Convert an AsciiDoc string to HTML5
 html = Asciidoctor.convert("= Hello\n\nA *bold* paragraph.")
@@ -127,7 +128,7 @@ puts doc.doctitle  # => "My Document"
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 source = <<-ASCIIDOC
 = My Document
@@ -166,7 +167,7 @@ end
 
 [source,crystal]
 ----
-require "crystal-asciidoctor"
+require "asciicrystal"
 
 # Create a document with an HTML5 converter
 doc = Asciidoctor::Document.new
@@ -204,7 +205,7 @@ crystal spec
 crystal spec spec/integration/
 
 # Type-check without codegen
-crystal build --no-codegen src/crystal-asciidoctor.cr
+crystal build --no-codegen src/asciicrystal.cr
 ----
 
 == Contributing

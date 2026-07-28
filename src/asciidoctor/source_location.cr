@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Tracks the file and line number of a node in the AsciiDoc source.
   # Only populated when the sourcemap option is enabled.
   class SourceLocation

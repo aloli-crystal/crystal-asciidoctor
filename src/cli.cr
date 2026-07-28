@@ -1,5 +1,5 @@
-require "./crystal-asciidoctor"
+require "./asciicrystal"
 
-options = Asciidoctor::Cli::Options.parse(ARGV)
-invoker = Asciidoctor::Cli::Invoker.new(options)
+options = Asciicrystal::Cli::Options.parse(ARGV)
+invoker = Asciicrystal::Cli::Invoker.new(options)
 exit invoker.invoke!

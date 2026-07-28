@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module SafeMode
     SAFE   =  1
     SECURE = 20

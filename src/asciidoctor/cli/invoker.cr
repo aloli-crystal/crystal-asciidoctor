@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Cli
     class Invoker
       property options : Options
@@ -40,14 +40,14 @@ module Asciidoctor
           opts_hash["docname"] = File.basename(infile, File.extname(infile))
         end
 
-        doc = Asciidoctor.load(source, opts_hash)
+        doc = Asciicrystal.load(source, opts_hash)
         @document = doc
 
-        # `Asciidoctor.load` pose déjà `doc.converter` ; le `||` reste
-        # un filet. L'original portait `Asciidoctor.send(:create_converter,
+        # `Asciicrystal.load` pose déjà `doc.converter` ; le `||` reste
+        # un filet. L'original portait `Asciicrystal.send(:create_converter,
         # …)` — un ruby-isme (`send` contourne la visibilité) qui
         # n'existe pas en Crystal et empêchait toute compilation du CLI.
-        converter = doc.converter || Asciidoctor.create_converter(doc.backend)
+        converter = doc.converter || Asciicrystal.create_converter(doc.backend)
         converted = converter.convert(doc)
         @output = converted
 

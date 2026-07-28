@@ -1,6 +1,6 @@
 require "./abstract_block"
 
-module Asciidoctor
+module Asciicrystal
   # Methods for managing sections of AsciiDoc content in a document.
   # The section responds as an Array of content blocks by delegating
   # block-related methods to its @blocks Array.

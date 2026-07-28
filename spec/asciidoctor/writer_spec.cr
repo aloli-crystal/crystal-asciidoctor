@@ -2,15 +2,15 @@ require "../spec_helper"
 
 # Helper class to test Writer module
 class TestWriter
-  include Asciidoctor::Writer
+  include Asciicrystal::Writer
 end
 
 # Helper class to test VoidWriter module
 class TestVoidWriter
-  include Asciidoctor::VoidWriter
+  include Asciicrystal::VoidWriter
 end
 
-describe Asciidoctor::Writer do
+describe Asciicrystal::Writer do
   describe "#write to IO" do
     it "writes output to IO with trailing newline" do
       writer = TestWriter.new
@@ -41,7 +41,7 @@ describe Asciidoctor::Writer do
   end
 end
 
-describe Asciidoctor::VoidWriter do
+describe Asciicrystal::VoidWriter do
   describe "#write to IO" do
     it "does not write anything" do
       writer = TestVoidWriter.new

@@ -2,7 +2,7 @@ require "./abstract_block"
 require "./safe_mode"
 require "./callouts"
 
-module Asciidoctor
+module Asciicrystal
   # The Document class represents a parsed AsciiDoc document.
   #
   # Document is the root node of a parsed AsciiDoc document. It provides an

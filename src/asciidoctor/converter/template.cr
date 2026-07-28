@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Converter
     # A Converter implementation that uses templates to convert AbstractNode objects
     # from a parsed AsciiDoc document tree to the backend format.

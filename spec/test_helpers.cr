@@ -7,14 +7,14 @@ module TestHelpers
   SAMPLE_DATA = ["first line", "second line", "third line"]
 
   # Parse the source string into a Document.
-  def self.document_from_string(src : String, opts : Hash(String, String) = {} of String => String) : Asciidoctor::Document
+  def self.document_from_string(src : String, opts : Hash(String, String) = {} of String => String) : Asciicrystal::Document
     opts["standalone"] = "false" unless opts.has_key?("standalone")
-    Asciidoctor.load(src, opts)
+    Asciicrystal.load(src, opts)
   end
 
   # Parse the source string into a Document (with nullable values).
   # nil values are treated as attribute deletions (equivalent to !key)
-  def self.document_from_string(src : String, opts : Hash(String, String?)) : Asciidoctor::Document
+  def self.document_from_string(src : String, opts : Hash(String, String?)) : Asciicrystal::Document
     normalized = {} of String => String
     opts.each do |k, v|
       if v.nil?
@@ -25,21 +25,21 @@ module TestHelpers
       end
     end
     normalized["standalone"] = "false" unless normalized.has_key?("standalone")
-    Asciidoctor.load(src, normalized)
+    Asciicrystal.load(src, normalized)
   end
 
   # Parse the source string into a Document and return the first block.
-  def self.block_from_string(src : String, opts : Hash(String, String) = {} of String => String) : Asciidoctor::Block
+  def self.block_from_string(src : String, opts : Hash(String, String) = {} of String => String) : Asciicrystal::Block
     opts["standalone"] = "false"
-    doc = Asciidoctor.load(src, opts)
-    doc.blocks.first.as(Asciidoctor::Block)
+    doc = Asciicrystal.load(src, opts)
+    doc.blocks.first.as(Asciicrystal::Block)
   end
 
   # Parse and convert the source string.
   def self.convert_string(src : String, opts : Hash(String, String) = {} of String => String) : String
     opts["standalone"] = "true" unless opts.has_key?("standalone")
-    doc = Asciidoctor.load(src, opts)
-    converter = doc.converter || Asciidoctor::Converter::Html5Converter.new("html5")
+    doc = Asciicrystal.load(src, opts)
+    converter = doc.converter || Asciicrystal::Converter::Html5Converter.new("html5")
     result = converter.convert(doc)
     # Remove xmlns attributes to avoid confusing XML parser
     result.gsub(/\s+xmlns(:\w+)?="[^"]*"/, "")
@@ -48,22 +48,22 @@ module TestHelpers
   # Parse and convert the source string to embedded output (no header/footer).
   def self.convert_string_to_embedded(src : String, opts : Hash(String, String) = {} of String => String) : String
     opts["standalone"] = "false"
-    doc = Asciidoctor.load(src, opts)
-    converter = doc.converter || Asciidoctor::Converter::Html5Converter.new("html5")
+    doc = Asciicrystal.load(src, opts)
+    converter = doc.converter || Asciicrystal::Converter::Html5Converter.new("html5")
     converter.convert(doc)
   end
 
   # Parse and convert the source string as inline doctype.
   def self.convert_inline_string(src : String, opts : Hash(String, String) = {} of String => String) : String
     opts["doctype"] = "inline"
-    doc = Asciidoctor.load(src, opts)
-    converter = doc.converter || Asciidoctor::Converter::Html5Converter.new("html5")
+    doc = Asciicrystal.load(src, opts)
+    converter = doc.converter || Asciicrystal::Converter::Html5Converter.new("html5")
     converter.convert(doc)
   end
 
   # Create an empty document.
-  def self.empty_document(opts : Hash(String, String) = {} of String => String) : Asciidoctor::Document
-    Asciidoctor.load("", opts.merge({"parse" => "false"}))
+  def self.empty_document(opts : Hash(String, String) = {} of String => String) : Asciicrystal::Document
+    Asciicrystal.load("", opts.merge({"parse" => "false"}))
   end
 
   # Count XPath matches in HTML/XML content.

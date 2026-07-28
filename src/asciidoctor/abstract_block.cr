@@ -2,7 +2,7 @@ require "./abstract_node"
 require "./content_model"
 require "./source_location"
 
-module Asciidoctor
+module Asciicrystal
   # An abstract base class that provides state and methods for managing a
   # block-level node of AsciiDoc content. Block-level nodes include Document,
   # Section, Block, List, ListItem, and Table.

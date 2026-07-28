@@ -1,14 +1,14 @@
 require "../../spec_helper"
 require "file_utils"
 
-# Spec d'intégration de l'exécutable `crystal-asciidoctor` (cible
+# Spec d'intégration de l'exécutable `asciicrystal` (cible
 # déclarée dans `shard.yml`). Le CLI était présent dans l'arbre mais ne
-# compilait pas : `Cli::Invoker` portait un `Asciidoctor.send(
+# compilait pas : `Cli::Invoker` portait un `Asciicrystal.send(
 # :create_converter, …)` — un ruby-isme (`send` contourne la
 # visibilité) sans équivalent Crystal. Ces tests garantissent que le
 # binaire se construit ET convertit réellement.
-describe "CLI · exécutable crystal-asciidoctor" do
-  binary = File.join(__DIR__, "..", "..", "..", "bin", "crystal-asciidoctor")
+describe "CLI · exécutable asciicrystal" do
+  binary = File.join(__DIR__, "..", "..", "..", "bin", "asciicrystal")
 
   it "convertit un .adoc en HTML (fichier de sortie par défaut)" do
     pending! "binaire absent (shards build) : #{binary}" unless File::Info.executable?(binary)
@@ -55,7 +55,7 @@ describe "CLI · exécutable crystal-asciidoctor" do
     stdout = IO::Memory.new
     Process.run(binary, ["--help"], output: stdout, error: Process::Redirect::Close)
     out = stdout.to_s
-    out.should contain("crystal-asciidoctor")
+    out.should contain("asciicrystal")
     out.should contain("--backend")
   end
 end

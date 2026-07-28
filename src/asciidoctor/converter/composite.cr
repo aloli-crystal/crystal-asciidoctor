@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Converter
     # A Converter implementation that delegates to the chain of Converter objects
     # passed to the constructor. Selects the first Converter that identifies itself

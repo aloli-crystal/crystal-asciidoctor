@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Describes the type of content a block accepts and how it should be converted.
   enum ContentModel
     # This block contains other blocks

@@ -22,17 +22,17 @@ EOS
 def manpage_convert(input : String, options : Hash(String, String) = {} of String => String) : String
   options["backend"] = "manpage"
   options["doctype"] = "manpage"
-  Asciidoctor.convert(input, options)
+  Asciicrystal.convert(input, options)
 end
 
 # Helper to load manpage document
-def manpage_load(input : String, options : Hash(String, String) = {} of String => String) : Asciidoctor::Document
+def manpage_load(input : String, options : Hash(String, String) = {} of String => String) : Asciicrystal::Document
   options["backend"] = "manpage"
   options["doctype"] = "manpage"
-  Asciidoctor.load(input, options)
+  Asciicrystal.load(input, options)
 end
 
-describe Asciidoctor::Converter::ManPageConverter do
+describe Asciicrystal::Converter::ManPageConverter do
   # ==========================================================================
   # Configuration
   # ==========================================================================
@@ -120,7 +120,7 @@ describe Asciidoctor::Converter::ManPageConverter do
 
     it "should include info comment block" do
       output = manpage_convert(SAMPLE_MANPAGE_HEADER, {"standalone" => "true"})
-      output.should contain("Generator: Asciidoctor Crystal")
+      output.should contain("Generator: Asciicrystal Crystal")
       output.should contain("Author: Author Name")
     end
 
@@ -185,19 +185,19 @@ describe Asciidoctor::Converter::ManPageConverter do
   # ==========================================================================
   describe "#convert_paragraph" do
     it "converts a simple paragraph" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :paragraph, content_model: Asciidoctor::ContentModel::Simple)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :paragraph, content_model: Asciicrystal::ContentModel::Simple)
       block.lines = ["Hello World"]
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_paragraph(block)
       result.should contain("Hello World")
     end
 
     it "adds .sp before paragraph" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :paragraph, content_model: Asciidoctor::ContentModel::Simple)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :paragraph, content_model: Asciicrystal::ContentModel::Simple)
       block.lines = ["Test paragraph"]
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_paragraph(block)
       result.should contain(".sp")
     end
@@ -221,11 +221,11 @@ describe Asciidoctor::Converter::ManPageConverter do
   # ==========================================================================
   describe "#convert_section" do
     it "converts a section with title" do
-      doc = Asciidoctor::Document.new
-      section = Asciidoctor::Section.new(document: doc, parent: doc)
+      doc = Asciicrystal::Document.new
+      section = Asciicrystal::Section.new(document: doc, parent: doc)
       section.title = "SYNOPSIS"
       section.level = 1
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_section(section)
       result.should contain(".SH")
       result.should contain("SYNOPSIS")
@@ -257,40 +257,40 @@ describe Asciidoctor::Converter::ManPageConverter do
   # ==========================================================================
   describe "Literal and listing blocks" do
     it "converts a literal block" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :literal, content_model: Asciidoctor::ContentModel::Verbatim)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :literal, content_model: Asciicrystal::ContentModel::Verbatim)
       block.lines = ["literal text"]
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_literal(block)
       result.should contain(".sp")
       result.should contain("literal text")
     end
 
     it "converts a listing block" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :listing, content_model: Asciidoctor::ContentModel::Verbatim)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :listing, content_model: Asciicrystal::ContentModel::Verbatim)
       block.lines = ["code here"]
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_listing(block)
       result.should contain(".sp")
       result.should contain("code here")
     end
 
     it "should use .nf and .fi for literal blocks" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :literal, content_model: Asciidoctor::ContentModel::Verbatim)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :literal, content_model: Asciicrystal::ContentModel::Verbatim)
       block.lines = ["line 1", "line 2"]
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_literal(block)
       result.should contain(".nf")
       result.should contain(".fi")
     end
 
     it "should use .nf and .fi for listing blocks" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :listing, content_model: Asciidoctor::ContentModel::Verbatim)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :listing, content_model: Asciicrystal::ContentModel::Verbatim)
       block.lines = ["code line 1", "code line 2"]
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_listing(block)
       result.should contain(".nf")
       result.should contain(".fi")
@@ -309,9 +309,9 @@ describe Asciidoctor::Converter::ManPageConverter do
   # ==========================================================================
   describe "#convert_inline_quoted" do
     it "converts emphasis" do
-      doc = Asciidoctor::Document.new
-      node = Asciidoctor::Inline.new(parent_block: doc, context: :quoted, text: "emphasized", type: :emphasis)
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      doc = Asciicrystal::Document.new
+      node = Asciicrystal::Inline.new(parent_block: doc, context: :quoted, text: "emphasized", type: :emphasis)
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_inline_quoted(node)
       result.should contain("\\fI")
       result.should contain("emphasized")
@@ -319,9 +319,9 @@ describe Asciidoctor::Converter::ManPageConverter do
     end
 
     it "converts strong" do
-      doc = Asciidoctor::Document.new
-      node = Asciidoctor::Inline.new(parent_block: doc, context: :quoted, text: "bold", type: :strong)
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      doc = Asciicrystal::Document.new
+      node = Asciicrystal::Inline.new(parent_block: doc, context: :quoted, text: "bold", type: :strong)
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_inline_quoted(node)
       result.should contain("\\fB")
       result.should contain("bold")
@@ -329,9 +329,9 @@ describe Asciidoctor::Converter::ManPageConverter do
     end
 
     it "converts monospaced text" do
-      doc = Asciidoctor::Document.new
-      node = Asciidoctor::Inline.new(parent_block: doc, context: :quoted, text: "mono", type: :monospaced)
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      doc = Asciicrystal::Document.new
+      node = Asciicrystal::Inline.new(parent_block: doc, context: :quoted, text: "mono", type: :monospaced)
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_inline_quoted(node)
       result.should contain("\\f(CR")
       result.should contain("mono")
@@ -339,9 +339,9 @@ describe Asciidoctor::Converter::ManPageConverter do
     end
 
     it "converts double-quoted text" do
-      doc = Asciidoctor::Document.new
-      node = Asciidoctor::Inline.new(parent_block: doc, context: :quoted, text: "hello", type: :double)
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      doc = Asciicrystal::Document.new
+      node = Asciicrystal::Inline.new(parent_block: doc, context: :quoted, text: "hello", type: :double)
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_inline_quoted(node)
       result.should contain("\\(lq")
       result.should contain("hello")
@@ -349,9 +349,9 @@ describe Asciidoctor::Converter::ManPageConverter do
     end
 
     it "converts single-quoted text" do
-      doc = Asciidoctor::Document.new
-      node = Asciidoctor::Inline.new(parent_block: doc, context: :quoted, text: "goodbye", type: :single)
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      doc = Asciicrystal::Document.new
+      node = Asciicrystal::Inline.new(parent_block: doc, context: :quoted, text: "goodbye", type: :single)
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_inline_quoted(node)
       result.should contain("\\(oq")
       result.should contain("goodbye")
@@ -374,10 +374,10 @@ describe Asciidoctor::Converter::ManPageConverter do
   # ==========================================================================
   describe "#convert_inline_anchor" do
     it "converts a link" do
-      doc = Asciidoctor::Document.new
-      node = Asciidoctor::Inline.new(parent_block: doc, context: :anchor, text: "Example", type: :link)
+      doc = Asciicrystal::Document.new
+      node = Asciicrystal::Inline.new(parent_block: doc, context: :anchor, text: "Example", type: :link)
       node.target = "https://example.com"
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_inline_anchor(node)
       result.should contain("Example")
     end
@@ -388,21 +388,21 @@ describe Asciidoctor::Converter::ManPageConverter do
   # ==========================================================================
   describe "#convert_admonition" do
     it "converts an admonition block" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :admonition, content_model: Asciidoctor::ContentModel::Compound)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :admonition, content_model: Asciicrystal::ContentModel::Compound)
       block.style = "NOTE"
       block.attributes["name"] = "note"
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_admonition(block)
       result.should contain("Note")
     end
 
     it "converts a WARNING admonition" do
-      doc = Asciidoctor::Document.new
-      block = Asciidoctor::Block.new(parent_block: doc, context: :admonition, content_model: Asciidoctor::ContentModel::Compound)
+      doc = Asciicrystal::Document.new
+      block = Asciicrystal::Block.new(parent_block: doc, context: :admonition, content_model: Asciicrystal::ContentModel::Compound)
       block.style = "WARNING"
       block.attributes["name"] = "warning"
-      converter = Asciidoctor::Converter::ManPageConverter.new("manpage")
+      converter = Asciicrystal::Converter::ManPageConverter.new("manpage")
       result = converter.convert_admonition(block)
       result.should contain("Warning")
     end

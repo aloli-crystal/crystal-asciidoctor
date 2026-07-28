@@ -1,5 +1,5 @@
-name: crystal-asciidoctor
-version: 2.0.26.11
+name: asciicrystal
+version: 2.0.26.12
 
 description: |
   A Crystal port of the Asciidoctor document processor.
@@ -10,20 +10,20 @@ authors:
   - Philippe Nénert pour ALOLI sas à Laguiole
 
 # Le shard est à la fois une BIBLIOTHÈQUE (AST + parser, utilisée par
-# crystal-asciidoctor-pdf) et un EXÉCUTABLE : `crystal-asciidoctor`,
+# asciicrystal-pdf) et un EXÉCUTABLE : `asciicrystal`,
 # équivalent de la commande `asciidoctor` Ruby (.adoc → HTML/DocBook/
 # manpage). Sans cette section, `shards build` ne produisait rien.
 targets:
-  crystal-asciidoctor:
+  asciicrystal:
     main: src/cli.cr
 
 dependencies:
-  crystal-rouge:
-    github: aloli-crystal/crystal-rouge
-    version: "~> 4.7"
+  rouge:
+    github: aloli-crystal/rouge
+    version: "~> 4.7.0.3"
 
 crystal: ">= 1.19.0"
 
 license: MIT
 
-repository: https://github.com/aloli-crystal/crystal-asciidoctor
+repository: https://github.com/aloli-crystal/asciicrystal

@@ -6,13 +6,14 @@
 
 == Add the Dependency
 
-Add crystal-asciidoctor to your `shard.yml`:
+Add asciicrystal to your `shard.yml`:
 
 [source,yaml]
 ----
 dependencies:
-  crystal-asciidoctor:
-    github: aloli-crystal/crystal-asciidoctor
+  asciicrystal:
+    github: aloli-crystal/asciicrystal
+    version: "~> 2.0.26.12"
 ----
 
 Then run:
@@ -26,4 +27,4 @@ shards install
 
 This shard depends on:
 
-* https://github.com/aloli-crystal/crystal-rouge[crystal-rouge] (~> 4.7) -- syntax highlighting
+* https://github.com/aloli-crystal/rouge[rouge] (~> 4.7.0.3) -- syntax highlighting

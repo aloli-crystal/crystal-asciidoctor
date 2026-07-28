@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Additional constants used by the Substitutors module
   PASS_START = "\u0096"
   PASS_END   = "\u0097"

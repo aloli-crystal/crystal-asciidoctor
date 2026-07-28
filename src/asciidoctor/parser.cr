@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Internal: Struct to hold block match data returned by is_delimited_block?
   record BlockMatchData, context : Symbol, masq : Set(String), tip : String, terminator : String
 

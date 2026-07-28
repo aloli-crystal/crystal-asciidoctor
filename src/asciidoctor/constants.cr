@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   ADMONITION_STYLE_HEADS = Set{'C', 'I', 'N', 'T', 'W'}
 
   ADMONITION_STYLES = Set{"CAUTION", "IMPORTANT", "NOTE", "TIP", "WARNING"}

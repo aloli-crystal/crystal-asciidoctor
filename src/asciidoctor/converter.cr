@@ -1,6 +1,6 @@
 require "./converter/base"
 
-module Asciidoctor
+module Asciicrystal
   # A module for defining converters that are used to convert AbstractNode objects
   # in a parsed AsciiDoc document to an output (aka backend) format such as HTML or DocBook.
   #

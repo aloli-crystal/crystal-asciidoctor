@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Character class constants for regex patterns.
   # Crystal uses PCRE (libpcre) with Unicode support.
   # Ruby's \p{Word} maps to PCRE's \p{Xwd}, \p{Alpha} to \p{L},

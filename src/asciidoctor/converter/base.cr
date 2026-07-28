@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Converter
     # Backend traits for a converter.
     record BackendTraits,
@@ -80,7 +80,7 @@ module Asciidoctor
       # Register this converter class for the given backends in the default registry.
       macro register_for(*backends)
         {% for backend in backends %}
-          Asciidoctor::Converter::DefaultRegistry.register(self, {{backend}}.to_s)
+          Asciicrystal::Converter::DefaultRegistry.register(self, {{backend}}.to_s)
         {% end %}
       end
 

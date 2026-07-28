@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Handles parsing AsciiDoc attribute lists into a Hash of key/value pairs.
   class AttributeList
     APOS      = "'"

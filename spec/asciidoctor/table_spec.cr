@@ -1,30 +1,30 @@
 require "../spec_helper"
 
 # Helper methods used across table tests
-# NOTE: Asciidoctor.convert bypasses Document#convert so standalone option is ignored.
-# We use Asciidoctor.load + doc.convert for embedded output.
+# NOTE: Asciicrystal.convert bypasses Document#convert so standalone option is ignored.
+# We use Asciicrystal.load + doc.convert for embedded output.
 def table_convert_string(input : String, options : Hash(String, String) = {} of String => String) : String
-  Asciidoctor.convert(input, options)
+  Asciicrystal.convert(input, options)
 end
 
 def table_convert_to_embedded(input : String, options : Hash(String, String) = {} of String => String) : String
-  doc = Asciidoctor.load(input, options)
+  doc = Asciicrystal.load(input, options)
   result = doc.convert
   result || ""
 end
 
-def table_document_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciidoctor::Document
-  Asciidoctor.load(input, options)
+def table_document_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciicrystal::Document
+  Asciicrystal.load(input, options)
 end
 
-describe Asciidoctor::Table do
+describe Asciicrystal::Table do
   # ==========================================================================
   # #initialize
   # ==========================================================================
   describe "#initialize" do
     it "creates a table" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
       table.context.should eq(:table)
       table.columns.should be_empty
       table.rows.head.should be_empty
@@ -38,14 +38,14 @@ describe Asciidoctor::Table do
   # ==========================================================================
   describe "#header_row?" do
     it "returns false when has_header_option is false" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
       table.header_row?.should be_false
     end
 
     it "returns true when has_header_option is true and body is empty" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
       table.has_header_option = true
       table.header_row?.should be_true
     end
@@ -54,9 +54,9 @@ describe Asciidoctor::Table do
   # ==========================================================================
   # Rows
   # ==========================================================================
-  describe "Asciidoctor::Table::Rows" do
+  describe "Asciicrystal::Table::Rows" do
     it "provides rows by section" do
-      rows = Asciidoctor::Table::Rows.new
+      rows = Asciicrystal::Table::Rows.new
       sections = rows.by_section
       sections.size.should eq(3)
       sections[0][0].should eq(:head)
@@ -65,7 +65,7 @@ describe Asciidoctor::Table do
     end
 
     it "converts to hash" do
-      rows = Asciidoctor::Table::Rows.new
+      rows = Asciicrystal::Table::Rows.new
       h = rows.to_h
       h.has_key?(:head).should be_true
       h.has_key?(:body).should be_true
@@ -78,9 +78,9 @@ describe Asciidoctor::Table do
   # ==========================================================================
   describe "Column" do
     it "creates a column with default attributes" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
       col.attributes["colnumber"].should eq("1")
       col.attributes["width"].should eq("1")
       col.attributes["halign"].should eq("left")
@@ -88,9 +88,9 @@ describe Asciidoctor::Table do
     end
 
     it "creates a column with specific index" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 2)
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 2)
       col.attributes["colnumber"].should eq("3")
     end
   end
@@ -100,51 +100,51 @@ describe Asciidoctor::Table do
   # ==========================================================================
   describe "Cell" do
     it "creates a cell with text" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
-      cell = Asciidoctor::Table::Cell.new(col, "Cell content")
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
+      cell = Asciicrystal::Table::Cell.new(col, "Cell content")
       cell.text.should eq("Cell content")
     end
 
     it "creates a cell with colspan and rowspan" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
-      cell = Asciidoctor::Table::Cell.new(col, "Cell", colspan: 2, rowspan: 3)
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
+      cell = Asciicrystal::Table::Cell.new(col, "Cell", colspan: 2, rowspan: 3)
       cell.colspan.should eq(2)
       cell.rowspan.should eq(3)
     end
 
     it "returns the cell text" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
-      cell = Asciidoctor::Table::Cell.new(col, "Hello")
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
+      cell = Asciicrystal::Table::Cell.new(col, "Hello")
       cell.text.should eq("Hello")
     end
 
     it "returns array with single paragraph for content" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
-      cell = Asciidoctor::Table::Cell.new(col, "Single paragraph")
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
+      cell = Asciicrystal::Table::Cell.new(col, "Single paragraph")
       cell.content.should eq(["Single paragraph"])
     end
 
     it "splits content on blank lines" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
-      cell = Asciidoctor::Table::Cell.new(col, "Para 1\n\nPara 2")
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
+      cell = Asciicrystal::Table::Cell.new(col, "Para 1\n\nPara 2")
       cell.content.should eq(["Para 1", "Para 2"])
     end
 
     it "cell with empty text returns empty string" do
-      doc = Asciidoctor::Document.new
-      table = Asciidoctor::Table.new(doc)
-      col = Asciidoctor::Table::Column.new(table, 0)
-      cell = Asciidoctor::Table::Cell.new(col, "")
+      doc = Asciicrystal::Document.new
+      table = Asciicrystal::Table.new(doc)
+      col = Asciicrystal::Table::Column.new(table, 0)
+      cell = Asciicrystal::Table::Cell.new(col, "")
       cell.text.should eq("")
     end
   end
@@ -163,7 +163,7 @@ describe Asciidoctor::Table do
     it "should parse 3 rows and 3 columns" do
       input = "|===\n|A |B |C\n|a |b |c\n|1 |2 |3\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
       table.rows.body.size.should eq(3)
       table.rows.body[0].size.should eq(3)
@@ -172,7 +172,7 @@ describe Asciidoctor::Table do
     it "should parse cell content correctly" do
       input = "|===\n|A |B |C\n|a |b |c\n|1 |2 |3\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body[0][0].text.should eq("A")
       table.rows.body[0][1].text.should eq("B")
       table.rows.body[0][2].text.should eq("C")
@@ -187,7 +187,7 @@ describe Asciidoctor::Table do
     it "first row sets number of columns when not specified" do
       input = "|===\n|first |second |third |fourth\n|1 |2 |3\n|4\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(4)
     end
 
@@ -209,7 +209,7 @@ describe Asciidoctor::Table do
     it "table with header should have correct head and body rows" do
       input = "[%header]\n|===\n|Item |Quantity\n|Item 1 |1\n|Item 2 |2\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.head.size.should eq(1)
       table.rows.body.size.should eq(2)
     end
@@ -217,7 +217,7 @@ describe Asciidoctor::Table do
     it "header cells should contain correct text" do
       input = "[%header]\n|===\n|Name |Value\n|A |1\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.head[0][0].text.should eq("Name")
       table.rows.head[0][1].text.should eq("Value")
     end
@@ -297,7 +297,7 @@ describe Asciidoctor::Table do
     it "colspec attribute using asterisk syntax sets number of columns" do
       input = "[cols=\"3*\"]\n|===\n|A |B |C |a |b |c |1 |2 |3\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
       table.rows.body.size.should eq(3)
     end
@@ -305,7 +305,7 @@ describe Asciidoctor::Table do
     it "table with explicit column count can have multiple rows on a single line" do
       input = "[cols=\"3*\"]\n|===\n|one |two\n|1 |2 |a |b\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
       table.rows.body.size.should eq(2)
     end
@@ -389,7 +389,7 @@ describe Asciidoctor::Table do
     it "supports repeating cells with 3*" do
       input = "|===\n3*|A\n|1 3*|2\n|b |c\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
     end
 
@@ -457,14 +457,14 @@ describe Asciidoctor::Table do
     it "dsv table should have at least one row" do
       input = ":===\na:b:c\n1:2:3\n:==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should be >= 1
     end
 
     it "single cell in DSV table should only produce single row" do
       input = ":===\nsingle cell\n:==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should eq(1)
       table.rows.body[0].size.should eq(1)
     end
@@ -472,7 +472,7 @@ describe Asciidoctor::Table do
     it "dsv table should parse 3 columns correctly" do
       input = ":===\na:b:c\n1:2:3\n:==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
       table.rows.body.size.should eq(2)
     end
@@ -486,7 +486,7 @@ describe Asciidoctor::Table do
     it "should parse dsv with escaped colons" do
       input = ":===\nMySQL\\:Server:value\n:==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(2)
     end
 
@@ -511,14 +511,14 @@ describe Asciidoctor::Table do
     it "csv table should have at least one row" do
       input = ",===\na,b,c\n1,2,3\n,==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should be >= 1
     end
 
     it "single cell in CSV table should only produce single row" do
       input = ",===\nsingle cell\n,==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should eq(1)
       table.rows.body[0].size.should eq(1)
     end
@@ -526,7 +526,7 @@ describe Asciidoctor::Table do
     it "csv table should parse 3 columns correctly" do
       input = ",===\na,b,c\n1,2,3\n,==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
       table.rows.body.size.should eq(2)
     end
@@ -534,7 +534,7 @@ describe Asciidoctor::Table do
     it "csv table should parse cell content correctly" do
       input = ",===\na,b,c\n1,2,3\n,==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body[0][0].text.should eq("a")
       table.rows.body[0][1].text.should eq("b")
     end
@@ -584,13 +584,13 @@ describe Asciidoctor::Table do
       input = "|===\n|A |B\n|1 |2\n|==="
       doc = table_document_from_string(input)
       doc.blocks.size.should eq(1)
-      doc.blocks[0].should be_a(Asciidoctor::Table)
+      doc.blocks[0].should be_a(Asciicrystal::Table)
     end
 
     it "should parse table with multiple rows" do
       input = "|===\n|A |B |C\n|a |b |c\n|1 |2 |3\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should eq(3)
     end
 
@@ -611,28 +611,28 @@ describe Asciidoctor::Table do
       doc = table_document_from_string(input)
       doc.blocks.size.should eq(2)
       doc.blocks[0].context.should eq(:paragraph)
-      doc.blocks[1].should be_a(Asciidoctor::Table)
+      doc.blocks[1].should be_a(Asciicrystal::Table)
     end
 
     it "should handle multiple tables in a document" do
       input = "|===\n|A |B\n|===\n\n|===\n|C |D\n|==="
       doc = table_document_from_string(input)
       doc.blocks.size.should eq(2)
-      doc.blocks[0].should be_a(Asciidoctor::Table)
-      doc.blocks[1].should be_a(Asciidoctor::Table)
+      doc.blocks[0].should be_a(Asciicrystal::Table)
+      doc.blocks[1].should be_a(Asciicrystal::Table)
     end
 
     it "should handle table with title" do
       input = ".My Table\n|===\n|A |B\n|1 |2\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.title.should eq("My Table")
     end
 
     it "should handle table with id" do
       input = "[#my-table]\n|===\n|A |B\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.id.should eq("my-table")
     end
 
@@ -640,17 +640,17 @@ describe Asciidoctor::Table do
       input = ":sectids:\n\n== Section\n\n|===\n|A |B\n|1 |2\n|==="
       doc = table_document_from_string(input)
       sect = doc.blocks[0]
-      sect.should be_a(Asciidoctor::Section)
-      if sect.is_a?(Asciidoctor::Section)
+      sect.should be_a(Asciicrystal::Section)
+      if sect.is_a?(Asciicrystal::Section)
         sect.blocks.size.should eq(1)
-        sect.blocks[0].should be_a(Asciidoctor::Table)
+        sect.blocks[0].should be_a(Asciicrystal::Table)
       end
     end
 
     it "should handle table with explicit header using %header" do
       input = "[%header]\n|===\n|Name |Value\n|A |1\n|B |2\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.head.size.should eq(1)
       table.rows.body.size.should eq(2)
       table.rows.head[0][0].text.should eq("Name")
@@ -669,7 +669,7 @@ describe Asciidoctor::Table do
     it "should handle table with single column" do
       input = "|===\n|A\n|B\n|C\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(1)
       table.rows.body.size.should eq(3)
     end
@@ -677,21 +677,21 @@ describe Asciidoctor::Table do
     it "should handle table with many columns" do
       input = "|===\n|A |B |C |D |E |F\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(6)
     end
 
     it "should handle empty table" do
       input = "|===\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.should be_empty
     end
 
     it "should handle table with two columns and two rows" do
       input = "|===\n|A |B\n|C |D\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(2)
       table.rows.body.size.should eq(2)
       table.rows.body[0][0].text.should eq("A")
@@ -703,7 +703,7 @@ describe Asciidoctor::Table do
     it "should handle table with cells on separate lines" do
       input = "|===\n|A\n|B\n|C\n|D\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(1)
       table.rows.body.size.should eq(4)
     end
@@ -711,7 +711,7 @@ describe Asciidoctor::Table do
     it "should handle table with blank line between rows" do
       input = "|===\n|A |B\n\n|C |D\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should be >= 1
     end
 
@@ -732,7 +732,7 @@ describe Asciidoctor::Table do
     it "should handle table with cols attribute specifying proportional widths" do
       input = "[cols=\"1,2,3\"]\n|===\n|A |B |C\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
     end
 
@@ -802,14 +802,14 @@ describe Asciidoctor::Table do
     it "should handle table with options=header via options attribute" do
       input = "[options=\"header\"]\n|===\n|Name |Value\n|A |1\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.head.size.should eq(1)
     end
 
     it "should handle table with cols using asterisk multiplier" do
       input = "[cols=\"3*\"]\n|===\n|A |B |C |a |b |c |1 |2 |3\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.columns.size.should eq(3)
     end
 
@@ -899,7 +899,7 @@ describe Asciidoctor::Table do
       # fragment, jamais dans le contenu d'une ligne précédente.
       input = "[cols=\"1,4\"]\n|===\n| *Rails 5.2 6.0*\n| desc un\n\n| *Rails 6.0 6.1*\n| desc deux\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.size.should eq(2)
       table.rows.body.each { |row| row.size.should eq(2) }
     end
@@ -908,7 +908,7 @@ describe Asciidoctor::Table do
       # `3*|` répète la cellule suivante 3 fois : a, b, b, b, c => 5 cellules.
       input = "[cols=\"4\"]\n|===\n| a 3*| b\n| c\n|==="
       doc = table_document_from_string(input)
-      table = doc.blocks[0].as(Asciidoctor::Table)
+      table = doc.blocks[0].as(Asciicrystal::Table)
       table.rows.body.sum(&.size).should eq(5)
     end
   end

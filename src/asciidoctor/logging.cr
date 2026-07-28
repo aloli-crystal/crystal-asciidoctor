@@ -1,6 +1,6 @@
 require "log"
 
-module Asciidoctor
+module Asciicrystal
   # Severity levels matching Ruby's Logger severity constants.
   enum Severity
     DEBUG

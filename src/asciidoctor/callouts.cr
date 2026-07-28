@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Maintains a catalog of callouts and their associations.
   class Callouts
     @lists : Array(Array(NamedTuple(ordinal: Int32, id: String)))

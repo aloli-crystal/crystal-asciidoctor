@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Extensions provide a way to participate in the parsing and converting
   # phases of the AsciiDoc processor or extend the AsciiDoc syntax.
   #
@@ -18,7 +18,7 @@ module Asciidoctor
   #
   # Extensions may be registered globally using the Extensions.register method
   # or added to a custom Registry instance and passed as an option to a single
-  # Asciidoctor processor.
+  # Asciicrystal processor.
   module Extensions
     # -------------------------------------------------------------------------
     # Processor — abstract base class for all extension processors

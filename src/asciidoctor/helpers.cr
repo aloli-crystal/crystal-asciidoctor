@@ -1,6 +1,6 @@
 require "uri"
 
-module Asciidoctor
+module Asciicrystal
   module Helpers
     extend self
 

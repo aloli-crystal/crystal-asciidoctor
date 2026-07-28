@@ -2,22 +2,22 @@ require "../spec_helper"
 require "../test_helpers"
 
 # Helper to create a block for substitution testing
-def text_block(src : String = "test") : Asciidoctor::Block
-  doc = Asciidoctor.load(src, {"standalone" => "false"})
-  doc.blocks.first.as(Asciidoctor::Block)
+def text_block(src : String = "test") : Asciicrystal::Block
+  doc = Asciicrystal.load(src, {"standalone" => "false"})
+  doc.blocks.first.as(Asciicrystal::Block)
 end
 
 describe "Text" do
   describe "encoding" do
     it "should handle utf8 characters in document" do
-      doc = Asciidoctor.load("Café crème\n\nÉlève modèle\n\nRésumé", {"standalone" => "false"})
+      doc = Asciicrystal.load("Café crème\n\nÉlève modèle\n\nRésumé", {"standalone" => "false"})
       doc.blocks.size.should be >= 1
-      block = doc.blocks.first.as(Asciidoctor::Block)
+      block = doc.blocks.first.as(Asciicrystal::Block)
       block.source.should contain("Café")
     end
 
     it "should handle utf8 characters in embedded document" do
-      doc = Asciidoctor.load("Café crème\n\nÉlève modèle", {"standalone" => "false"})
+      doc = Asciicrystal.load("Café crème\n\nÉlève modèle", {"standalone" => "false"})
       doc.blocks.size.should be >= 1
     end
 
@@ -72,37 +72,37 @@ describe "Text" do
 
   describe "horizontal rule" do
     it "should parse thematic break" do
-      doc = Asciidoctor.load("Before\n\n'''\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n'''\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
 
     it "should parse markdown horizontal rule with dashes" do
-      doc = Asciidoctor.load("Before\n\n---\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n---\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
 
     it "should parse markdown horizontal rule with asterisks" do
-      doc = Asciidoctor.load("Before\n\n***\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n***\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
 
     it "should parse markdown horizontal rule with underscores" do
-      doc = Asciidoctor.load("Before\n\n___\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n___\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
 
     it "should parse markdown horizontal rule with spaced dashes" do
-      doc = Asciidoctor.load("Before\n\n- - -\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n- - -\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
 
     it "should parse markdown horizontal rule with spaced asterisks" do
-      doc = Asciidoctor.load("Before\n\n* * *\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n* * *\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
 
     it "should parse markdown horizontal rule with spaced underscores" do
-      doc = Asciidoctor.load("Before\n\n_ _ _\n\nAfter", {"standalone" => "false"})
+      doc = Asciicrystal.load("Before\n\n_ _ _\n\nAfter", {"standalone" => "false"})
       doc.blocks.size.should be >= 2
     end
   end

@@ -1,6 +1,6 @@
 require "./abstract_block"
 
-module Asciidoctor
+module Asciicrystal
   # Methods for managing AsciiDoc lists (ordered, unordered and description lists).
   class List < AbstractBlock
     # The parent block.

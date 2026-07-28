@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Converter
     class ManPageConverter < Base
       register_for "manpage"
@@ -87,7 +87,7 @@ module Asciidoctor
         authors_str = node.attr?("authors") ? node.attr("authors").to_s : "[see the \"AUTHOR(S)\" section]"
 
         result = [] of String
-        result << %('" t\n."     Title: #{mantitle}\n."    Author: #{authors_str}\n." Generator: Asciidoctor Crystal #{VERSION})
+        result << %('" t\n."     Title: #{mantitle}\n."    Author: #{authors_str}\n." Generator: Asciicrystal Crystal #{VERSION})
         result << %(."      Date: #{docdate}) if docdate
         manual_str = manmanual ? manmanual.to_s.tr(WHITESPACE_CHARS, " ").squeeze(' ') : "\\ \\&"
         source_str = mansource ? mansource.to_s.tr(WHITESPACE_CHARS, " ").squeeze(' ') : "\\ \\&"

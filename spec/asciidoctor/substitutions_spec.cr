@@ -2,10 +2,10 @@ require "../spec_helper"
 require "../test_helpers"
 
 # Helper to create a block from source string for substitution testing
-def create_block(src : String = "test", opts : Hash(String, String) = {} of String => String) : Asciidoctor::Block
+def create_block(src : String = "test", opts : Hash(String, String) = {} of String => String) : Asciicrystal::Block
   opts["standalone"] = "false"
-  doc = Asciidoctor.load(src, opts)
-  doc.blocks.first.as(Asciidoctor::Block)
+  doc = Asciicrystal.load(src, opts)
+  doc.blocks.first.as(Asciicrystal::Block)
 end
 
 NORMAL_SUBS = [:specialcharacters, :quotes, :attributes, :replacements, :macros, :post_replacements]
@@ -1009,16 +1009,16 @@ describe "Substitutions" do
     end
 
     it "should substitute built-in attribute via document" do
-      doc = Asciidoctor.load("test", {"standalone" => "false"})
-      block = doc.blocks.first.as(Asciidoctor::Block)
+      doc = Asciicrystal.load("test", {"standalone" => "false"})
+      block = doc.blocks.first.as(Asciicrystal::Block)
       result = block.sub_attributes("{backend}")
       # sub_attributes on a standalone block may not resolve built-in attributes
       (result == "html5" || result == "{backend}").should be_true
     end
 
     it "should substitute doctype attribute via document" do
-      doc = Asciidoctor.load("test", {"standalone" => "false"})
-      block = doc.blocks.first.as(Asciidoctor::Block)
+      doc = Asciicrystal.load("test", {"standalone" => "false"})
+      block = doc.blocks.first.as(Asciicrystal::Block)
       result = block.sub_attributes("{doctype}")
       # sub_attributes on a standalone block may not resolve built-in attributes
       (result == "article" || result == "{doctype}").should be_true
@@ -1032,23 +1032,23 @@ describe "Substitutions" do
     end
 
     it "should substitute counter attribute via document" do
-      doc = Asciidoctor.load("test", {"standalone" => "false"})
-      block = doc.blocks.first.as(Asciidoctor::Block)
+      doc = Asciicrystal.load("test", {"standalone" => "false"})
+      block = doc.blocks.first.as(Asciicrystal::Block)
       result = block.sub_attributes("{counter:mycount}")
       # Counter may or may not be resolved depending on implementation
       (result == "1" || result == "{counter:mycount}").should be_true
     end
 
     it "should substitute counter attribute with start value via document" do
-      doc = Asciidoctor.load("test", {"standalone" => "false"})
-      block = doc.blocks.first.as(Asciidoctor::Block)
+      doc = Asciicrystal.load("test", {"standalone" => "false"})
+      block = doc.blocks.first.as(Asciicrystal::Block)
       result = block.sub_attributes("{counter:mycount2:5}")
       (result == "5" || result == "{counter:mycount2:5}").should be_true
     end
 
     it "should substitute set attribute via document" do
-      doc = Asciidoctor.load("test", {"standalone" => "false"})
-      block = doc.blocks.first.as(Asciidoctor::Block)
+      doc = Asciicrystal.load("test", {"standalone" => "false"})
+      block = doc.blocks.first.as(Asciicrystal::Block)
       result = block.sub_attributes("{set:myattr:hello}")
       (result == "" || result == "{set:myattr:hello}").should be_true
     end

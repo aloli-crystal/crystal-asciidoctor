@@ -1,15 +1,15 @@
 require "../spec_helper"
 
-describe Asciidoctor::Callouts do
+describe Asciicrystal::Callouts do
   describe "#register" do
     it "returns a unique callout id" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       id = callouts.register(1)
       id.should eq("CO1-1")
     end
 
     it "increments the callout index" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1).should eq("CO1-1")
       callouts.register(2).should eq("CO1-2")
     end
@@ -17,7 +17,7 @@ describe Asciidoctor::Callouts do
 
   describe "#next_list" do
     it "advances to the next callout list" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1)
       callouts.next_list
       id = callouts.register(1)
@@ -27,7 +27,7 @@ describe Asciidoctor::Callouts do
 
   describe "#read_next_id" do
     it "reads the next callout id" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1)
       callouts.register(2)
       callouts.rewind
@@ -36,7 +36,7 @@ describe Asciidoctor::Callouts do
     end
 
     it "returns nil when no more callouts" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1)
       callouts.rewind
       callouts.read_next_id.should eq("CO1-1")
@@ -46,7 +46,7 @@ describe Asciidoctor::Callouts do
 
   describe "#callout_ids" do
     it "returns space-separated callout ids for the specified list item" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1)
       callouts.register(1)
       callouts.register(2)
@@ -55,7 +55,7 @@ describe Asciidoctor::Callouts do
     end
 
     it "returns empty string when no callouts match" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1)
       ids = callouts.callout_ids(99)
       ids.should eq("")
@@ -64,7 +64,7 @@ describe Asciidoctor::Callouts do
 
   describe "#rewind" do
     it "resets the list index and callout index" do
-      callouts = Asciidoctor::Callouts.new
+      callouts = Asciicrystal::Callouts.new
       callouts.register(1)
       callouts.register(2)
       callouts.next_list

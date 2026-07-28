@@ -1,9 +1,9 @@
 require "../spec_helper"
 
-describe Asciidoctor::Timings do
+describe Asciicrystal::Timings do
   describe "#start and #record" do
     it "records elapsed time for a key" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.start(:read)
       sleep 0.01
       timings.record(:read)
@@ -15,40 +15,40 @@ describe Asciidoctor::Timings do
 
   describe "#read" do
     it "returns nil if read has not been recorded" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.read.should be_nil
     end
   end
 
   describe "#parse" do
     it "returns nil if parse has not been recorded" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.parse.should be_nil
     end
   end
 
   describe "#convert" do
     it "returns nil if convert has not been recorded" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.convert.should be_nil
     end
   end
 
   describe "#write" do
     it "returns nil if write has not been recorded" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.write.should be_nil
     end
   end
 
   describe "#total" do
     it "returns nil if no phases have been recorded" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.total.should be_nil
     end
 
     it "returns combined time of all recorded phases" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.start(:read)
       sleep 0.01
       timings.record(:read)
@@ -63,7 +63,7 @@ describe Asciidoctor::Timings do
 
   describe "#read_parse" do
     it "returns combined time for read and parse" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.start(:read)
       sleep 0.01
       timings.record(:read)
@@ -79,7 +79,7 @@ describe Asciidoctor::Timings do
 
   describe "#print_report" do
     it "prints timing report to IO" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       timings.start(:read)
       sleep 0.01
       timings.record(:read)
@@ -100,7 +100,7 @@ describe Asciidoctor::Timings do
     end
 
     it "prints timing report without subject" do
-      timings = Asciidoctor::Timings.new
+      timings = Asciicrystal::Timings.new
       io = IO::Memory.new
       timings.print_report(io)
       output = io.to_s

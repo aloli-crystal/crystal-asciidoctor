@@ -1,11 +1,11 @@
-require "crystal-rouge"
+require "rouge"
 
-module Asciidoctor
-  # Server-side syntax highlighter adapter using crystal-rouge.
+module Asciicrystal
+  # Server-side syntax highlighter adapter using rouge.
   #
   # When the document attribute `source-highlighter` is set to `rouge`,
   # this adapter performs syntax highlighting during the convert phase
-  # using the crystal-rouge tokenization engine.
+  # using the rouge tokenization engine.
   class RougeAdapter < SyntaxHighlighterBase
     register_for "rouge"
 
@@ -19,7 +19,7 @@ module Asciidoctor
       true
     end
 
-    # Highlights the source code using crystal-rouge.
+    # Highlights the source code using rouge.
     def highlight(node : AbstractNode, source : String, lang : String, opts : Hash(Symbol, String) = {} of Symbol => String) : String
       lexer = Rouge::RegexLexer.find(lang)
       if lexer

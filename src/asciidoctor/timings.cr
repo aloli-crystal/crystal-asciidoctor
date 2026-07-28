@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   class Timings
     @log : Hash(Symbol, Float64)
     @timers : Hash(Symbol, Float64)

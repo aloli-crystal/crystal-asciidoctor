@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # A pluggable adapter for integrating a syntax (aka code) highlighter into AsciiDoc processing.
   #
   # There are two types of syntax highlighter adapters:
@@ -114,7 +114,7 @@ module Asciidoctor
     # Register this syntax highlighter class for the given names in the default registry.
     macro register_for(*names)
       {% for name in names %}
-        Asciidoctor::SyntaxHighlighter::DefaultRegistry.register(self, {{name}}.to_s)
+        Asciicrystal::SyntaxHighlighter::DefaultRegistry.register(self, {{name}}.to_s)
       {% end %}
     end
 

@@ -1,9 +1,9 @@
 require "../spec_helper"
 
 # Custom syntax highlighter for testing registration
-class TestSyntaxHighlighterA < Asciidoctor::SyntaxHighlighterBase
-  def format(node : Asciidoctor::AbstractNode, lang : String | Nil, opts : Hash(Symbol, String) = {} of Symbol => String) : String
-    %(<pre class="highlight"><code class="language-#{lang}" data-lang="#{lang}">#{node.is_a?(Asciidoctor::AbstractBlock) ? (node.content || "") : ""}</code></pre>)
+class TestSyntaxHighlighterA < Asciicrystal::SyntaxHighlighterBase
+  def format(node : Asciicrystal::AbstractNode, lang : String | Nil, opts : Hash(Symbol, String) = {} of Symbol => String) : String
+    %(<pre class="highlight"><code class="language-#{lang}" data-lang="#{lang}">#{node.is_a?(Asciicrystal::AbstractBlock) ? (node.content || "") : ""}</code></pre>)
   end
 
   def highlight? : Bool
@@ -11,9 +11,9 @@ class TestSyntaxHighlighterA < Asciidoctor::SyntaxHighlighterBase
   end
 end
 
-class TestSyntaxHighlighterB < Asciidoctor::SyntaxHighlighterBase
-  def format(node : Asciidoctor::AbstractNode, lang : String | Nil, opts : Hash(Symbol, String) = {} of Symbol => String) : String
-    %(<pre class="highlight"><code>#{node.is_a?(Asciidoctor::AbstractBlock) ? (node.content || "") : ""}</code></pre>)
+class TestSyntaxHighlighterB < Asciicrystal::SyntaxHighlighterBase
+  def format(node : Asciicrystal::AbstractNode, lang : String | Nil, opts : Hash(Symbol, String) = {} of Symbol => String) : String
+    %(<pre class="highlight"><code>#{node.is_a?(Asciicrystal::AbstractBlock) ? (node.content || "") : ""}</code></pre>)
   end
 
   def highlight? : Bool
@@ -24,68 +24,68 @@ end
 # Helper methods
 def convert_string(input : String, options : Hash(String, String) = {} of String => String) : String
   options["standalone"] = "true" unless options.has_key?("standalone")
-  Asciidoctor.convert(input, options)
+  Asciicrystal.convert(input, options)
 end
 
 def convert_string_to_embedded(input : String, options : Hash(String, String) = {} of String => String) : String
   options["standalone"] = "false"
-  Asciidoctor.convert(input, options)
+  Asciicrystal.convert(input, options)
 end
 
-def document_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciidoctor::Document
-  Asciidoctor.load(input, options)
+def document_from_string(input : String, options : Hash(String, String) = {} of String => String) : Asciicrystal::Document
+  Asciicrystal.load(input, options)
 end
 
-describe Asciidoctor::SyntaxHighlighter do
+describe Asciicrystal::SyntaxHighlighter do
   describe "DefaultRegistry" do
     it "should register and retrieve a syntax highlighter by name" do
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.register(TestSyntaxHighlighterA, "test-hl-a")
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.for("test-hl-a").should eq(TestSyntaxHighlighterA)
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.register(TestSyntaxHighlighterA, "test-hl-a")
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.for("test-hl-a").should eq(TestSyntaxHighlighterA)
     end
 
     it "should return nil for unregistered syntax highlighter" do
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.for("nonexistent-hl").should be_nil
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.for("nonexistent-hl").should be_nil
     end
 
     it "should create an instance of a registered syntax highlighter" do
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.register(TestSyntaxHighlighterA, "test-hl-create")
-      instance = Asciidoctor::SyntaxHighlighter::DefaultRegistry.create("test-hl-create")
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.register(TestSyntaxHighlighterA, "test-hl-create")
+      instance = Asciicrystal::SyntaxHighlighter::DefaultRegistry.create("test-hl-create")
       instance.should_not be_nil
       instance.should be_a(TestSyntaxHighlighterA)
       instance.not_nil!.name.should eq("test-hl-create")
     end
 
     it "should return nil when creating an instance for unregistered name" do
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.create("nonexistent-hl-create").should be_nil
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.create("nonexistent-hl-create").should be_nil
     end
 
     it "should register a syntax highlighter for multiple names" do
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.register(TestSyntaxHighlighterB, "test-hl-b1", "test-hl-b2")
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.for("test-hl-b1").should eq(TestSyntaxHighlighterB)
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.for("test-hl-b2").should eq(TestSyntaxHighlighterB)
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.register(TestSyntaxHighlighterB, "test-hl-b1", "test-hl-b2")
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.for("test-hl-b1").should eq(TestSyntaxHighlighterB)
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.for("test-hl-b2").should eq(TestSyntaxHighlighterB)
     end
   end
 
   describe "CustomFactory" do
     it "should create a custom factory with seed registry" do
-      factory = Asciidoctor::SyntaxHighlighter::CustomFactory.new({"custom-hl" => TestSyntaxHighlighterA})
+      factory = Asciicrystal::SyntaxHighlighter::CustomFactory.new({"custom-hl" => TestSyntaxHighlighterA})
       factory.for("custom-hl").should eq(TestSyntaxHighlighterA)
     end
 
     it "should return nil for unregistered name in custom factory" do
-      factory = Asciidoctor::SyntaxHighlighter::CustomFactory.new
+      factory = Asciicrystal::SyntaxHighlighter::CustomFactory.new
       factory.for("nonexistent").should be_nil
     end
 
     it "should create an instance from custom factory" do
-      factory = Asciidoctor::SyntaxHighlighter::CustomFactory.new({"custom-hl" => TestSyntaxHighlighterA})
+      factory = Asciicrystal::SyntaxHighlighter::CustomFactory.new({"custom-hl" => TestSyntaxHighlighterA})
       instance = factory.create("custom-hl")
       instance.should_not be_nil
       instance.should be_a(TestSyntaxHighlighterA)
     end
 
     it "should register a syntax highlighter in custom factory" do
-      factory = Asciidoctor::SyntaxHighlighter::CustomFactory.new
+      factory = Asciicrystal::SyntaxHighlighter::CustomFactory.new
       factory.register(TestSyntaxHighlighterB, "custom-hl-b")
       factory.for("custom-hl-b").should eq(TestSyntaxHighlighterB)
     end
@@ -115,7 +115,7 @@ describe Asciidoctor::SyntaxHighlighter do
 
     it "should return empty string for docinfo by default" do
       hl = TestSyntaxHighlighterA.new("test-hl")
-      doc = Asciidoctor::Document.new
+      doc = Asciicrystal::Document.new
       hl.docinfo(:head, doc).should eq("")
       hl.docinfo(:footer, doc).should eq("")
     end
@@ -123,24 +123,24 @@ describe Asciidoctor::SyntaxHighlighter do
 
   describe "HighlightJsAdapter" do
     it "should be registered for highlightjs and highlight.js" do
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.for("highlightjs").should eq(Asciidoctor::HighlightJsAdapter)
-      Asciidoctor::SyntaxHighlighter::DefaultRegistry.for("highlight.js").should eq(Asciidoctor::HighlightJsAdapter)
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.for("highlightjs").should eq(Asciicrystal::HighlightJsAdapter)
+      Asciicrystal::SyntaxHighlighter::DefaultRegistry.for("highlight.js").should eq(Asciicrystal::HighlightJsAdapter)
     end
 
     it "should have pre_class set to highlightjs" do
-      hl = Asciidoctor::HighlightJsAdapter.new
+      hl = Asciicrystal::HighlightJsAdapter.new
       hl.pre_class.should eq("highlightjs")
     end
 
     it "should have docinfo for head and footer" do
-      hl = Asciidoctor::HighlightJsAdapter.new
+      hl = Asciicrystal::HighlightJsAdapter.new
       hl.docinfo?(:head).should be_true
       hl.docinfo?(:footer).should be_true
     end
 
     it "should generate CSS link in head docinfo" do
-      hl = Asciidoctor::HighlightJsAdapter.new
-      doc = Asciidoctor::Document.new
+      hl = Asciicrystal::HighlightJsAdapter.new
+      doc = Asciicrystal::Document.new
       head = hl.docinfo(:head, doc)
       head.should contain("link")
       head.should contain("highlight.js")
@@ -148,24 +148,24 @@ describe Asciidoctor::SyntaxHighlighter do
     end
 
     it "should generate JS script in footer docinfo" do
-      hl = Asciidoctor::HighlightJsAdapter.new
-      doc = Asciidoctor::Document.new
+      hl = Asciicrystal::HighlightJsAdapter.new
+      doc = Asciicrystal::Document.new
       footer = hl.docinfo(:footer, doc)
       footer.should contain("highlight.min.js")
       footer.should contain("hljs.highlightBlock")
     end
 
     it "should use custom theme from document attribute" do
-      hl = Asciidoctor::HighlightJsAdapter.new
-      doc = Asciidoctor::Document.new
+      hl = Asciicrystal::HighlightJsAdapter.new
+      doc = Asciicrystal::Document.new
       doc.attributes["highlightjs-theme"] = "monokai"
       head = hl.docinfo(:head, doc)
       head.should contain("monokai.min.css")
     end
 
     it "should load additional languages from highlightjs-languages attribute" do
-      hl = Asciidoctor::HighlightJsAdapter.new
-      doc = Asciidoctor::Document.new
+      hl = Asciicrystal::HighlightJsAdapter.new
+      doc = Asciicrystal::Document.new
       doc.attributes["highlightjs-languages"] = "yaml, scilab"
       footer = hl.docinfo(:footer, doc)
       footer.should contain("languages/yaml.min.js")
@@ -173,7 +173,7 @@ describe Asciidoctor::SyntaxHighlighter do
     end
 
     it "should not highlight (client-side)" do
-      hl = Asciidoctor::HighlightJsAdapter.new
+      hl = Asciicrystal::HighlightJsAdapter.new
       hl.highlight?.should be_false
     end
   end
@@ -184,7 +184,7 @@ describe Asciidoctor::SyntaxHighlighter do
       doc = document_from_string(input, {"safe" => "safe"})
       doc.basebackend?("html").should be_true
       doc.syntax_highlighter.should_not be_nil
-      doc.syntax_highlighter.should be_a(Asciidoctor::HighlightJsAdapter)
+      doc.syntax_highlighter.should be_a(Asciicrystal::HighlightJsAdapter)
     end
 
     it "should not set syntax_highlighter on document when source-highlighter is not set" do

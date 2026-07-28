@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   # Client-side syntax highlighter adapter for highlight.js.
   #
   # This adapter inserts the necessary CSS and JavaScript into the output document

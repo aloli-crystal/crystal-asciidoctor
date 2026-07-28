@@ -1,4 +1,4 @@
-module Asciidoctor
+module Asciicrystal
   module Converter
     class Html5Converter < Base
       register_for "html5"
@@ -353,7 +353,7 @@ Your browser does not support the audio tag.
         result << %(<html#{xml_ns}#{lang_attr}>)
         encoding = node.attr("encoding", "UTF-8")
         result << %(<head>\n<meta charset="#{encoding}"#{slash}>\n<meta http-equiv="X-UA-Compatible" content="IE=edge"#{slash}>\n<meta name="viewport" content="width=device-width, initial-scale=1.0"#{slash}>)
-        result << %(<meta name="generator" content="Asciidoctor (Crystal)"#{slash}>) unless node.attr?("reproducible")
+        result << %(<meta name="generator" content="Asciicrystal (Crystal)"#{slash}>) unless node.attr?("reproducible")
         result << %(<meta name="description" content="#{node.attr("description")}"#{slash}>) if node.attr?("description")
         result << %(<meta name="keywords" content="#{node.attr("keywords")}"#{slash}>) if node.attr?("keywords")
         result << %(<meta name="author" content="#{node.attr("authors") || ""}"#{slash}>) if node.attr?("authors")

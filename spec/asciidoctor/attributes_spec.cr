@@ -123,19 +123,19 @@ describe "Attributes" do
     end
 
     it "performs attribute substitution on attribute value" do
-      doc = TestHelpers.document_from_string(":version: 1.0\n:release: Asciidoctor {version}")
-      doc.attributes["release"].should eq("Asciidoctor 1.0")
+      doc = TestHelpers.document_from_string(":version: 1.0\n:release: Asciicrystal {version}")
+      doc.attributes["release"].should eq("Asciicrystal 1.0")
     end
 
     it "assigns attribute to empty string if substitution fails to resolve attribute" do
-      # input = ":release: Asciidoctor {version}"
+      # input = ":release: Asciicrystal {version}"
       # document_from_string input, attributes: { 'attribute-missing' => 'drop-line' }
       # assert_message @logger, :INFO, 'dropping line containing reference to missing attribute: version'
     end
 
     it "assigns multi-line attribute to empty string if substitution fails to resolve attribute" do
       # input = <<-EOS
-      # :release: Asciidoctor +
+      # :release: Asciicrystal +
       #           {version}
       # EOS
       # doc = document_from_string input, attributes: { 'attribute-missing' => 'drop-line' }
@@ -230,7 +230,7 @@ describe "Attributes" do
       {imagesdir}
       EOS
       output = TestHelpers.convert_inline_string(input, {"safe" => "safe"})
-      output.should eq("#{Asciidoctor::USER_HOME}/etc/images")
+      output.should eq("#{Asciicrystal::USER_HOME}/etc/images")
     end
 
     it "user-home attribute resolves to . if safe mode is SERVER or greater" do
@@ -476,7 +476,7 @@ end
 
 context "Block Attributes" do
   it "can only access a positional attribute from the attributes hash" do
-    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"1" => "position 1"})
+    node = Asciicrystal::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"1" => "position 1"})
     node.attr("1").should be_nil
     node.attr?("1").should be_falsey
     node.attributes["1"].should eq("position 1")
@@ -519,27 +519,27 @@ context "Block Attributes" do
   end
 
   it "set_attr should set value to empty string if no value is specified" do
-    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph)
+    node = Asciicrystal::Block.new(TestHelpers.empty_document, :paragraph)
     node.set_attr("foo")
     node.attr("foo").should eq("")
   end
 
   it "remove_attr should remove attribute and return previous value" do
     doc = TestHelpers.empty_document
-    node = Asciidoctor::Block.new(doc, :paragraph, nil, nil, {"foo" => "bar"})
+    node = Asciicrystal::Block.new(doc, :paragraph, nil, nil, {"foo" => "bar"})
     node.remove_attr("foo").should eq("bar")
     node.attr("foo").should be_nil
   end
 
   it "set_attr should not overwrite existing key if overwrite is false" do
-    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
+    node = Asciicrystal::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
     node.attr("foo").should eq("bar")
     node.set_attr("foo", "baz", false)
     node.attr("foo").should eq("bar")
   end
 
   it "set_attr should overwrite existing key by default" do
-    node = Asciidoctor::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
+    node = Asciicrystal::Block.new(TestHelpers.empty_document, :paragraph, nil, nil, {"foo" => "bar"})
     node.attr("foo").should eq("bar")
     node.set_attr("foo", "baz")
     node.attr("foo").should eq("baz")
@@ -552,7 +552,7 @@ context "Block Attributes" do
     # {uri}
     # EOS
 
-    # doc = Asciidoctor.load(input, {"uri" => "https://github.com"})
+    # doc = Asciicrystal.load(input, {"uri" => "https://github.com"})
     # doc.set_attr("uri", "https://google.com")
     # output = doc.convert.to_s
     # TestHelpers.xpath_count("//a[@href=\"https://google.com\"]", output).should eq(1)
@@ -994,7 +994,7 @@ context "Substitution and Escaping" do
 
   context "Intrinsic attributes" do
     it "substitute intrinsics" do
-      Asciidoctor::INTRINSIC_ATTRIBUTES.each do |key, value|
+      Asciicrystal::INTRINSIC_ATTRIBUTES.each do |key, value|
         html = TestHelpers.convert_string("Look, a {#{key}} is here")
         html.should contain("Look, a #{value} is here")
       end
@@ -1363,7 +1363,7 @@ context "Substitution and Escaping" do
 
       doc = TestHelpers.document_from_string(input)
       b1 = doc.blocks.first
-      b1.as(Asciidoctor::Block).lines.should eq(["[ quote]"])
+      b1.as(Asciicrystal::Block).lines.should eq(["[ quote]"])
     end
 
     it "attribute list may begin with comma" do
@@ -1763,7 +1763,7 @@ context "Substitution and Escaping" do
     section = doc.blocks[0]
     section.should_not be_nil
     section.context.should eq(:section)
-    section.as(Asciidoctor::Section).special.should be_falsey
+    section.as(Asciicrystal::Section).special.should be_falsey
     output = doc.convert.to_s
     TestHelpers.xpath_count("article:root > section", output).should eq(1)
     TestHelpers.xpath_count("article:root > section[xml|id=\"idname\"]", output).should eq(1)
@@ -1830,7 +1830,7 @@ context "Substitution and Escaping" do
     section_one.id.should eq("one")
     subsection = section_one.blocks.last
     subsection.id.should eq("sub")
-    section_two = doc.blocks.last.as(Asciidoctor::Section)
+    section_two = doc.blocks.last.as(Asciicrystal::Section)
     section_two.attr("role").should eq("classy")
   end
 end

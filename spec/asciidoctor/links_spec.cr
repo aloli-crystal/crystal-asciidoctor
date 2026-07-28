@@ -2,15 +2,15 @@ require "../spec_helper"
 require "../test_helpers"
 
 # Helper to create a block for link substitution testing
-def link_block(src : String = "test") : Asciidoctor::Block
-  doc = Asciidoctor.load(src, {"standalone" => "false"})
-  doc.blocks.first.as(Asciidoctor::Block)
+def link_block(src : String = "test") : Asciicrystal::Block
+  doc = Asciicrystal.load(src, {"standalone" => "false"})
+  doc.blocks.first.as(Asciicrystal::Block)
 end
 
 # Helper to create a document
-def link_doc(src : String = "test", opts : Hash(String, String) = {} of String => String) : Asciidoctor::Document
+def link_doc(src : String = "test", opts : Hash(String, String) = {} of String => String) : Asciicrystal::Document
   opts["standalone"] = "false" unless opts.has_key?("standalone")
-  Asciidoctor.load(src, opts)
+  Asciicrystal.load(src, opts)
 end
 
 describe "Links" do
@@ -1199,7 +1199,7 @@ describe "Links" do
     it "should parse document with link in paragraph" do
       doc = link_doc("Visit http://example.com for more.")
       doc.blocks.size.should eq(1)
-      doc.blocks.first.as(Asciidoctor::Block).source.should contain("http://example.com")
+      doc.blocks.first.as(Asciicrystal::Block).source.should contain("http://example.com")
     end
 
     it "should parse document with xref in paragraph" do
@@ -1210,7 +1210,7 @@ describe "Links" do
     it "should parse document with anchor on section" do
       doc = link_doc("[#custom-id]\n== My Section\n\nContent")
       section = doc.blocks.first
-      section.should be_a(Asciidoctor::Section)
+      section.should be_a(Asciicrystal::Section)
     end
 
     it "should parse document with multiple paragraphs containing links" do
