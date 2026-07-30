@@ -1,0 +1,77 @@
+name: Veille ameba (repasser la CI sur Crystal récent)
+
+# Toute la CI aloli-crystal est épinglée à Crystal 1.19.1 parce qu'ameba 1.6.4
+# (dernière stable) ne compile plus sous Crystal 1.21. Ce workflow surveille la
+# sortie d'une ameba stable > 1.6.4 (les préversions -dev sont ignorées par
+# l'API "releases/latest") et ouvre une issue pour rappeler de repasser au
+# Crystal le plus récent.
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # tous les lundis à 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Version d'ameba « bloquante » actuelle. À mettre à jour le jour où on bascule.
+  PINNED_AMEBA: v1.6.4
+
+jobs:
+  check-ameba:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer la dernière ameba stable
+        id: ameba
+        run: |
+          latest=$(gh api repos/crystal-ameba/ameba/releases/latest --jq '.tag_name')
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+          echo "Dernière stable ameba : $latest (bloquante actuelle : $PINNED_AMEBA)"
+
+      - name: Ouvrir une issue si une stable plus récente existe
+        if: steps.ameba.outputs.latest != env.PINNED_AMEBA
+        env:
+          LATEST: ${{ steps.ameba.outputs.latest }}
+          REPO: ${{ github.repository }}
+        run: |
+          # S'assurer que le label existe (l'API de création d'issue échoue sinon).
+          gh api "repos/${REPO}/labels" -f name=ameba -f color=ededed \
+            -f description="Mise à jour ameba / compat Crystal" >/dev/null 2>&1 || true
+
+          # Dédup : ne rien faire s'il reste une issue ouverte avec le label ameba.
+          open_count=$(gh api "repos/${REPO}/issues?state=open&labels=ameba" --jq 'length')
+          if [ "${open_count:-0}" -gt 0 ]; then
+            echo "Une issue ameba est déjà ouverte, on n'en recrée pas."
+            exit 0
+          fi
+
+          crystal_req=$(curl -s "https://raw.githubusercontent.com/crystal-ameba/ameba/${LATEST}/shard.yml" | grep -i '^crystal:' || echo "crystal: (à vérifier)")
+
+          body=$(cat <<EOF
+          Une version **stable** d'ameba plus récente que \`${PINNED_AMEBA}\` est disponible : **\`${LATEST}\`**.
+
+          Contrainte Crystal déclarée par cette version : \`${crystal_req}\`
+
+          ### Contexte
+          Toute la CI \`aloli-crystal\` est épinglée à **Crystal 1.19.1** parce qu'ameba 1.6.4 ne
+          compilait plus sous Crystal 1.21 (l'étape \`shards install\` échouait au postinstall d'ameba).
+          Avec cette nouvelle stable, on peut repasser au Crystal le plus récent.
+
+          ### À faire
+          0. Vérifier que \`${LATEST}\` couvre bien le Crystal visé (contrainte ci-dessus).
+          0. Remonter la contrainte \`ameba\` dans les \`shard.yml\` (ex. \`~> 1.7\`).
+          0. Restaurer \`crystal: latest\` dans les \`ci.yml\` (forme simple **et** matrice \`["1.19.0", "latest"]\`).
+          0. Mettre à jour \`PINNED_AMEBA\` dans ce workflow (ou le supprimer).
+          0. Vérifier que le code compile et teste sur Crystal latest.
+
+          _Issue ouverte automatiquement par le workflow \`check-ameba.yml\`._
+          EOF
+          )
+
+          gh api "repos/${REPO}/issues" \
+            -f title="ameba ${LATEST} disponible — repasser la CI sur Crystal latest" \
+            -f body="${body}" \
+            -f "labels[]=ameba"
